@@ -17,6 +17,12 @@ export * from './utils/event';
 export * from './utils/format';
 export * from './utils/scroll';
 
+interface ExportFileOpts {
+  mimeType?: string;
+  byteOrderMark?: string | Uint8Array;
+  encoding?: string;
+}
+
 // others utils
 export function copyToClipboard(text: string): Promise<void>;
 export function debounce<F extends (...args: any[]) => any>(
@@ -26,8 +32,8 @@ export function debounce<F extends (...args: any[]) => any>(
 ): F & { cancel(): void };
 export function exportFile(
   fileName: string,
-  rawData: BlobPart,
-  mimeType?: string
+  rawData: string | ArrayBuffer | ArrayBufferView | Blob,
+  opts?: string | ExportFileOpts
 ): true | Error;
 export function extend<R>(deep: boolean, target: any, ...sources: any[]): R;
 export function extend<R>(target: object, ...sources: any[]): R;

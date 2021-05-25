@@ -16,6 +16,7 @@ export default defineComponent({
     const classes = computed(() =>
       'q-td' + (props.autoWidth === true ? ' q-table--col-auto-width' : '')
       + (props.noHover === true ? ' q-td--no-hover' : '')
+      + ' '
     )
 
     return () => {
@@ -24,16 +25,18 @@ export default defineComponent({
       }
 
       const name = vm.vnode.key
-
-      const col = props.props.colsMap !== void 0 && name
-        ? props.props.colsMap[ name ]
-        : props.props.col
+      const col = (
+        (props.props.colsMap !== void 0 ? props.props.colsMap[ name ] : null)
+        || props.props.col
+      )
 
       if (col === void 0) { return }
 
+      const { row } = props.props
+
       return h('td', {
-        class: classes.value + ' ' + col.__tdClass,
-        style: col.style
+        class: classes.value + col.__tdClass(row),
+        style: col.__tdStyle(row)
       }, hSlot(slots.default))
     }
   }

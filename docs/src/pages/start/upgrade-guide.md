@@ -197,6 +197,22 @@ $ quasar create <folder_name> --branch next
 
 In order to support Node 13+ (and for many other benefits) we have **upgraded Webpack from v4 to v5**. You may need to upgrade your webpack plugins accordingly.
 
+#### Nodejs polyfills
+Webpack v5 removed the Nodejs polyfills for the web client builds. If you are using packages for the web client that rely on Nodejs API (they shouldn't!), you will get errors saying that some packages are missing. Examples: `Buffer`, `crypto`, `os`, `path`.
+
+These need to be addressed by the package owners. But if you don't want to wait and just want to run your app/website (with a bit of risk), then you can manually install [node-polyfill-webpack-plugin](https://www.npmjs.com/package/node-polyfill-webpack-plugin) (yarn add --dev node-polyfill-webpack-plugin) then reference it in quasar.conf.js > build > chainWebpack. Example:
+
+```
+// quasar.conf.js
+build: {
+  chainWebpack (chain) {
+    const nodePolyfillWebpackPlugin = require('node-polyfill-webpack-plugin')
+    chain.plugin('node-polyfill').use(nodePolyfillWebpackPlugin)
+  }
+}
+```
+
+#### Webpack devserver
 As part of the upgrade to Webpack 5, Quasar CLI now supplies [webpack-dev-server v4](https://github.com/webpack/webpack-dev-server) and [webpack-dev-middleware v4](https://github.com/webpack/webpack-dev-middleware) which come with their own breaking changes. This influences quasar.conf.js > devServer options. Below are some of the most used props:
 
 | Prop name | Type | Description |
@@ -208,6 +224,8 @@ As part of the upgrade to Webpack 5, Quasar CLI now supplies [webpack-dev-server
 | proxy | Object/Array | Same as before with webpack 4 |
 
 More on quasar.conf.js > [devServer](/quasar-cli/quasar-conf-js#property-devserver).
+
+#### webpack-chain
 
 ::: warning
 At the moment of writing these lines, [webpack-chain](https://github.com/neutrinojs/webpack-chain) has not been updated to fully support Webpack 5. This has impact over all quasar.conf.js > chainWebpack{...} methods. While these methods will still work, the newer parts of the configuration introduced in Webpack 5 are not (yet) available. For those parts, the `extendWebpack*` methods should be used, until webpack-chain is fully Webpack 5 compatible.
@@ -421,6 +439,24 @@ All slots are now acting in the same manner as the scoped slots in Vue 2. If you
 
 Use "class" and "style" attributes instead of "content-class" / "content-style" props for the above mentioned Quasar components.
 
+### QBtn/QRouteTab
+
+If you were using the `to` prop and delaying navigation in your `@click` handler:
+
+```
+// OLD way
+function onClick (e, go) {
+  e.navigate = false // <<<--- this changed
+  // ...maybe later call go()?
+}
+
+// NEW way
+function onClick (e, go) {
+  e.preventDefault() // <<<--- this changed
+  // ...maybe later call go()?
+}
+```
+
 #### QBreadcrumbsEl
 
 Removed "append" prop because Vue Router v4 [has also dropped it](https://next.router.vuejs.org/guide/migration/index.html#removal-of-append-prop-in-router-link).
@@ -620,7 +656,7 @@ The `@scroll` event parameter now has a slightly different content:
 
 Renamed the "data" property to "rows" (to solve TS conflict issue with "data" incorrectly inferred as the "data()" method of a Vue component).
 
-New prop: "column-sort-order". Also, new "columns" definition prop: "sortOrder".
+New prop: "column-sort-order". New "columns" definition prop ("sortOrder") and now "style" and "classes" can be Functions too.
 
 #### QTable/QTree
 
@@ -781,6 +817,10 @@ The object literal property names provided for methods "addToDate" and "subtract
 | minutes | minutes | - |
 | seconds | seconds | - |
 | milliseconds | milliseconds | - |
+
+#### exportFile util
+
+The exportFile() util (forces browser to download a file with your specified content) is enhanced with new features: you can specify bom (byte order mark) and/or a text encoding. [More info](/quasar-utils/other-utils#export-file).
 
 #### scroll utils
 

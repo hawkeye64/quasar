@@ -398,8 +398,8 @@ export default defineComponent({
           return slot !== void 0
             ? slot(getBodyCellScope({ key, row, pageIndex, col }))
             : h('td', {
-              class: col.__tdClass,
-              style: col.style
+              class: col.__tdClass(row),
+              style: col.__tdStyle(row)
             }, getCellValue(col, row))
         })
 
@@ -429,21 +429,21 @@ export default defineComponent({
       if (props.onRowClick !== void 0) {
         data.class[ 'cursor-pointer' ] = true
         data.onClick = evt => {
-          emit('row-click', evt, row, pageIndex)
+          emit('RowClick', evt, row, pageIndex)
         }
       }
 
       if (props.onRowDblclick !== void 0) {
         data.class[ 'cursor-pointer' ] = true
         data.onDblclick = evt => {
-          emit('row-dblclick', evt, row, pageIndex)
+          emit('RowDblclick', evt, row, pageIndex)
         }
       }
 
       if (props.onRowContextmenu !== void 0) {
         data.class[ 'cursor-pointer' ] = true
         data.onContextmenu = evt => {
-          emit('row-contextmenu', evt, row, pageIndex)
+          emit('RowContextmenu', evt, row, pageIndex)
         }
       }
 
@@ -970,13 +970,13 @@ export default defineComponent({
 
             if (props.onRowClick !== void 0) {
               data.onClick = evt => {
-                emit('row-click', evt, scope.row, scope.pageIndex)
+                emit('RowClick', evt, scope.row, scope.pageIndex)
               }
             }
 
             if (props.onRowDblclick !== void 0) {
               data.onDblclick = evt => {
-                emit('row-dblclick', evt, scope.row, scope.pageIndex)
+                emit('RowDblclick', evt, scope.row, scope.pageIndex)
               }
             }
           }

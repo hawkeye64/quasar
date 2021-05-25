@@ -205,13 +205,15 @@ export default defineComponent({
         emitValue(val)
 
         if ([ 'text', 'search', 'url', 'tel', 'password' ].includes(props.type) && e.target === document.activeElement) {
-          const index = e.target.selectionEnd
+          const { selectionStart, selectionEnd } = e.target
 
-          index !== void 0 && nextTick(() => {
-            if (e.target === document.activeElement && val.indexOf(e.target.value) === 0) {
-              e.target.setSelectionRange(index, index)
-            }
-          })
+          if (selectionStart !== void 0 && selectionEnd !== void 0) {
+            nextTick(() => {
+              if (e.target === document.activeElement && val.indexOf(e.target.value) === 0) {
+                e.target.setSelectionRange(selectionStart, selectionEnd)
+              }
+            })
+          }
         }
       }
 
@@ -373,7 +375,11 @@ export default defineComponent({
 
     // expose public methods
     const vm = getCurrentInstance()
-    Object.assign(vm.proxy, { focus, select })
+    Object.assign(vm.proxy, {
+      focus,
+      select,
+      getNativeElement: () => inputRef.value
+    })
 
     return renderFn
   }
