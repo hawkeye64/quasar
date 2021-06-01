@@ -5,9 +5,10 @@ q-layout.doc-layout(view="lHh LpR lff", @scroll="onScroll")
       q-btn.q-mx-sm.lt-md(flat, dense, round, @click="toggleLeftDrawer", aria-label="Menu", :icon="mdiMenu")
 
       q-btn.quasar-logo.text-bold(key="logo", flat, no-caps, no-wrap, stretch, to="/")
-        q-avatar.doc-layout-avatar
-          img(src="https://cdn.quasar.dev/logo/svg/quasar-logo.svg")
-        q-toolbar-title.text-weight-bold(shrink) Quasar
+        q-avatar
+          img.quasar-logo__img(src="https://cdn.quasar.dev/logo-v2/svg/logo.svg")
+        q-toolbar-title.text-weight-bold(shrink)
+          img.quasar-logo__logotype(src="https://cdn.quasar.dev/logo-v2/svg/logotype.svg")
 
       q-space
 
@@ -62,7 +63,7 @@ q-layout.doc-layout(view="lHh LpR lff", @scroll="onScroll")
             type="a"
             href="https://bit.ly/3cTLXsO"
             target="_blank"
-            color="primary"
+            color="brand-primary"
             outline
             :icon="mdiFileDocumentEditOutline"
             label="Survey results are out!"
@@ -110,7 +111,7 @@ q-layout.doc-layout(view="lHh LpR lff", @scroll="onScroll")
     @on-layout="updateRightDrawerOnLayout"
   )
     q-scroll-area.fit
-      header-menu.q-mt-sm.text-primary.column(v-if="$q.screen.lt.sm", align="right")
+      header-menu.q-mt-sm.text-brand-primary.column(v-if="$q.screen.lt.sm", align="right")
 
       q-list.doc-toc.q-my-sm.text-grey-8
         q-item(
@@ -129,7 +130,7 @@ q-layout.doc-layout(view="lHh LpR lff", @scroll="onScroll")
     router-view
 
   q-page-scroller
-    q-btn(fab-mini, color="primary", glossy, :icon="mdiChevronUp")
+    q-btn(fab-mini, color="brand-primary", glossy, :icon="mdiChevronUp")
 </template>
 
 <script>
@@ -199,9 +200,6 @@ export default {
 .doc-layout__main-btn
   width: 268px
 
-.doc-layout-avatar > div
-  border-radius: 0
-
 .q-drawer--mobile
   .doc-toc
     .q-item
@@ -225,11 +223,15 @@ export default {
   overflow: inherit !important
 
 .quasar-logo
-  img
+  &__img
     transform: rotate(0deg)
     transition: transform .8s ease-in-out
-  &:hover img
+  &:hover &__img
     transform: rotate(-360deg)
+
+  &__logotype
+    height: 19px
+    vertical-align: middle
 
 .q-page-container :target
   scroll-margin-top: ($toolbar-min-height + 16px)

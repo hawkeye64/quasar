@@ -5,10 +5,10 @@ q-card.doc-api.q-my-lg(flat bordered)
     q-space
 
     .col-auto(v-if="pageLink")
-      q-btn(icon="launch" label="Docs" color="primary" no-caps unelevated :to="docPath")
+      q-btn(icon="launch" label="Docs" color="brand-primary" no-caps unelevated :to="docPath")
     .col-auto.text-grey(v-else) {{ typeBanner }}
 
-  q-linear-progress(v-if="loading", color="primary", indeterminate)
+  q-linear-progress(v-if="loading", color="brand-primary", indeterminate)
 
   template(v-else-if="nothingToShow")
     q-separator
@@ -18,7 +18,7 @@ q-card.doc-api.q-my-lg(flat bordered)
     q-separator
 
     div.bg-grey-2.text-grey-7.flex.no-wrap
-      q-tabs.col(v-model="currentTab", active-color="primary", indicator-color="primary", align="left", :breakpoint="0", dense)
+      q-tabs.col(v-model="currentTab", active-color="brand-primary", indicator-color="brand-primary", align="left", :breakpoint="0", dense)
         q-tab(
           v-for="tab in tabsList"
           :key="`api-tab-${tab}`"
@@ -26,8 +26,7 @@ q-card.doc-api.q-my-lg(flat bordered)
         )
           .row.no-wrap.items-center
             span.q-mr-xs.text-capitalize.text-weight-medium {{ tab }}
-            q-badge(v-if="filteredApiCount[tab].overall")
-              | {{ filteredApiCount[tab].overall }}
+            q-badge(v-if="filteredApiCount[tab].overall" :label="filteredApiCount[tab].overall")
 
       q-input.q-mx-sm(
         v-if="$q.screen.gt.xs"
@@ -53,8 +52,8 @@ q-card.doc-api.q-my-lg(flat bordered)
           .col-auto.row.no-wrap.text-grey-7.q-py-sm
             q-tabs(
               v-model="currentInnerTab",
-              active-color="primary",
-              indicator-color="primary",
+              active-color="brand-primary",
+              indicator-color="brand-primary",
               :breakpoint="0",
               vertical,
               dense,
@@ -69,8 +68,7 @@ q-card.doc-api.q-my-lg(flat bordered)
                 .row.no-wrap.items-center.self-stretch
                   span.q-mr-xs.text-capitalize.text-weight-medium {{ innerTab }}
                   .col
-                  q-badge(v-if="filteredApiCount[tab].category[innerTab]")
-                    | {{ filteredApiCount[tab].category[innerTab] }}
+                  q-badge(v-if="filteredApiCount[tab].category[innerTab]" :label="filteredApiCount[tab].category[innerTab]")
 
           q-separator(vertical)
 
@@ -277,7 +275,7 @@ export default {
     })
 
     const inputIcon = computed(() => filter.value !== '' ? mdiClose : mdiMagnify)
-    const filteredApi = computed(() => getFilteredApi(apiDef.value, filter.value, tabsList.value, innerTabsList.value))
+    const filteredApi = computed(() => getFilteredApi(apiDef.value, filter.value.toLowerCase(), tabsList.value, innerTabsList.value))
     const filteredApiCount = computed(() => getApiCount(filteredApi.value, tabsList.value, innerTabsList.value))
 
     function parseApiFile (name, { type, behavior, meta, addedIn, ...api }) {

@@ -13,7 +13,7 @@
 
         <q-toolbar-title>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo/svg/quasar-logo.svg">
+            <img src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg">
           </q-avatar>
           Layout Builder
         </q-toolbar-title>
@@ -269,7 +269,7 @@
               <q-separator spaced />
               <div class="row q-col-gutter-sm">
                 <div v-if="step !== 'play'" class="col-12 col-sm-auto">
-                  <q-btn class="full-width" color="primary" @click="$refs.stepper.next()" label="Continue" />
+                  <q-btn class="full-width" color="brand-primary" @click="$refs.stepper.next()" label="Continue" />
                 </div>
                 <div class="col-12 col-sm-auto">
                   <q-btn class="full-width" color="black" label="Export Layout" @click="exportDialog = true" />
@@ -288,7 +288,7 @@
             <q-separator />
 
             <q-card-actions align="right">
-              <q-btn color="primary" flat label="Close" v-close-popup />
+              <q-btn color="brand-primary" flat label="Close" v-close-popup />
             </q-card-actions>
           </q-card>
         </q-dialog>
@@ -502,7 +502,7 @@ export default {
 ` : ''}
         <q-toolbar-title>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo/svg/quasar-logo.svg">
+            <img src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg">
           </q-avatar>
           Title
         </q-toolbar-title>${pick.right ? `
@@ -547,7 +547,7 @@ export default {
       <q-toolbar>
         <q-toolbar-title>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo/svg/quasar-logo.svg">
+            <img src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg">
           </q-avatar>
           <div>Title</div>
         </q-toolbar-title>
