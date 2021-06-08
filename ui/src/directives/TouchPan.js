@@ -1,5 +1,5 @@
 import { client } from '../plugins/Platform.js'
-import { getModifierDirections, getTouchTarget, shouldStart } from '../utils/private/touch.js'
+import { getModifierDirections, shouldStart } from '../utils/private/touch.js'
 import { addEvt, cleanEvt, position, leftClick, prevent, stop, stopAndPrevent, preventDraggable, noop } from '../utils/event.js'
 import { clearSelection } from '../utils/private/selection.js'
 import getSSRProps from '../utils/private/noop-ssr-directive-transform.js'
@@ -158,8 +158,9 @@ export default __QUASAR_SSR_SERVER__
           },
 
           touchStart (evt) {
+            console.log('touchStart')
             if (shouldStart(evt, ctx)) {
-              const target = getTouchTarget(evt.target)
+              const target = evt.target
 
               addEvt(ctx, 'temp', [
                 [ target, 'touchmove', 'move', 'notPassiveCapture' ],
@@ -376,16 +377,16 @@ export default __QUASAR_SSR_SERVER__
         ])
       },
 
-      updated (el, mod) {
+      updated (el, bindings) {
         const ctx = el.__qtouchpan
 
         if (ctx !== void 0) {
-          if (mod.oldValue !== mod.value) {
+          if (bindings.oldValue !== bindings.value) {
             typeof value !== 'function' && ctx.end()
-            ctx.handler = mod.value
+            ctx.handler = bindings.value
           }
 
-          ctx.direction = getModifierDirections(mod)
+          ctx.direction = getModifierDirections(bindings.modifiers)
         }
       },
 
