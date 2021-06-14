@@ -46,7 +46,7 @@ export default defineComponent({
       default: '50% 50%'
     },
 
-    imgClass: [ Array, String, Object ],
+    imgClass: String,
     imgStyle: Object,
 
     noSpinner: Boolean,
@@ -85,7 +85,8 @@ export default defineComponent({
     }))
 
     const imgClass = computed(() =>
-      `q-img__image q-img__image--with${ props.noTransition === true ? 'out' : '' }-transition`
+      `q-img__image ${ props.imgClass !== void 0 ? props.imgClass + ' ' : '' }`
+      + `q-img__image--with${ props.noTransition === true ? 'out' : '' }-transition`
     )
 
     const imgStyle = computed(() => ({
