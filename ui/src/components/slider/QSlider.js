@@ -5,8 +5,6 @@ import { useFormInject, useFormProps, useFormAttrs } from '../../composables/pri
 import useSlider, {
   useSliderProps,
   useSliderEmits,
-  getRatio,
-  getModel,
   keyCodes
 } from './use-slider.js'
 
@@ -39,22 +37,21 @@ export default createComponent({
     const formAttrs = useFormAttrs(props)
     const injectFormInput = useFormInject(formAttrs)
 
-    const rootRef = ref(null)
-    const model = ref(props.modelValue === null ? props.min : props.modelValue)
-    const curRatio = ref(0)
-
     const { state, methods } = useSlider({
       updateValue, updatePosition, getDragging
     })
 
-    const modelRatio = computed(() => (
-      state.minMaxDiff.value === 0 ? 0 : (model.value - props.min) / state.minMaxDiff.value
-    ))
+    const rootRef = ref(null)
+    const curRatio = ref(0)
+
+    const model = ref(props.modelValue === null ? state.innerMin.value : props.modelValue)
+
+    const modelRatio = computed(() => methods.convertModelToRatio(model.value))
     const ratio = computed(() => (state.active.value === true ? curRatio.value : modelRatio.value))
 
     const trackStyle = computed(() => ({
-      [ state.positionProp.value ]: 0,
-      [ state.sizeProp.value ]: `${ 100 * ratio.value }%`
+      [ state.positionProp.value ]: `${ 100 * state.innerMinRatio.value }%`,
+      [ state.sizeProp.value ]: `${ 100 * (ratio.value - state.innerMinRatio.value) }%`
     }))
 
     const thumbStyle = computed(() => ({
@@ -105,14 +102,10 @@ export default createComponent({
       return methods.getPinStyle(percent, ratio.value)
     })
 
-    watch(() => props.modelValue, v => {
-      model.value = v === null
-        ? 0
-        : between(v, props.min, props.max)
-    })
-
-    watch(() => props.min + props.max, () => {
-      model.value = between(model.value, props.min, props.max)
+    watch(() => props.modelValue + state.innerMin.value + state.innerMax.value, () => {
+      model.value = props.modelValue === null
+        ? state.innerMin.value
+        : between(props.modelValue, state.innerMin.value, state.innerMax.value)
     })
 
     function updateValue (change) {
@@ -127,19 +120,13 @@ export default createComponent({
     }
 
     function updatePosition (event, dragging = state.dragging.value) {
-      const ratio = getRatio(
-        event,
-        dragging,
-        state.isReversed.value,
-        props.vertical
-      )
+      const ratio = methods.getDraggingRatio(event, dragging)
 
-      model.value = getModel(ratio, props.min, props.max, props.step, state.decimals.value)
+      model.value = methods.convertRatioToModel(ratio)
+
       curRatio.value = props.snap !== true || props.step === 0
         ? ratio
-        : (
-            state.minMaxDiff.value === 0 ? 0 : (model.value - props.min) / state.minMaxDiff.value
-          )
+        : methods.convertModelToRatio(model.value)
     }
 
     function onFocus () {
@@ -159,21 +146,40 @@ export default createComponent({
 
       model.value = between(
         parseFloat((model.value + offset).toFixed(state.decimals.value)),
-        props.min,
-        props.max
+        state.innerMin.value,
+        state.innerMax.value
       )
 
       updateValue()
     }
 
     return () => {
-      const child = [
+      const track = [
+        h('div', {
+          class: `q-slider__inner-track q-slider__inner-track${ state.axis.value } absolute`,
+          style: state.innerTrackStyle.value
+        }),
+
+        h('div', {
+          class: `q-slider__track q-slider__track${ state.axis.value } absolute`,
+          style: trackStyle.value
+        })
+      ]
+
+      props.markers !== false && track.push(
+        h('div', {
+          class: `q-slider__track-markers q-slider__track-markers${ state.axis.value } absolute`,
+          style: state.markerStyle.value
+        })
+      )
+
+      const thumb = [
         methods.getThumbSvg(),
         h('div', { class: 'q-slider__focus-ring' })
       ]
 
       if (props.label === true || props.labelAlways === true) {
-        child.push(
+        thumb.push(
           h('div', {
             class: `q-slider__pin q-slider__pin${ state.axis.value } absolute ` + pinClass.value,
             style: pinStyle.value.pin
@@ -197,22 +203,8 @@ export default createComponent({
       }
 
       if (props.name !== void 0 && props.disable !== true) {
-        injectFormInput(child, 'push')
+        injectFormInput(thumb, 'push')
       }
-
-      const track = [
-        h('div', {
-          class: `q-slider__track q-slider__track${ state.axis.value } absolute`,
-          style: trackStyle.value
-        })
-      ]
-
-      props.markers !== false && track.push(
-        h('div', {
-          class: `q-slider__track-markers q-slider__track-markers${ state.axis.value } absolute-full fit`,
-          style: state.markerStyle.value
-        })
-      )
 
       const content = [
         h('div', {
@@ -222,7 +214,7 @@ export default createComponent({
         h('div', {
           class: `q-slider__thumb-container q-slider__thumb-container${ state.axis.value } absolute non-selectable` + thumbClass.value,
           style: thumbStyle.value
-        }, child)
+        }, thumb)
       ]
 
       const data = {
