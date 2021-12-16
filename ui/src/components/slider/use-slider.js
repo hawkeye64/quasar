@@ -3,13 +3,14 @@ import { h, ref, computed, onBeforeUnmount, getCurrentInstance } from 'vue'
 import TouchPan from '../../directives/TouchPan.js'
 
 import useDark, { useDarkProps } from '../../composables/private/use-dark.js'
+import { useFormProps } from '../../composables/private/use-form.js'
 
 import { between } from '../../utils/format.js'
 import { position, stopAndPrevent } from '../../utils/event.js'
 import { isNumber } from '../../utils/private/is.js'
-import { injectGetter } from '../../utils/private/inject-obj-prop.js'
+import { defineGetterObject } from '../../utils/private/inject-obj-prop.js'
 
-const markerClass = 'q-slider__marker-label'
+const markerClass = 'q-slider__marker-labels'
 const defaultMarkerConvertFn = v => ({ value: v })
 const defaultMarkerLabelRenderFn = ({ marker }) => h('div', {
   key: marker.value,
@@ -22,46 +23,54 @@ export const keyCodes = [ 34, 37, 40, 33, 39, 38 ]
 
 export const useSliderProps = {
   ...useDarkProps,
+  ...useFormProps,
 
   min: {
     type: Number,
     default: 0
   },
-  innerMin: Number,
   max: {
     type: Number,
     default: 100
   },
+  innerMin: Number,
   innerMax: Number,
+
   step: {
     type: Number,
     default: 1,
     validator: v => v >= 0
   },
 
-  color: String,
-
-  labelColor: String,
-  labelTextColor: String,
-  dense: Boolean,
-
-  label: Boolean,
-  labelAlways: Boolean,
-  markers: [ Boolean, Number ],
-  markerLabels: [ Boolean, Array, Object, Function ],
-
-  switchLabelPosition: Boolean,
-  switchMarkerLabelPosition: Boolean,
-
   snap: Boolean,
 
   vertical: Boolean,
   reverse: Boolean,
 
+  color: String,
+
+  label: Boolean,
+  labelColor: String,
+  labelTextColor: String,
+  labelAlways: Boolean,
+  switchLabelSide: Boolean,
+
+  markers: [ Boolean, Number ],
+  markerLabels: [ Boolean, Array, Object, Function ],
+  switchMarkerLabelsSide: Boolean,
+
+  trackSize: {
+    type: String,
+    default: '4px'
+  },
+
   disable: Boolean,
   readonly: Boolean,
+  dense: Boolean,
+
   tabindex: [ String, Number ],
 
+  thumbColor: String,
   thumbPath: {
     type: String,
     default: 'M 4, 10 a 6,6 0 1,0 12,0 a 6,6 0 1,0 -12,0'
@@ -80,7 +89,7 @@ export default function ({ updateValue, updatePosition, getDragging }) {
   const dragging = ref(false)
 
   const axis = computed(() => (props.vertical === true ? '--v' : '--h'))
-  const labelSide = computed(() => '-' + (props.switchLabelPosition === true ? 'switched' : 'standard'))
+  const labelSide = computed(() => '-' + (props.switchLabelSide === true ? 'switched' : 'standard'))
 
   const isReversed = computed(() => (
     props.vertical === true
@@ -107,8 +116,8 @@ export default function ({ updateValue, updatePosition, getDragging }) {
 
   const classes = computed(() =>
     `q-slider q-slider${ axis.value } q-slider--${ active.value === true ? '' : 'in' }active`
+    + ` ${ props.vertical === true ? 'column' : 'row' } items-center`
     + (isReversed.value === true ? ' q-slider--reversed' : '')
-    + (props.color !== void 0 ? ` text-${ props.color }` : '')
     + (props.disable === true ? ' disabled' : ' q-slider--enabled' + (editable.value === true ? ' q-slider--editable' : ''))
     + (focus.value === 'both' ? ' q-slider--focus' : '')
     + (props.label || props.labelAlways === true ? ' q-slider--label' : '')
@@ -116,6 +125,8 @@ export default function ({ updateValue, updatePosition, getDragging }) {
     + (isDark.value === true ? ' q-slider--dark' : '')
     + (props.dense === true ? ' q-slider--dense q-slider--dense' + axis.value : '')
   )
+
+  const colorClass = computed(() => (props.color !== void 0 ? ` text-${ props.color }` : ''))
 
   const arrowClass = computed(() =>
     `q-slider__arrow absolute q-slider__arrow${ axis.value } q-slider__arrow${ axis.value }${ labelSide.value }`
@@ -226,14 +237,14 @@ export default function ({ updateValue, updatePosition, getDragging }) {
     return Object.keys(def).map(key => {
       const item = def[ key ]
       const value = Number(key)
-      return Object(item) === item ? { ...item, value } : { value }
+      return Object(item) === item ? { ...item, value } : { value, label: item }
     })
   }
 
   const markerLabelClass = computed(() => {
     const prefix = ` ${ markerClass }${ axis.value }-`
     return markerClass
-      + `${ prefix }${ props.switchMarkerLabelPosition === true ? 'switched' : 'standard' }`
+      + `${ prefix }${ props.switchMarkerLabelsSide === true ? 'switched' : 'standard' }`
       + `${ prefix }${ isReversed.value === true ? 'rtl' : 'ltr' }`
   })
 
@@ -263,9 +274,10 @@ export default function ({ updateValue, updatePosition, getDragging }) {
     return acc
   })
 
-  const markerLabelScope = {}
-  injectGetter(markerLabelScope, 'markerList', () => markerLabelsList.value)
-  injectGetter(markerLabelScope, 'markerMap', () => markerLabelsMap.value)
+  const markerLabelScope = defineGetterObject({
+    markerList: () => markerLabelsList.value,
+    markerMap: () => markerLabelsMap.value
+  })
 
   function getMarkerLabelsContent () {
     if (slots[ 'marker-label-group' ] !== void 0) {
@@ -280,7 +292,7 @@ export default function ({ updateValue, updatePosition, getDragging }) {
     return h(
       'div',
       {
-        class: 'q-slider__marker-label-container no-pointer-events',
+        class: 'q-slider__marker-labels-container col no-pointer-events relative-position',
         onMousedownCapture: stopAndPrevent, onClick: stopAndPrevent, onTouchstart: stopAndPrevent
       },
       getMarkerLabelsContent()
@@ -296,7 +308,12 @@ export default function ({ updateValue, updatePosition, getDragging }) {
   ))
 
   const sizeProp = computed(() => (props.vertical === true ? 'height' : 'width'))
+  const thicknessProp = computed(() => (props.vertical === true ? 'width' : 'height'))
   const orientation = computed(() => (props.vertical === true ? 'vertical' : 'horizontal'))
+
+  const trackContainerStyle = computed(() => ({
+    [ thicknessProp.value ]: props.trackSize
+  }))
 
   const innerTrackStyle = computed(() => ({
     [ positionProp.value ]: `${ 100 * innerMinRatio.value }%`,
@@ -445,6 +462,7 @@ export default function ({ updateValue, updatePosition, getDragging }) {
       isReversed,
       editable,
       classes,
+      colorClass,
       decimals,
       innerMin,
       innerMinRatio,
@@ -453,6 +471,7 @@ export default function ({ updateValue, updatePosition, getDragging }) {
       step,
       trackLen,
       markerStyle,
+      trackContainerStyle,
       innerTrackStyle,
       tabindex,
       positionProp,

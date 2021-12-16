@@ -1,6 +1,6 @@
 import { h, ref, computed, watch, getCurrentInstance } from 'vue'
 
-import { useFormInject, useFormProps } from '../../composables/private/use-form.js'
+import { useFormInject } from '../../composables/private/use-form.js'
 
 import useSlider, {
   useSliderProps,
@@ -23,7 +23,6 @@ export default createComponent({
   name: 'QRange',
 
   props: {
-    ...useFormProps,
     ...useSliderProps,
 
     modelValue: {
@@ -37,8 +36,6 @@ export default createComponent({
       }
     },
 
-    name: String,
-
     dragRange: Boolean,
     dragOnlyRange: Boolean,
 
@@ -48,7 +45,10 @@ export default createComponent({
     rightLabelTextColor: String,
 
     leftLabelValue: [ String, Number ],
-    rightLabelValue: [ String, Number ]
+    rightLabelValue: [ String, Number ],
+
+    leftThumbColor: String,
+    rightThumbColor: String
   },
 
   emits: useSliderEmits,
@@ -136,11 +136,14 @@ export default createComponent({
         'z-index': nextFocus.value === 'min' ? 2 : void 0
       })),
 
-      thumbClass: computed(() => (
-        state.preventFocus.value === false && state.focus.value === 'min'
-          ? ' q-slider--focus'
-          : ''
-      )),
+      thumbClass: computed(() => {
+        const color = props.leftThumbColor || props.thumbColor
+        return (
+          state.preventFocus.value === false && state.focus.value === 'min'
+            ? ' q-slider--focus'
+            : ''
+        ) + (color !== void 0 ? ` text-${ color }` : '')
+      }),
 
       pinClass: computed(() => {
         const color = props.leftLabelColor || props.labelColor
@@ -182,11 +185,14 @@ export default createComponent({
         [ state.positionProp.value ]: `${ 100 * ratioMax.value }%`
       })),
 
-      thumbClass: computed(() => (
-        state.preventFocus.value === false && state.focus.value === 'max'
-          ? ' q-slider--focus'
-          : ''
-      )),
+      thumbClass: computed(() => {
+        const color = props.rightThumbColor || props.thumbColor
+        return (
+          state.preventFocus.value === false && state.focus.value === 'max'
+            ? ' q-slider--focus'
+            : ''
+        ) + (color !== void 0 ? ` text-${ color }` : '')
+      }),
 
       pinClass: computed(() => {
         const color = props.rightLabelColor || props.labelColor
@@ -449,6 +455,7 @@ export default createComponent({
       return h('div', {
         ref: sideProps.domRef,
         class: `q-slider__thumb-container q-slider__thumb-container${ state.axis.value } absolute non-selectable`
+          + state.colorClass.value
           + sideProps.thumbClass.value,
         style: sideProps.thumbStyle.value,
         ...sideProps.events.value,
@@ -476,16 +483,20 @@ export default createComponent({
         })
       )
 
-      props.markerLabels !== false && track.push(methods.getMarkerLabels())
-
       const content = [
         h('div', {
           class: `q-slider__track-container q-slider__track-container${ state.axis.value } absolute`
-        }, track),
+            + state.colorClass.value,
+          style: state.trackContainerStyle.value
+        }, track)
+      ]
 
+      props.markerLabels !== false && content.push(methods.getMarkerLabels())
+
+      content.push(
         getThumb(minProps),
         getThumb(maxProps)
-      ]
+      )
 
       if (props.name !== void 0 && props.disable !== true) {
         injectFormInput(content, 'push')

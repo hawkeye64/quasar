@@ -1,6 +1,6 @@
 import { h, ref, computed, watch, getCurrentInstance } from 'vue'
 
-import { useFormInject, useFormProps, useFormAttrs } from '../../composables/private/use-form.js'
+import { useFormInject, useFormAttrs } from '../../composables/private/use-form.js'
 
 import useSlider, {
   useSliderProps,
@@ -18,7 +18,6 @@ export default createComponent({
 
   props: {
     ...useSliderProps,
-    ...useFormProps,
 
     modelValue: {
       required: true,
@@ -59,9 +58,11 @@ export default createComponent({
     }))
 
     const thumbClass = computed(() => (
-      state.preventFocus.value === false && state.focus.value === true
-        ? ' q-slider--focus'
-        : ''
+      (
+        state.preventFocus.value === false && state.focus.value === true
+          ? ' q-slider--focus'
+          : ''
+      ) + (props.thumbColor !== void 0 ? ` text-${ props.thumbColor }` : '')
     ))
 
     const pinClass = computed(() => (
@@ -173,8 +174,6 @@ export default createComponent({
         })
       )
 
-      props.markerLabels !== false && track.push(methods.getMarkerLabels())
-
       const thumb = [
         methods.getThumbSvg(),
         h('div', { class: 'q-slider__focus-ring' })
@@ -211,14 +210,21 @@ export default createComponent({
       const content = [
         h('div', {
           class: `q-slider__track-container q-slider__track-container${ state.axis.value } absolute`
-        }, track),
+            + state.colorClass.value,
+          style: state.trackContainerStyle.value
+        }, track)
+      ]
 
+      props.markerLabels !== false && content.push(methods.getMarkerLabels())
+
+      content.push(
         h('div', {
           class: `q-slider__thumb-container q-slider__thumb-container${ state.axis.value } absolute non-selectable`
+            + state.colorClass.value
             + thumbClass.value,
           style: thumbStyle.value
         }, thumb)
-      ]
+      )
 
       const data = {
         ref: rootRef,
