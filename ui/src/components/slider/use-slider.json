@@ -64,6 +64,51 @@
       "extends": "color"
     },
 
+    "track-color": {
+      "extends": "color",
+      "desc": "Color name for the track (can be 'transparent' too) from the Quasar Color Palette",
+      "addedIn": "v2.4"
+    },
+
+    "track-img": {
+      "type": "String",
+      "desc": "Apply a pattern image on the track",
+      "transformAssetUrls": true,
+      "examples": [ "~assets/my-pattern.png" ],
+      "category": "style",
+      "addedIn": "v2.4"
+    },
+
+    "inner-track-color": {
+      "extends": "color",
+      "desc": "Color name for the inner track (can be 'transparent' too) from the Quasar Color Palette",
+      "addedIn": "v2.4"
+    },
+
+    "inner-track-img": {
+      "type": "String",
+      "desc": "Apply a pattern image on the inner track",
+      "transformAssetUrls": true,
+      "examples": [ "~assets/my-pattern.png" ],
+      "category": "style",
+      "addedIn": "v2.4"
+    },
+
+    "selection-color": {
+      "extends": "color",
+      "desc": "Color name for the selection bar (can be 'transparent' too) from the Quasar Color Palette",
+      "addedIn": "v2.4"
+    },
+
+    "selection-img": {
+      "type": "String",
+      "desc": "Apply a pattern image on the selection bar",
+      "transformAssetUrls": true,
+      "examples": [ "~assets/my-pattern.png" ],
+      "category": "style",
+      "addedIn": "v2.4"
+    },
+
     "label": {
       "type": "Boolean",
       "desc": "Popup a label when user clicks/taps on the slider thumb and moves it",
@@ -108,6 +153,7 @@
       "definition": {
         "value": {
           "type": "Number",
+          "required": true,
           "desc": "Value of equivalent model where to position the marker",
           "__exemption": [ "examples" ]
         },
@@ -115,6 +161,11 @@
           "type": [ "Number", "String" ],
           "desc": "Label to use",
           "__exemption": [ "examples" ]
+        },
+        "classes": {
+          "type": [ "String", "Array", "Object" ],
+          "desc": "CSS classes to be attributed to the marker label",
+          "examples": [ "my-class-name" ]
         },
         "style": {
           "type": "Object",
@@ -144,22 +195,34 @@
             "desc": "Label to use",
             "__exemption": [ "examples" ]
           },
+          "classes": {
+            "type": [ "String", "Array", "Object" ],
+            "desc": "CSS classes to be attributed to the marker label",
+            "examples": [ "my-class-name" ]
+          },
           "style": {
             "type": "Object",
             "desc": "Style definitions to be attributed to the marker label",
-            "examples": [ "{ height: '24px' }" ],
-            "category": "style"
+            "examples": [ "{ height: '24px' }" ]
           }
         }
       },
       "category": "content",
       "examples": [
         true,
-        "[ { value: 0, label: '0%' }, { value: 5 } ]",
-        "{ 0: '0%', 5: { label: '5%', style: { width: '24px' } } }",
+        "[ { value: 0, label: '0%' }, { value: 5, classes: 'my-class', style: { width: '24px' } } ]",
+        "{ 0: '0%', 5: { label: '5%', classes: 'my-class', style: { width: '24px' } } }",
         "val => (10 * val) + '%'",
-        "val => ({ label: (10 * val) + '%', style: { width: '24px' } })"
+        "val => ({ label: (10 * val) + '%', classes: 'my-class', style: { width: '24px' } })"
       ],
+      "addedIn": "v2.4"
+    },
+
+    "marker-labels-class": {
+      "type": "String",
+      "desc": "CSS class(es) to apply to the marker labels container",
+      "examples": [ "text-orange" ],
+      "category": "style",
       "addedIn": "v2.4"
     },
 
@@ -173,7 +236,17 @@
     "track-size": {
       "type": "String",
       "desc": "Track size (including CSS unit)",
+      "default": "4px",
       "examples": [ "35px" ],
+      "category": "style",
+      "addedIn": "v2.4"
+    },
+
+    "thumb-size": {
+      "type": "String",
+      "desc": "Thumb size (including CSS unit)",
+      "default": "20px",
+      "examples": [ "20px" ],
       "category": "style",
       "addedIn": "v2.4"
     },
@@ -320,6 +393,31 @@
               }
             }
           }
+        },
+
+        "classes": {
+          "type": "String",
+          "desc": "Required CSS classes to be applied to the marker element",
+          "__exemption": [ "examples" ]
+        },
+
+        "getStyle": {
+          "type": "Function",
+          "desc": "Get CSS style Object to apply to a marker element at respective model value; For perf reasons, use only if requested model value is not already part of markerMap",
+          "params": {
+            "value": {
+              "type": "Number",
+              "desc": "The marker label equivalent model value",
+              "required": true,
+              "examples": [ "5" ]
+            }
+          },
+          "returns": {
+            "type": "Object",
+            "desc": "CSS style Object to apply to a marker element at respective model value",
+            "__exemption": [ "examples" ]
+          },
+          "__exemption": [ "examples" ]
         }
       }
     },
@@ -398,6 +496,31 @@
               }
             }
           }
+        },
+
+        "classes": {
+          "type": "String",
+          "desc": "Required CSS classes to be applied to the marker element",
+          "__exemption": [ "examples" ]
+        },
+
+        "getStyle": {
+          "type": "Function",
+          "desc": "Get CSS style Object to apply to a marker element at respective model value; For perf reasons, use only if requested model value is not already part of markerMap",
+          "params": {
+            "value": {
+              "type": "Number",
+              "desc": "The marker label equivalent model value",
+              "required": true,
+              "examples": [ "5" ]
+            }
+          },
+          "returns": {
+            "type": "Object",
+            "desc": "CSS style Object to apply to a marker element at respective model value",
+            "__exemption": [ "examples" ]
+          },
+          "__exemption": [ "examples" ]
         }
       }
     }
