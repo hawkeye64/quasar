@@ -1,9 +1,6 @@
 <template lang="pug">
-  q-card.quasar-sponsor(flat, bordered, @click.native="openWebsite", :style="style")
-    q-card-section.quasar-sponsor__title {{ name }}
-    q-separator
-    q-card-section.quasar-sponsor__logo.flex.flex-center
-      q-img(:alt="name" :src="`https://cdn.quasar.dev/sponsors/${img}`")
+.quasar-sponsor.flex.flex-center(@click="openWebsite" :style="style")
+  q-img.fit(:alt="name" contain :src="logoUrl")
 </template>
 
 <script>
@@ -23,6 +20,10 @@ export default {
       return {
         cursor: this.url ? 'pointer' : 'default'
       }
+    },
+
+    logoUrl () {
+      return `https://cdn.quasar.dev/sponsors/${this.img}`
     }
   },
 
@@ -37,15 +38,11 @@ export default {
 <style lang="sass">
 .quasar-sponsor
   width: 100%
-  max-width: 14rem
-  height: 265px
+  max-width: 11rem
+  height: 120px
+  padding: 16px
 
-  &__logo
-    height: 200px
-  &__title
-    transition: color .28s, background .28s
-
-  &:hover .quasar-sponsor__title
-    background: $brand-primary
-    color: #fff
+@media (max-width: 720px)
+  .quasar-sponsor
+    height: 80px
 </style>
