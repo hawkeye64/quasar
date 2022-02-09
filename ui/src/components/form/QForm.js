@@ -1,4 +1,4 @@
-import { h, ref, onMounted, getCurrentInstance, nextTick, provide } from 'vue'
+import { h, ref, onActivated, onDeactivated, onMounted, getCurrentInstance, nextTick, provide } from 'vue'
 
 import { createComponent } from '../../utils/private/create.js'
 import { stopAndPrevent } from '../../utils/event.js'
@@ -33,7 +33,7 @@ export default createComponent({
         ? shouldFocus
         : props.noErrorFocus !== true
 
-      validateIndex++
+      const index = ++validateIndex
 
       const emitEvent = (res, ref) => {
         emit('validation-' + (res === true ? 'success' : 'error'), ref)
@@ -47,7 +47,7 @@ export default createComponent({
           promises.push(
             valid.then(
               valid => ({ valid, comp }),
-              error => ({ valid: false, comp, error })
+              err => ({ valid: false, comp, err })
             )
           )
         }
@@ -71,34 +71,33 @@ export default createComponent({
         return Promise.resolve(true)
       }
 
-      const index = validateIndex
+      return Promise.all(promises).then(res => {
+        const errors = res.filter(r => r.valid !== true)
 
-      return Promise.all(promises).then(
-        res => {
-          if (index === validateIndex) {
-            const errors = res.filter(r => r.valid !== true)
+        if (errors.length === 0) {
+          index === validateIndex && emitEvent(true)
+          return true
+        }
 
-            if (errors.length === 0) {
-              emitEvent(true)
-              return true
-            }
+        const { valid, comp, err } = errors[ 0 ]
 
-            const { valid, comp } = errors[ 0 ]
+        // if not outdated already
+        if (index === validateIndex) {
+          err !== void 0 && console.error(err)
 
-            emitEvent(false, comp)
+          emitEvent(false, comp)
 
-            if (
-              focus === true
-              && valid !== true
-              && typeof comp.focus === 'function'
-            ) {
-              comp.focus()
-            }
-
-            return false
+          if (
+            focus === true
+            && valid !== true
+            && typeof comp.focus === 'function'
+          ) {
+            comp.focus()
           }
         }
-      )
+
+        return false
+      })
     }
 
     function resetValidation () {
@@ -112,8 +111,11 @@ export default createComponent({
     function submit (evt) {
       evt !== void 0 && stopAndPrevent(evt)
 
+      const index = validateIndex + 1
+
       validate().then(val => {
-        if (val === true) {
+        // if not outdated && validation succeeded
+        if (index === validateIndex && val === true) {
           if (props.onSubmit !== void 0) {
             emit('submit', evt)
           }
@@ -144,7 +146,7 @@ export default createComponent({
         const target = rootRef.value.querySelector('[autofocus], [data-autofocus]')
           || Array.prototype.find.call(rootRef.value.querySelectorAll('[tabindex]'), el => el.tabIndex > -1)
 
-        target !== null && target !== void 0 && target.focus()
+        target !== null && target !== void 0 && target.focus({ preventScroll: true })
       })
     }
 
@@ -159,6 +161,16 @@ export default createComponent({
           registeredComponents.splice(index, 1)
         }
       }
+    })
+
+    let shouldActivate = false
+
+    onDeactivated(() => {
+      shouldActivate = true
+    })
+
+    onActivated(() => {
+      shouldActivate === true && props.autofocus === true && focus()
     })
 
     onMounted(() => {

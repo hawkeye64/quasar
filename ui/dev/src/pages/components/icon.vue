@@ -23,17 +23,39 @@
     </div>
       <!-- This is the raw SVG -->
       <q-icon color="secondary" size="5rem">
-        <svg height="21" viewBox="0 0 21 21" width="21" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" transform="translate(3 4)"><path d="m3.5 10.5-1-.0345601c-1.10193561-.0037085-2-.93261826-2-2.03456011v-5.9654399c0-1.1045695.8954305-2 2-2l10-.00245977c1.1045695 0 2 .8954305 2 2v6.00245977c0 1.1045695-.8954305 2.00000001-2 2.00000001-.0014957 0-.3348291.01234-1 .0370199"/><path d="m7.5 12.5-3-3h6z" transform="matrix(1 0 0 -1 0 22)"/></g></svg>
+        <svg viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+          <g fill="none" fill-rule="evenodd" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" transform="translate(3 4)">
+            <path d="m3.5 10.5-1-.0345601c-1.10193561-.0037085-2-.93261826-2-2.03456011v-5.9654399c0-1.1045695.8954305-2 2-2l10-.00245977c1.1045695 0 2 .8954305 2 2v6.00245977c0 1.1045695-.8954305 2.00000001-2 2.00000001-.0014957 0-.3348291.01234-1 .0370199"/>
+            <path d="m7.5 12.5-3-3h6z" transform="matrix(1 0 0 -1 0 22)"/>
+          </g>
+        </svg>
       </q-icon>
 
-      <!-- This one is broken, because it starts with lower-case 'm' to work. Adding 'M0 0z' to start, causes a dot
-      <q-icon :name="suiAirplay" size="5rem" color="primary" /> -->
+      <q-icon :name="suiAirplay" size="5rem" color="secondary" />
 
       <!-- This one has special hand-added handling to make it work -->
-      <q-icon :name="suiAirplay2" size="5rem" color="accent" />
+      <q-icon :name="suiAirplay2" size="5rem" color="secondary" />
 
       <!-- Testing for 'M.' -->
-      <q-icon :name="oiBatteryEmpty" size="5rem" />
+      <q-icon :name="oiBatteryEmpty" size="5rem" color="secondary" />
+
+      <q-btn id="showInfoBtn" no-caps class="q-ml-sm">
+        <q-icon size="2em" name="img:https://www.gfbr.global/wp-content/uploads/2015/10/TwitterLogo_55acee-49x49.png" />
+      </q-btn>
+
+      <q-space />
+
+      <q-expansion-item
+        class="bg-white"
+        style="width: 300px; z-index: 1; border: 2px solid #ccc"
+        label="RE tests for SVG"
+        :caption="`${testSvgReTexts.filter(t => t.status === 'OK').length} / ${testSvgReTexts.length} OK`"
+      >
+        <div v-for="test in testSvgReTexts" :key="test.text" class="q-px-md row no-wrap items-center justify-between">
+          <div>{{test.text}}</div>
+          <div :class="test.class">{{test.status}}</div>
+        </div>
+      </q-expansion-item>
     <div>
 
     </div>
@@ -144,6 +166,33 @@ function customIconMapFn (iconName) {
   }
 }
 
+const testSvgReFill = (groups, texts) => {
+  if (groups.length === 0) {
+    return texts
+  }
+
+  const [ curGroup, ...restGroups ] = groups
+  const curTexts = []
+  const srcTexts = Array.isArray(texts) !== true || texts.length === 0 ? [ '' ] : texts
+
+  srcTexts.forEach(text => {
+    curGroup.forEach(char => {
+      curTexts.push(`${ text }${ char }`)
+    })
+  })
+
+  return testSvgReFill(restGroups, curTexts)
+}
+
+const testSvgReGroups = [
+  [ 'm', 'M' ],
+  [ '', ' ' ],
+  [ '', '+', '-' ],
+  [ '', '.' ],
+  [ '0', '9' ]
+]
+const testSvgReTexts = testSvgReFill(testSvgReGroups)
+
 export default {
   setup () {
     const useMapFn = ref(false)
@@ -163,7 +212,13 @@ export default {
       }
     })
 
+    const mRE = /^[Mm]\s?[-+]?\.?\d/
+
     return {
+      testSvgReTexts: testSvgReTexts.map(text => ({
+        text,
+        ...(mRE.test(text) ? { status: 'OK', class: 'text-positive' } : { status: 'BAD', class: 'text-negative' })
+      })),
       useMapFn,
       icon,
       text: ref('gigi'),
@@ -224,3 +279,13 @@ export default {
   }
 }
 </script>
+
+<style>
+#showInfoBtn {
+  position: absolute;
+  right: 10px;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+}
+</style>

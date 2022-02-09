@@ -1,4 +1,4 @@
-import { h, ref, computed, watch, onMounted, withDirectives, getCurrentInstance } from 'vue'
+import { h, ref, computed, watch, getCurrentInstance } from 'vue'
 
 import QCircularProgress from '../circular-progress/QCircularProgress.js'
 import TouchPan from '../../directives/TouchPan.js'
@@ -6,6 +6,7 @@ import TouchPan from '../../directives/TouchPan.js'
 import { createComponent } from '../../utils/private/create.js'
 import { position, stopAndPrevent } from '../../utils/event.js'
 import { between, normalizeToInterval } from '../../utils/format.js'
+import { hDir } from '../../utils/private/render.js'
 
 import { useFormProps, useFormAttrs } from '../../composables/private/use-form.js'
 import { useCircularCommonProps } from '../circular-progress/use-circular-progress.js'
@@ -25,6 +26,9 @@ export default createComponent({
       type: Number,
       required: true
     },
+
+    innerMin: Number,
+    innerMax: Number,
 
     step: {
       type: Number,
@@ -50,27 +54,33 @@ export default createComponent({
     const model = ref(props.modelValue)
     const dragging = ref(false)
 
-    let centerPosition, $el
+    const innerMin = computed(() => (
+      isNaN(props.innerMin) === true || props.innerMin < props.min
+        ? props.min
+        : props.innerMin
+    ))
+    const innerMax = computed(() => (
+      isNaN(props.innerMax) === true || props.innerMax > props.max
+        ? props.max
+        : props.innerMax
+    ))
 
-    watch(() => props.modelValue, val => {
-      if (val < props.min) {
-        model.value = props.min
-      }
-      else if (val > props.max) {
-        model.value = props.max
-      }
-      else {
-        if (val !== model.value) {
-          model.value = val
-        }
-        return
-      }
+    let centerPosition
 
-      if (model.value !== props.modelValue) {
-        emit('update:modelValue', model.value)
-        emit('change', model.value)
-      }
-    })
+    function normalizeModel () {
+      model.value = props.modelValue === null
+        ? innerMin.value
+        : between(props.modelValue, innerMin.value, innerMax.value)
+
+      updateValue(true)
+    }
+
+    watch(
+      () => `${ props.modelValue }|${ innerMin.value }|${ innerMax.value }`,
+      normalizeModel
+    )
+
+    normalizeModel()
 
     const editable = computed(() => props.disable === false && props.readonly === false)
 
@@ -138,7 +148,7 @@ export default createComponent({
     })
 
     function updateCenterPosition () {
-      const { top, left, width, height } = $el.getBoundingClientRect()
+      const { top, left, width, height } = proxy.$el.getBoundingClientRect()
       centerPosition = {
         top: top + height / 2,
         left: left + width / 2
@@ -168,8 +178,8 @@ export default createComponent({
 
       model.value = between(
         parseFloat((model.value + offset).toFixed(decimals.value)),
-        props.min,
-        props.max
+        innerMin.value,
+        innerMax.value
       )
 
       updateValue()
@@ -212,7 +222,7 @@ export default createComponent({
         newModel = parseFloat(newModel.toFixed(decimals.value))
       }
 
-      newModel = between(newModel, props.min, props.max)
+      newModel = between(newModel, innerMin.value, innerMax.value)
 
       emit('drag-value', newModel)
 
@@ -240,16 +250,12 @@ export default createComponent({
       return h('input', formAttrs.value)
     }
 
-    onMounted(() => {
-      $el = proxy.$el
-    })
-
     return () => {
       const data = {
         class: classes.value,
         role: 'slider',
-        'aria-valuemin': props.min,
-        'aria-valuemax': props.max,
+        'aria-valuemin': innerMin.value,
+        'aria-valuemax': innerMax.value,
         'aria-valuenow': props.modelValue,
         ...attrs.value,
         ...circularProps.value,
@@ -262,18 +268,18 @@ export default createComponent({
         default: slots.default
       }
 
-      if (editable.value === true) {
-        if (props.name !== void 0) {
-          child.internal = getNameInput
-        }
-
-        return withDirectives(
-          h(QCircularProgress, data, child),
-          directives.value
-        )
+      if (editable.value === true && props.name !== void 0) {
+        child.internal = getNameInput
       }
 
-      return h(QCircularProgress, data, child)
+      return hDir(
+        QCircularProgress,
+        data,
+        child,
+        'knob',
+        editable.value,
+        () => directives.value
+      )
     }
   }
 })

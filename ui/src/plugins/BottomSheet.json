@@ -33,6 +33,7 @@
               "definition": {
                 "classes": {
                   "type": [ "String", "Array", "Object" ],
+                  "tsType": "VueClassProp",
                   "desc": "CSS classes for this action",
                   "examples": [ "my-class" ]
                 },
@@ -60,6 +61,12 @@
                   "type": [ "String", "Number" ],
                   "desc": "Action label",
                   "examples": [ "Facebook" ]
+                },
+
+                "...": {
+                  "type": "Any",
+                  "desc": "Any other custom props",
+                  "__exemption": [ "examples" ]
                 }
               }
             },

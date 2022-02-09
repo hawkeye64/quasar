@@ -254,19 +254,21 @@
               ]
             },
             "badgeStyle": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueStyleProp",
               "desc": "Style definitions to be attributed to the badge",
               "examples": [
                 "background-color: #ff0000",
-                ":content-style=\"{ backgroundColor: '#ff0000' }\""
+                "{ backgroundColor: '#ff0000' }"
               ]
             },
             "badgeClass": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueClassProp",
               "desc": "Class definitions to be attributed to the badge",
               "examples": [
                 "my-special-class",
-                ":content-class=\"{ 'my-special-class': <condition> }\""
+                "{ 'my-special-class': <condition> }"
               ]
             },
 
@@ -275,11 +277,12 @@
               "desc": "Show progress bar to detail when notification will disappear automatically (unless timeout is 0)"
             },
             "progressClass": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueClassProp",
               "desc": "Class definitions to be attributed to the progress bar",
               "examples": [
                 "my-special-class",
-                ":content-class=\"{ 'my-special-class': <condition> }\""
+                "{ 'my-special-class': <condition> }"
               ]
             },
 
@@ -406,11 +409,12 @@
                 "desc": "Show progress bar to detail when notification will disappear automatically (unless timeout is 0)"
               },
               "progressClass": {
-                "type": [ "Array", "String", "Object" ],
+                "type": [ "String", "Array", "Object" ],
+                "tsType": "VueClassProp",
                 "desc": "Class definitions to be attributed to the progress bar",
                 "examples": [
                   "my-special-class",
-                  ":content-class=\"{ 'my-special-class': <condition> }\""
+                  "{ 'my-special-class': <condition> }"
                 ]
               },
 
@@ -566,19 +570,21 @@
               "examples": [ "bottom-right" ]
             },
             "badgeStyle": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueStyleProp",
               "desc": "Style definitions to be attributed to the badge",
               "examples": [
                 "background-color: #ff0000",
-                ":content-style=\"{ backgroundColor: '#ff0000' }\""
+                "{ backgroundColor: '#ff0000' }"
               ]
             },
             "badgeClass": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueClassProp",
               "desc": "Class definitions to be attributed to the badge",
               "examples": [
                 "my-special-class",
-                ":content-class=\"{ 'my-special-class': <condition> }\""
+                "{ 'my-special-class': <condition> }"
               ]
             },
 
@@ -587,11 +593,12 @@
               "desc": "Show progress bar to detail when notification will disappear automatically (unless timeout is 0)"
             },
             "progressClass": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueClassProp",
               "desc": "Class definitions to be attributed to the progress bar",
               "examples": [
                 "my-special-class",
-                ":content-class=\"{ 'my-special-class': <condition> }\""
+                "{ 'my-special-class': <condition> }"
               ]
             },
 
@@ -746,19 +753,21 @@
               "examples": [ "bottom-right" ]
             },
             "badgeStyle": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueStyleProp",
               "desc": "Style definitions to be attributed to the badge",
               "examples": [
                 "background-color: #ff0000",
-                ":content-style=\"{ backgroundColor: '#ff0000' }\""
+                "{ backgroundColor: '#ff0000' }"
               ]
             },
             "badgeClass": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueClassProp",
               "desc": "Class definitions to be attributed to the badge",
               "examples": [
                 "my-special-class",
-                ":content-class=\"{ 'my-special-class': <condition> }\""
+                "{ 'my-special-class': <condition> }"
               ]
             },
 
@@ -767,11 +776,12 @@
               "desc": "Show progress bar to detail when notification will disappear automatically (unless timeout is 0)"
             },
             "progressClass": {
-              "type": [ "Array", "String", "Object" ],
+              "type": [ "String", "Array", "Object" ],
+              "tsType": "VueClassProp",
               "desc": "Class definitions to be attributed to the progress bar",
               "examples": [
                 "my-special-class",
-                ":content-class=\"{ 'my-special-class': <condition> }\""
+                "{ 'my-special-class': <condition> }"
               ]
             },
 

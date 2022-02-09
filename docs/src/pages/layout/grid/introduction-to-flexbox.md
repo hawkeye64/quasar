@@ -73,6 +73,10 @@ Also, if you want to wrap in reverse order, then `reverse-wrap` is available.
 
 ![Flexbox Items Align](https://cdn.quasar.dev/img/flexbox-cross-axis-align.svg)
 
+::: tip
+There is also the convenience `flex-center` CSS class which is equivalent to `items-center` + `justify-center`. Use it along with `flex`, `row` or `column`.
+:::
+
 The next classes **align a flex container's lines** within when there is extra space in the cross-axis, similar to how horizontal-* aligns individual items within the main-axis.
 
 ![Flexbox Content Align](https://cdn.quasar.dev/img/flexbox-content-align.svg)
@@ -240,7 +244,7 @@ Note that there will be a noticeable bump in CSS footprint when enabling it. So 
 .self-<bp>-(start|end|center|baseline|stretch)
 .flex-<bp>-center
 .gutter-<bp>(|-x|-y)-(xs|sm|md|lg|xl)
-.(col|offset)-<bp>(|0..12)
+.(col|offset)-<bp>-(|0..12)
 ```
 
 There are also responsive classes for spacing, both for padding and for margin:

@@ -10,9 +10,17 @@
     "definition": {
       "...props": {
         "type": "Object",
-        "desc": "QAjaxBar component props",
+        "desc": "QAjaxBar component props, EXCEPT for 'hijack-filter'",
         "__exemption": [ "examples" ]
       }
+    }
+  },
+
+  "props": {
+    "isActive": {
+      "type": "Boolean",
+      "desc": "Is LoadingBar active?",
+      "reactive": true
     }
   },
 

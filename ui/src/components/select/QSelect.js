@@ -17,7 +17,7 @@ import { useFormProps, useFormInputNameAttr } from '../../composables/private/us
 import useKeyComposition from '../../composables/private/use-key-composition.js'
 
 import { createComponent } from '../../utils/private/create.js'
-import { isDeepEqual } from '../../utils/private/is.js'
+import { isDeepEqual, isPlainObject } from '../../utils/private/is.js'
 import { stop, prevent, stopAndPrevent } from '../../utils/event.js'
 import { normalizeToInterval } from '../../utils/format.js'
 import { shouldIgnoreKey, isKeyCode } from '../../utils/private/key-composition.js'
@@ -337,7 +337,7 @@ export default createComponent({
           itemProps[ 'aria-selected' ] = itemProps.active === true ? 'true' : 'false'
 
           if ($q.platform.is.desktop === true) {
-            itemProps.onMousemove = () => { setOptionIndex(index) }
+            itemProps.onMousemove = () => { menu.value === true && setOptionIndex(index) }
           }
         }
 
@@ -602,7 +602,7 @@ export default createComponent({
 
       return typeof val === 'function'
         ? val
-        : opt => (Object(opt) === opt && val in opt ? opt[ val ] : opt)
+        : opt => (isPlainObject(opt) === true && val in opt ? opt[ val ] : opt)
     }
 
     function isOptionSelected (opt) {
@@ -610,8 +610,12 @@ export default createComponent({
       return innerOptionsValue.value.find(v => isDeepEqual(v, val)) !== void 0
     }
 
-    function selectInputText () {
-      if (props.useInput === true && targetRef.value !== null) {
+    function selectInputText (e) {
+      if (
+        props.useInput === true
+        && targetRef.value !== null
+        && (e === void 0 || (targetRef.value === e.target && e.target.value === selectedString.value))
+      ) {
         targetRef.value.select()
       }
     }
@@ -644,34 +648,34 @@ export default createComponent({
 
       if (typeof value === 'string' && value.length > 0) {
         const needle = value.toLocaleLowerCase()
+        const findFn = extractFn => {
+          const option = props.options.find(opt => extractFn.value(opt).toLocaleLowerCase() === needle)
 
-        let fn = opt => getOptionValue.value(opt).toLocaleLowerCase() === needle
-        let option = props.options.find(fn)
+          if (option === void 0) {
+            return false
+          }
 
-        if (option !== void 0) {
           if (innerValue.value.indexOf(option) === -1) {
             toggleOption(option)
           }
           else {
             hidePopup()
           }
-        }
-        else {
-          fn = opt => getOptionLabel.value(opt).toLocaleLowerCase() === needle
-          option = props.options.find(fn)
 
-          if (option !== void 0) {
-            if (innerValue.value.indexOf(option) === -1) {
-              toggleOption(option)
-            }
-            else {
-              hidePopup()
-            }
-          }
-          else {
-            filter(value, true)
-          }
+          return true
         }
+        const fillFn = afterFilter => {
+          if (findFn(getOptionValue) === true) {
+            return
+          }
+          if (findFn(getOptionLabel) === true || afterFilter === true) {
+            return
+          }
+
+          filter(value, true, () => fillFn(true))
+        }
+
+        fillFn()
       }
       else {
         state.clearValue(e)
@@ -981,7 +985,7 @@ export default createComponent({
         type: 'search',
         ...comboboxAttrs.value,
         ...state.splitAttrs.attributes.value,
-        id: state.targetUid.value,
+        id: isTarget === true ? state.targetUid.value : void 0,
         maxlength: props.maxlength,
         autocomplete: props.autocomplete,
         'data-autofocus': (fromDialog !== true && props.autofocus === true) || void 0,
@@ -992,7 +996,7 @@ export default createComponent({
 
       if (fromDialog !== true && hasDialog === true) {
         if (Array.isArray(data.class) === true) {
-          data.class[ 0 ] += ' no-pointer-events'
+          data.class = [ ...data.class, 'no-pointer-events' ]
         }
         else {
           data.class += ' no-pointer-events'
@@ -1050,7 +1054,7 @@ export default createComponent({
       }
     }
 
-    function filter (val, keepClosed) {
+    function filter (val, keepClosed, afterUpdateFn) {
       if (props.onFilter === void 0 || (keepClosed !== true && state.focused.value !== true)) {
         return
       }
@@ -1108,6 +1112,7 @@ export default createComponent({
               }
 
               typeof afterFn === 'function' && nextTick(() => { afterFn(proxy) })
+              typeof afterUpdateFn === 'function' && nextTick(() => { afterUpdateFn(proxy) })
             })
           }
         },
@@ -1380,11 +1385,12 @@ export default createComponent({
     Object.assign(proxy, {
       showPopup, hidePopup,
       removeAtIndex, add, toggleOption,
+      getOptionIndex: () => optionIndex.value,
       setOptionIndex, moveOptionSelection,
       filter, updateMenuPosition, updateInputValue,
       isOptionSelected,
       getEmittingOptionValue,
-      isOptionDisabled: (...args) => isOptionDisabled.value.apply(null, args),
+      isOptionDisabled: (...args) => isOptionDisabled.value.apply(null, args) === true,
       getOptionValue: (...args) => getOptionValue.value.apply(null, args),
       getOptionLabel: (...args) => getOptionLabel.value.apply(null, args)
     })
@@ -1457,13 +1463,13 @@ export default createComponent({
           child.push(getInput(fromDialog, isTarget))
         }
         // there can be only one (when dialog is opened the control in dialog should be target)
-        else if (state.editable.value === true && isTarget === true) {
+        else if (state.editable.value === true) {
           child.push(
             h('div', {
-              ref: targetRef,
+              ref: isTarget === true ? targetRef : void 0,
               key: 'd_t',
-              class: 'no-outline',
-              id: state.targetUid.value,
+              class: 'q-select__focus-target',
+              id: isTarget === true ? state.targetUid.value : void 0,
               ...comboboxAttrs.value,
               onKeydown: onTargetKeydown,
               onKeyup: onTargetKeyup,
@@ -1471,10 +1477,10 @@ export default createComponent({
             })
           )
 
-          if (typeof props.autocomplete === 'string' && props.autocomplete.length > 0) {
+          if (isTarget === true && typeof props.autocomplete === 'string' && props.autocomplete.length > 0) {
             child.push(
               h('input', {
-                class: 'q-select__autocomplete-input no-outline',
+                class: 'q-select__autocomplete-input',
                 autocomplete: props.autocomplete,
                 onKeyup: onTargetAutocomplete
               })

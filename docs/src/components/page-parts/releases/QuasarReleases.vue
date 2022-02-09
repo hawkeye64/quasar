@@ -23,6 +23,11 @@ import PackageReleases from './PackageReleases'
 
 const { extractDate } = date
 
+const versionRE = {
+  quasar: /^2./,
+  '@quasar/app': /^3./
+}
+
 export default {
   name: 'QuasarReleases',
 
@@ -72,10 +77,18 @@ export default {
             continue
           }
 
-          const [ packageName, version ] = release.name.split('-v')
+          const [ packageName, version ] = release.name.split(' ')[ 0 ].split('-v')
+
+          if (packagePrefixes.includes(packageName) === false) {
+            continue
+          }
 
           if (!version) {
             stopQuery = true
+            continue
+          }
+
+          if (versionRE[ packageName ] !== void 0 && versionRE[ packageName ].test(version) === false) {
             continue
           }
 

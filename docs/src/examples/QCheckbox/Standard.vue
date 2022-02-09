@@ -1,11 +1,6 @@
 <template>
   <div class="q-pa-md">
-    <div class="q-gutter-sm">
-      <q-checkbox v-model="val" />
-    </div>
-
-    <div class="q-px-sm">
-    </div>
+    <q-checkbox v-model="val" />
   </div>
 </template>
 

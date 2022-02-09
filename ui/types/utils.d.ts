@@ -1,3 +1,6 @@
+// Error on "quasar" import shown in IDE is normal, as we only have Components/Directives/Plugins types after the build step
+// The import will work correctly at runtime
+import { QUploader } from "quasar";
 import {
   ComponentOptionsMixin,
   ComponentPropsOptions,
@@ -16,6 +19,8 @@ export * from './utils/dom';
 export * from './utils/event';
 export * from './utils/format';
 export * from './utils/scroll';
+
+import { VueStyleObjectProp } from "./api/vue-prop-types";
 
 interface ExportFileOpts {
   mimeType?: string;
@@ -59,7 +64,7 @@ interface MorphOptions {
   delay?: number;
   fill?: string;
 
-  style?: string | Partial<CSSStyleDeclaration>;
+  style?: string | VueStyleObjectProp;
   classes?: string;
 
   resize?: boolean;
@@ -135,4 +140,4 @@ export function createUploaderComponent<
   Emits extends EmitsOptions = []
 >(
   options: CreateUploaderComponentOptions<Props, Emits>
-): DefineComponent<Props, {}, {}, {}, {}, {}, {}, EmitsOptions>;
+): QUploader & DefineComponent<Props, {}, {}, {}, {}, {}, {}, Emits>;

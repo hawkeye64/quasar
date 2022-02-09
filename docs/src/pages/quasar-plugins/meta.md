@@ -17,7 +17,11 @@ Take full advantage of this feature by using it with **Quasar CLI**, especially 
 <doc-installation plugins="Meta" />
 
 ## Usage
-What the Meta plugin does is that it enables the use of a special property in your Vue components called `meta`. Take a look at the example below, with almost all of its features:
+What the Meta plugin does is that it enables the use of a special property in your Vue components called `meta`. Take a look at the example below, with almost all of its features.
+
+::: warning Important!
+Make sure not to duplicate content that already exists in `/src/index.template.html`. If you want to use the Meta plugin, the recommended way is to remove the same tags from the html template. But on use-cases where you know a tag will never change and you always want it rendered, then it's better to have it only on the html template instead.
+:::
 
 ### Composition API
 
@@ -175,6 +179,40 @@ Metas are computed from .vue files in the order their vue components are activat
 
 When a component that uses Meta plugin gets rendered or destroyed, it is added/removed to/from the chain and metas are updated accordingly.
 
+### Handling HTML attributes
+When you need to set a Boolean HTML attribute in `meta`, `link` or `script` sections, set its value to Boolean `true`.
+
+```js
+script: {
+  myScript: {
+    src: 'https://...',
+    defer: true
+  }
+}
+// will output:
+// <script src="https://..."
+//         defer
+//         data-qmeta="myScript">
+```
+
+If you have an attribute and you want to set it to the actual value of "true", then use String form. More details below:
+
+```js
+someattribute: 'true'
+// will output: someattribute="true"
+
+someattribute: true
+// will output: someattribute
+
+someattribute: void 0
+// will NOT output the attribute
+// (useful when you set it upstream
+// and want to remove it downstream)
+
+someattribute: ''
+// will output: someattribute=""
+```
+
 ### Non-reactive
 
 Notice that all properties (except for title and titleTemplate) are Objects; you can override meta props defined in previous Vue components in the chain by using the same keys again. Example:
@@ -199,10 +237,6 @@ setup () {
   })
 }
 ```
-
-::: warning
-Just make sure not to duplicate content that already exists in `/src/index.template.html`. If you want to use the Meta plugin, the recommended way is to remove the same tags from the html template. But on use-cases where you know a tag will never change and you always want it rendered, then it's better to have it only on the html template instead.
-:::
 
 ### Reactive
 
@@ -239,3 +273,7 @@ export default {
 
 ## Testing Meta
 Before you deploy, you really should make sure that your work on the meta tags is compliant. Although you could just copy and paste your link into a Discord chat, a Facebook post or a Tweet, we recommend verifying with [https://metatags.io/](https://metatags.io/).
+
+::: warning Important!
+**This test will only work for SSR builds** because SSR directly supplies the rendered HTML when accessing the webserver (as opposed to SPA or PWA which supplies an empty page then loads the code that renders the page on client's browser). Services like above (metatags.io) expect the page to be already rendered when fetching it (it does not run the JS to render it themselves).
+:::

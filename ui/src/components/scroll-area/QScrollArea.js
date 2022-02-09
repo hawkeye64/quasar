@@ -1,4 +1,4 @@
-import { h, ref, computed, withDirectives, onBeforeUnmount, getCurrentInstance } from 'vue'
+import { h, ref, computed, withDirectives, onActivated, onDeactivated, onBeforeUnmount, getCurrentInstance } from 'vue'
 
 import useDark, { useDarkProps } from '../../composables/private/use-dark.js'
 
@@ -108,6 +108,9 @@ export default createComponent({
         && panning.value === false
       ) || scroll.vertical.size.value <= container.vertical.value + 1
     )
+    scroll.vertical.thumbStart = computed(() =>
+      scroll.vertical.percentage.value * (container.vertical.value - scroll.vertical.thumbSize.value)
+    )
     scroll.vertical.thumbSize = computed(() =>
       Math.round(
         between(
@@ -118,13 +121,11 @@ export default createComponent({
       )
     )
     scroll.vertical.style = computed(() => {
-      const thumbSize = scroll.vertical.thumbSize.value
-      const pos = scroll.vertical.percentage.value * (container.vertical.value - thumbSize)
       return {
         ...props.thumbStyle,
         ...props.verticalThumbStyle,
-        top: `${ pos }px`,
-        height: `${ thumbSize }px`
+        top: `${ scroll.vertical.thumbStart.value }px`,
+        height: `${ scroll.vertical.thumbSize.value }px`
       }
     })
     scroll.vertical.thumbClass = computed(() =>
@@ -149,6 +150,9 @@ export default createComponent({
         && panning.value === false
       ) || scroll.horizontal.size.value <= container.horizontal.value + 1
     )
+    scroll.horizontal.thumbStart = computed(() =>
+      scroll.horizontal.percentage.value * (container.horizontal.value - scroll.horizontal.thumbSize.value)
+    )
     scroll.horizontal.thumbSize = computed(() =>
       Math.round(
         between(
@@ -159,13 +163,11 @@ export default createComponent({
       )
     )
     scroll.horizontal.style = computed(() => {
-      const thumbSize = scroll.horizontal.thumbSize.value
-      const pos = scroll.horizontal.percentage.value * (container.horizontal.value - thumbSize)
       return {
         ...props.thumbStyle,
         ...props.horizontalThumbStyle,
-        left: `${ pos }px`,
-        width: `${ thumbSize }px`
+        left: `${ scroll.horizontal.thumbStart.value }px`,
+        width: `${ scroll.horizontal.thumbSize.value }px`
       }
     })
     scroll.horizontal.thumbClass = computed(() =>
@@ -311,8 +313,11 @@ export default createComponent({
       const data = scroll[ axis ]
 
       if (data.thumbHidden.value !== true) {
-        const pos = evt[ dirProps[ axis ].offset ] - data.thumbSize.value / 2
-        setScroll(pos / container[ axis ].value * data.size.value, axis)
+        const offset = evt[ dirProps[ axis ].offset ]
+        if (offset < data.thumbStart.value || offset > data.thumbStart.value + data.thumbSize.value) {
+          const pos = offset - data.thumbSize.value / 2
+          setScroll(pos / container[ axis ].value * data.size.value, axis)
+        }
 
         // activate thumb pan
         if (data.ref.value !== null) {
@@ -372,6 +377,26 @@ export default createComponent({
           percentage * (scroll[ axis ].size.value - container[ axis ].value),
           duration
         )
+      }
+    })
+
+    let scrollPosition = null
+
+    onDeactivated(() => {
+      scrollPosition = {
+        top: scroll.vertical.position.value,
+        left: scroll.horizontal.position.value
+      }
+    })
+
+    onActivated(() => {
+      if (scrollPosition === null) { return }
+
+      const scrollTarget = targetRef.value
+
+      if (scrollTarget !== null) {
+        setHorizontalScrollPosition(scrollTarget, scrollPosition.left)
+        setVerticalScrollPosition(scrollTarget, scrollPosition.top)
       }
     })
 
