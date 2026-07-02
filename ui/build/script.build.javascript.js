@@ -1,371 +1,386 @@
-process.env.BABEL_ENV = 'production'
+import fse from 'fs-extra'
+import { rolldown } from 'rolldown'
 
-const path = require('path')
-const fs = require('fs')
-const rollup = require('rollup')
-const uglify = require('uglify-es')
+import {
+  BUILD_TARGETS,
+  banner,
+  logError,
+  resolveToRoot,
+  version,
+  writeFile
+} from './build.utils.js'
 
-const { nodeResolve } = require('@rollup/plugin-node-resolve')
-// const typescript = require('rollup-plugin-typescript2')
-const replace = require('@rollup/plugin-replace')
-
-const { version } = require('../package.json')
-
-const buildConf = require('./build.conf')
-const buildUtils = require('./build.utils')
-const prepareDiff = require('./prepare-diff')
-
-const rootFolder = path.resolve(__dirname, '..')
-
-function resolve (_path) {
-  return path.resolve(rootFolder, _path)
-}
-
-// const tsConfig = {
-//   tsconfigOverride: {
-//     compilerOptions: {
-//       sourceMap: true
-//     },
-//     include: ['./src/**/*.ts']
-//   }
-// }
-
-const rollupPluginsModern = [
-  // typescript(tsConfig),
-  nodeResolve()
-]
-
-const uglifyJsOptions = {
-  compress: {
-    // turn off flags with small gains to speed up minification
-    arrows: false,
-    collapse_vars: false,
-    comparisons: false,
-    computed_props: false,
-    hoist_funs: false,
-    hoist_props: false,
-    hoist_vars: false,
-    inline: false,
-    loops: false,
-    negate_iife: false,
-    properties: false,
-    reduce_funcs: false,
-    reduce_vars: false,
-    switches: false,
-    toplevel: false,
-    typeofs: false,
-
-    // a few flags with noticable gains/speed ratio
-    booleans: true,
-    if_return: true,
-    sequences: true,
-    unused: true,
-
-    // required features to drop conditional branches
-    conditionals: true,
-    dead_code: true,
-    evaluate: true
-  },
-  mangle: {
-    safari10: true
-  }
-}
+const importRE = /import\s*\{([\w,\s]+)\}\s*from\s*(['"])([a-zA-Z0-9-@/]+)\2;?/g
+const umdTempFilesList = []
+const umdTargetAssetRE = /\.js$/
+process.on('exit', () => {
+  umdTempFilesList.forEach(file => {
+    fse.removeSync(file)
+  })
+})
 
 const builds = [
-  { // Generic prod entry (client-side only; NOT used by Quasar CLI)
-    rollup: {
-      input: {
-        input: resolve('src/index.all.js')
-      },
-      output: {
-        file: resolve('dist/quasar.esm.js'),
-        format: 'es'
+  // Client entry-point used by @quasar/vite-plugin for DEV only.
+  // Also used as entry-point in package.json.
+  {
+    inputConfig: {
+      platform: 'browser',
+      input: resolveToRoot('src/index.dev.js'),
+      external: ['vue'],
+      transform: {
+        target: BUILD_TARGETS.ROLLDOWN_BROWSER,
+        define: {
+          // Any change to the flags should be reflected
+          // to src/flags.dev.js as well.
+          __QUASAR_VERSION__: `'${version}'`,
+          __QUASAR_SSR_SERVER__: 'false'
+        }
       }
     },
-    build: {
-      minified: true,
-      replace: {
-        __QUASAR_VERSION__: `'${ version }'`,
-        __QUASAR_SSR__: false,
-        __QUASAR_SSR_SERVER__: false,
-        __QUASAR_SSR_CLIENT__: false,
-        __QUASAR_SSR_PWA__: false
+    outputList: [
+      {
+        outputConfig: {
+          format: 'esm'
+        },
+        file: resolveToRoot('dist/quasar.client.js'),
+        writeArgs: { summary: true }
       }
-    }
+    ]
   },
-  { // SSR server prod entry
-    rollup: {
-      input: {
-        input: resolve('src/index.all.js')
-      },
-      output: {
-        file: resolve('dist/quasar.cjs.js'),
-        format: 'cjs'
+
+  // SSR server prod entry-point
+  //   -> ESM - used by @quasar/app-vite
+  //.  -> CJS - used by @quasar/app-webpack
+  // (no flags; not required to replace them)
+  {
+    inputConfig: {
+      platform: 'node',
+      input: resolveToRoot('src/index.ssr.js'),
+      external: ['vue'],
+      transform: {
+        target: BUILD_TARGETS.ROLLDOWN_NODE,
+        define: {
+          __QUASAR_VERSION__: `'${version}'`,
+          __QUASAR_SSR__: 'true',
+          __QUASAR_SSR_SERVER__: 'true',
+          __QUASAR_SSR_CLIENT__: 'false',
+          __QUASAR_SSR_PWA__: 'false'
+        }
       }
     },
-    build: {
-      minified: true,
-      replace: {
-        __QUASAR_VERSION__: `'${ version }'`,
-        __QUASAR_SSR__: true,
-        __QUASAR_SSR_SERVER__: true,
-        __QUASAR_SSR_CLIENT__: false,
-        __QUASAR_SSR_PWA__: false
+    outputList: [
+      {
+        outputConfig: {
+          format: 'esm',
+          minify: true
+        },
+        file: resolveToRoot('dist/quasar.server.prod.js'),
+        writeArgs: { summary: true }
+      },
+      {
+        outputConfig: {
+          format: 'cjs',
+          minify: true
+        },
+        file: resolveToRoot('dist/quasar.server.prod.cjs'),
+        writeArgs: { summary: true }
       }
-    }
+    ]
   },
-  { // UMD entry
-    rollup: {
-      input: {
-        input: resolve('src/index.umd.js')
-      },
-      output: {
-        file: resolve('dist/quasar.umd.js'),
-        format: 'umd'
+
+  // UMD entry
+  {
+    inputConfig: {
+      platform: 'browser',
+      input: resolveToRoot('src/index.umd.js'),
+      external: ['vue'],
+      transform: {
+        target: BUILD_TARGETS.ROLLDOWN_BROWSER,
+        define: {
+          __QUASAR_VERSION__: `'${version}'`,
+          __QUASAR_SSR__: 'false',
+          __QUASAR_SSR_SERVER__: 'false',
+          __QUASAR_SSR_CLIENT__: 'false',
+          __QUASAR_SSR_PWA__: 'false'
+        }
       }
     },
-    build: {
-      unminified: true,
-      minified: true,
-      replace: {
-        __QUASAR_VERSION__: `'${ version }'`,
-        __QUASAR_SSR__: false,
-        __QUASAR_SSR_SERVER__: false,
-        __QUASAR_SSR_CLIENT__: false,
-        __QUASAR_SSR_PWA__: false
+    outputList: [
+      {
+        outputConfig: {
+          format: 'iife',
+          globals: { vue: 'window.Vue' }
+        },
+        file: resolveToRoot('dist/quasar.umd.js'),
+        writeArgs: { summary: true }
+      },
+      {
+        outputConfig: {
+          format: 'iife',
+          globals: { vue: 'window.Vue' },
+          minify: true
+        },
+        file: resolveToRoot('dist/quasar.umd.prod.js'),
+        writeArgs: { summary: true, gzip: true }
       }
-    }
+    ]
   }
 ]
 
-function addUmdAssets (builds, type, injectName) {
-  const files = fs.readdirSync(resolve(type))
-
-  files
-    .filter(file => file.endsWith('.js'))
-    .forEach(file => {
-      const name = file
-        .substr(0, file.length - 3)
-        .replace(/-([a-zA-Z])/g, g => g[ 1 ].toUpperCase())
-
-      builds.push({
-        rollup: {
-          input: {
-            input: resolve(`${ type }/${ file }`)
-          },
-          output: {
-            file: addExtension(resolve(`dist/${ type }/${ file }`), 'umd'),
-            format: 'umd',
-            name: `Quasar.${ injectName }.${ name }`
-          }
-        },
-        build: {
-          minified: true
-        }
-      })
-    })
-}
-
-function addSsrDirectives (builds) {
-  const files = fs.readdirSync(resolve('src/directives'))
-  const acc = []
-
-  files
-    .filter(file => file.endsWith('.js') && file.endsWith('.ssr.js') === false)
-    .forEach(file => {
-      const name = file.substr(0, file.length - 3)
-      const ssrFile = resolve(`src/directives/${ file.replace('.js', '.ssr.js') }`)
-
-      if (fs.existsSync(ssrFile)) {
-        acc.push(`  '${ buildUtils.kebabCase(name) }': require('./${ name }.js')`)
-
-        builds.push({
-          rollup: {
-            input: {
-              input: ssrFile
-            },
-            output: {
-              file: resolve(`dist/ssr-directives/${ name }.js`),
-              format: 'cjs',
-              exports: 'auto',
-              name: false
-            }
-          },
-          build: {
-            unminified: true
-          }
+async function compile({ inputConfig, outputList }) {
+  try {
+    const bundle = await rolldown(inputConfig)
+    await Promise.all(
+      outputList.map(({ outputConfig, file, writeArgs = {} }) =>
+        bundle.generate({ ...outputConfig, banner }).then(result => {
+          writeFile(file, result.output[0].code, writeArgs)
         })
-      }
-      else {
-        acc.push(`  '${ buildUtils.kebabCase(name) }': noopTransform`)
-      }
-    })
+      )
+    )
 
-  buildUtils.writeFile(
-    resolve('dist/ssr-directives/index.js'),
-    'const noopTransform = () => ({ props: [] })\nmodule.exports = {\n' + acc.join(',\n') + '\n}\n'
+    await bundle.close()
+  } catch (err) {
+    logError(`Rolldown build failed for ${inputConfig.input}`)
+    console.error(err)
+    process.exit(1)
+  }
+}
+
+async function convertExternalImports(content) {
+  const importList = {}
+  const packageList = new Set()
+  const tokenMap = {}
+  let tokenIndex = 0
+
+  const tokenContent = content.replace(
+    importRE,
+    (_, importIdMatch, __, packageMatch) => {
+      const token = `____token_${tokenIndex++}____`
+      packageList.add(packageMatch)
+      tokenMap[token] = { packageMatch, importIdMatch }
+      return token
+    }
   )
-}
 
-function build (builds) {
-  return Promise
-    .all(builds.map(genConfig).map(buildEntry))
-    .catch(buildUtils.logError)
-}
-
-function genConfig (opts) {
-  opts.rollup.input.plugins = [ ...rollupPluginsModern ]
-
-  if (opts.build.replace !== void 0) {
-    opts.rollup.input.plugins.unshift(
-      replace({
-        preventAssignment: true,
-        values: opts.build.replace
+  await Promise.all(
+    [...packageList].map(packageMatch =>
+      import(packageMatch).then(module => {
+        importList[packageMatch] = module
       })
+    )
+  )
+
+  return tokenContent.replaceAll(/____token_\d+____/g, token => {
+    const { packageMatch, importIdMatch } = tokenMap[token]
+    return importIdMatch
+      .match(/[^\s,]+/g)
+      .map(id => `const ${id} = '${importList[packageMatch][id]}'\n`)
+      .join('')
+  })
+}
+
+const umdDashRE = /-([a-zA-Z])/g
+
+async function getUmdFiles(type) {
+  const dirList = await fse.readdir(resolveToRoot(type))
+
+  if (type === 'icon-set') {
+    const rawLegacyFiles = await fse.readdir(
+      resolveToRoot('build/legacy-assets/icon-set')
+    )
+    const legacyFiles = rawLegacyFiles.filter(file =>
+      umdTargetAssetRE.test(file)
+    )
+
+    const legacyIconSetFiles = new Set(
+      legacyFiles.map(
+        // replacing .umd.prod.js with .js
+        file => `${file.slice(0, -12)}.js`
+      )
+    )
+
+    return {
+      targetFiles: dirList.filter(
+        file => umdTargetAssetRE.test(file) && !legacyIconSetFiles.has(file)
+      ),
+      legacyFiles
+    }
+  }
+
+  if (type === 'lang') {
+    return {
+      targetFiles: dirList.filter(file => umdTargetAssetRE.test(file)),
+      legacyFiles: []
+    }
+  }
+
+  throw new Error(`Unsupported UMD asset type: ${type}`)
+}
+
+async function addUmdAssets(buildList, type, injectName, convertImports) {
+  const { targetFiles, legacyFiles } = await getUmdFiles(type)
+
+  for (const file of legacyFiles) {
+    const content = await fse.readFile(
+      resolveToRoot(`build/legacy-assets/${type}/${file}`),
+      'utf8'
+    )
+
+    await fse.writeFile(
+      resolveToRoot(`dist/${type}/${file}`),
+      banner + content,
+      'utf8'
     )
   }
 
-  opts.rollup.input.external = opts.rollup.input.external || []
-  opts.rollup.input.external.push('vue', '@vue/compiler-dom')
+  for (const file of targetFiles) {
+    const name = file
+      .slice(0, -3)
+      .replaceAll(umdDashRE, g => g[1].toUpperCase())
 
-  opts.rollup.output.banner = buildConf.banner
+    const inputCode = await fse.readFile(
+      resolveToRoot(`${type}/${file}`),
+      'utf8'
+    )
+    const tempFile = resolveToRoot(`dist/${type}/temp.${file}`)
+    umdTempFilesList.push(tempFile)
 
-  if (opts.rollup.output.name !== false) {
-    opts.rollup.output.name = opts.rollup.output.name || 'Quasar'
+    await fse.writeFile(
+      tempFile,
+      (convertImports === true
+        ? await convertExternalImports(inputCode)
+        : inputCode
+      ).replace('export default ', `window.Quasar.${injectName}.${name} = `),
+      'utf8'
+    )
+
+    buildList.push({
+      inputConfig: {
+        platform: 'browser',
+        input: tempFile,
+        transform: {
+          target: BUILD_TARGETS.ROLLDOWN_BROWSER
+        }
+      },
+      outputList: [
+        {
+          outputConfig: {
+            format: 'iife',
+            minify: true
+          },
+          file: addExtension(resolveToRoot(`dist/${type}/${file}`), 'umd.prod')
+        }
+      ]
+    })
   }
-  else {
-    delete opts.rollup.output.name
-  }
-
-  opts.rollup.output.globals = opts.rollup.output.globals || {}
-  opts.rollup.output.globals.vue = 'Vue'
-
-  return opts
 }
 
-function addExtension (filename, ext = 'prod') {
+function addExtension(filename, ext = 'prod') {
   const insertionPoint = filename.lastIndexOf('.')
-  return `${ filename.slice(0, insertionPoint) }.${ ext }${ filename.slice(insertionPoint) }`
-}
-
-function injectVueRequirement (code) {
-  const index = code.indexOf('Vue = Vue && Vue.hasOwnProperty(\'default\') ? Vue[\'default\'] : Vue')
-
-  if (index === -1) {
-    return code
-  }
-
-  const checkMe = ` if (Vue === void 0) {
-    console.error('[ Quasar ] Vue is required to run. Please add a script tag for it before loading Quasar.')
-    return
-  }
-  `
-
-  return code.substring(0, index - 1)
-    + checkMe
-    + code.substring(index)
-}
-
-function buildEntry (config) {
-  return rollup
-    .rollup(config.rollup.input)
-    .then(bundle => bundle.generate(config.rollup.output))
-    .then(({ output }) => {
-      const code = config.rollup.output.format === 'umd'
-        ? injectVueRequirement(output[ 0 ].code)
-        : output[ 0 ].code
-
-      return config.build.unminified
-        ? buildUtils.writeFile(config.rollup.output.file, code)
-        : code
-    })
-    .then(code => {
-      if (!config.build.minified) {
-        return code
-      }
-
-      const minified = uglify.minify(code, uglifyJsOptions)
-
-      if (minified.error) {
-        return Promise.reject(minified.error)
-      }
-
-      return buildUtils.writeFile(
-        addExtension(config.rollup.output.file),
-        buildConf.banner + minified.code,
-        true
-      )
-    })
-    .catch(err => {
-      console.error(err)
-      process.exit(1)
-    })
+  const suffix = filename.slice(insertionPoint)
+  return `${filename.slice(0, insertionPoint)}.${ext}${suffix}`
 }
 
 const runBuild = {
-  full () {
-    require('./build.lang-index').generate()
-      .then(() => require('./build.svg-icon-sets').generate())
-      .then(() => require('./build.api').generate())
-      .then(data => {
-        require('./build.transforms').generate()
-        require('./build.vetur').generate(data)
-        require('./build.types').generate(data)
-        require('./build.web-types').generate(data)
+  async full() {
+    import('./build.transforms.js').then(({ generate }) =>
+      generate({ compact: true })
+    )
+    import('./build.icon-sets.js').then(({ generate }) => generate())
 
-        addSsrDirectives(builds)
+    Promise.all([
+      addUmdAssets(builds, 'lang', 'Lang'),
+      addUmdAssets(builds, 'icon-set', 'IconSet', true)
+    ]).then(() => {
+      builds.map(compile)
+    })
 
-        addUmdAssets(builds, 'lang', 'lang')
-        addUmdAssets(builds, 'icon-set', 'iconSet')
+    const api = await import('./build.api.js').then(({ generate }) =>
+      generate({ compact: true })
+    )
 
-        build(builds)
-      })
+    import('./build.web-types.js').then(({ generate }) =>
+      generate({ api, compact: true })
+    )
+
+    const quasarLangIndex = await import('./build.lang.js').then(
+      ({ generate }) => generate()
+    )
+    import('./build.types.js').then(({ generate }) =>
+      generate({ api, quasarLangIndex })
+    )
   },
 
-  async types () {
+  async fast() {
+    // does NOT builds types
+    import('./build.transforms.js').then(({ generate }) =>
+      generate({ compact: true })
+    )
+    import('./build.icon-sets.js').then(({ generate }) => generate())
+
+    Promise.all([
+      addUmdAssets(builds, 'lang', 'Lang'),
+      addUmdAssets(builds, 'icon-set', 'IconSet', true)
+    ]).then(() => {
+      builds.map(compile)
+    })
+
+    const api = await import('./build.api.js').then(({ generate }) =>
+      generate({ compact: true })
+    )
+
+    import('./build.web-types.js').then(({ generate }) =>
+      generate({ api, compact: true })
+    )
+
+    await import('./build.lang.js').then(({ generate }) => generate())
+  },
+
+  async types() {
+    const { prepareDiff } = await import('./prepare-diff.js')
     prepareDiff('dist/types/index.d.ts')
 
-    const data = await require('./build.api').generate()
+    const api = await import('./build.api.js').then(({ generate }) =>
+      generate()
+    )
 
-    require('./build.vetur').generate(data)
-    require('./build.web-types').generate(data)
-
-    // 'types' depends on 'lang-index'
-    await require('./build.lang-index').generate()
-    require('./build.types').generate(data)
+    const quasarLangIndex = await import('./build.lang.js').then(
+      ({ generate }) => generate()
+    )
+    import('./build.types.js').then(({ generate }) =>
+      generate({ api, quasarLangIndex })
+    )
   },
 
-  async api () {
+  async api() {
+    const { prepareDiff } = await import('./prepare-diff.js')
     await prepareDiff('dist/api')
-    await require('./build.api').generate()
+    import('./build.api.js').then(({ generate }) => generate())
   },
 
-  async vetur () {
-    await prepareDiff('dist/vetur')
-
-    const data = await require('./build.api').generate()
-    require('./build.vetur').generate(data)
-  },
-
-  async webtypes () {
+  async webtypes() {
+    const { prepareDiff } = await import('./prepare-diff.js')
     await prepareDiff('dist/web-types')
 
-    const data = await require('./build.api').generate()
-    require('./build.web-types').generate(data)
+    const api = await import('./build.api.js').then(({ generate }) =>
+      generate({ compact: true })
+    )
+    import('./build.web-types.js').then(({ generate }) => generate({ api }))
   },
 
-  async transforms () {
+  async transforms() {
+    const { prepareDiff } = await import('./prepare-diff.js')
     await prepareDiff('dist/transforms')
-    require('./build.transforms').generate()
+    import('./build.transforms.js').then(({ generate }) => generate())
   }
 }
 
-module.exports = function (subtype) {
-  if (runBuild[ subtype ] === void 0) {
-    console.log(` Unrecognized subtype specified: "${ subtype }".`)
-    console.log(` Available: ${ Object.keys(runBuild).join(' | ') }\n`)
+export function buildJavascript(subtype) {
+  if (runBuild[subtype] === void 0) {
+    console.log(` Unrecognized subtype specified: "${subtype}".`)
+    console.log(` Available: ${Object.keys(runBuild).join(' | ')}\n`)
     process.exit(1)
   }
 
-  runBuild[ subtype ]()
+  runBuild[subtype]()
 }

@@ -1,15 +1,22 @@
-import { h, onMounted, onBeforeUnmount, getCurrentInstance, nextTick } from 'vue'
+import {
+  getCurrentInstance,
+  h,
+  nextTick,
+  onBeforeUnmount,
+  onMounted
+} from 'vue'
 
-import useCanRender from '../../composables/private/use-can-render.js'
+import useHydration from '../../composables/use-hydration/use-hydration.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { listenOpts, noop } from '../../utils/event.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { listenOpts, noop } from '../../utils/event/event.js'
 
 const hasObserver = typeof ResizeObserver !== 'undefined'
-const resizeProps = hasObserver === true
+const resizeProps = hasObserver
   ? {}
   : {
-      style: 'display:block;position:absolute;top:0;left:0;right:0;bottom:0;height:100%;width:100%;overflow:hidden;pointer-events:none;z-index:-1;',
+      style:
+        'display:block;position:absolute;top:0;left:0;right:0;bottom:0;height:100%;width:100%;overflow:hidden;pointer-events:none;z-index:-1;',
       url: 'about:blank'
     }
 
@@ -18,30 +25,37 @@ export default createComponent({
 
   props: {
     debounce: {
-      type: [ String, Number ],
+      type: [String, Number],
       default: 100
     }
   },
 
-  emits: [ 'resize' ],
+  emits: ['resize'],
 
-  setup (props, { emit }) {
-    if (__QUASAR_SSR_SERVER__) { return noop }
+  setup(props, { emit }) {
+    if (__QUASAR_SSR_SERVER__) return noop
 
-    let timer = null, targetEl, size = { width: -1, height: -1 }
+    let timer = null,
+      targetEl,
+      size = { width: -1, height: -1 }
 
-    function trigger (immediately) {
-      if (immediately === true || props.debounce === 0 || props.debounce === '0') {
+    function trigger(immediately) {
+      if (
+        immediately === true ||
+        props.debounce === 0 ||
+        props.debounce === '0'
+      ) {
         emitEvent()
-      }
-      else if (timer === null) {
+      } else if (timer === null) {
         timer = setTimeout(emitEvent, props.debounce)
       }
     }
 
-    function emitEvent () {
-      clearTimeout(timer)
-      timer = null
+    function emitEvent() {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
 
       if (targetEl) {
         const { offsetWidth: width, offsetHeight: height } = targetEl
@@ -53,34 +67,41 @@ export default createComponent({
       }
     }
 
-    const vm = getCurrentInstance()
+    const { proxy } = getCurrentInstance()
 
-    // expose public methods
-    Object.assign(vm.proxy, { trigger })
+    // expose public method
+    proxy.trigger = trigger
 
-    if (hasObserver === true) {
+    if (hasObserver) {
       let observer
 
-      onMounted(() => {
-        nextTick(() => {
-          targetEl = vm.proxy.$el.parentNode
+      // initialize as soon as possible
+      const init = stop => {
+        targetEl = proxy.$el.parentNode
 
-          if (targetEl) {
-            observer = new ResizeObserver(trigger)
-            observer.observe(targetEl)
-            emitEvent()
-          }
-        })
+        if (targetEl) {
+          observer = new ResizeObserver(trigger)
+          observer.observe(targetEl)
+          emitEvent()
+        } else if (!stop) {
+          nextTick(() => {
+            init(true)
+          })
+        }
+      }
+
+      onMounted(() => {
+        init()
       })
 
       onBeforeUnmount(() => {
-        clearTimeout(timer)
+        if (timer !== null) clearTimeout(timer)
 
         if (observer !== void 0) {
           if (observer.disconnect !== void 0) {
             observer.disconnect()
-          }
-          else if (targetEl) { // FF for Android
+          } else if (targetEl) {
+            // FF for Android
             observer.unobserve(targetEl)
           }
         }
@@ -88,53 +109,57 @@ export default createComponent({
 
       return noop
     }
-    else { // no observer, so fallback to old iframe method
-      const canRender = useCanRender()
 
-      let curDocView
+    // no observer, so fallback to old iframe method
+    const { isHydrated } = useHydration()
 
-      function cleanup () {
+    let curDocView
+
+    const cleanup = () => {
+      if (timer !== null) {
         clearTimeout(timer)
-
-        if (curDocView !== void 0) {
-          // iOS is fuzzy, need to check it first
-          if (curDocView.removeEventListener !== void 0) {
-            curDocView.removeEventListener('resize', trigger, listenOpts.passive)
-          }
-          curDocView = void 0
-        }
+        timer = null
       }
 
-      function onObjLoad () {
-        cleanup()
-
-        if (targetEl && targetEl.contentDocument) {
-          curDocView = targetEl.contentDocument.defaultView
-          curDocView.addEventListener('resize', trigger, listenOpts.passive)
-          emitEvent()
+      if (curDocView !== void 0) {
+        // iOS is fuzzy, need to check it first
+        if (curDocView.removeEventListener !== void 0) {
+          curDocView.removeEventListener('resize', trigger, listenOpts.passive)
         }
+        curDocView = void 0
       }
+    }
 
-      onMounted(() => {
-        nextTick(() => {
-          targetEl = vm.proxy.$el
-          targetEl && onObjLoad()
-        })
+    const onObjLoad = () => {
+      cleanup()
+
+      if (targetEl?.contentDocument) {
+        curDocView = targetEl.contentDocument.defaultView
+        curDocView.addEventListener('resize', trigger, listenOpts.passive)
+        emitEvent()
+      }
+    }
+
+    onMounted(() => {
+      nextTick(() => {
+        targetEl = proxy.$el
+        if (targetEl) onObjLoad()
       })
+    })
 
-      onBeforeUnmount(cleanup)
+    onBeforeUnmount(cleanup)
 
-      return () => {
-        if (canRender.value === true) {
-          return h('object', {
-            style: resizeProps.style,
-            tabindex: -1, // fix for Firefox
-            type: 'text/html',
-            data: resizeProps.url,
-            'aria-hidden': 'true',
-            onLoad: onObjLoad
-          })
-        }
+    return () => {
+      if (isHydrated.value) {
+        return h('object', {
+          class: 'q--avoid-card-border',
+          style: resizeProps.style,
+          tabindex: -1, // fix for Firefox
+          type: 'text/html',
+          data: resizeProps.url,
+          'aria-hidden': 'true',
+          onLoad: onObjLoad
+        })
       }
     }
   }

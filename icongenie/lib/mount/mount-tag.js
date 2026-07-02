@@ -1,14 +1,12 @@
-const { log } = require('../utils/logger')
+import { log } from '../utils/logger.js'
 
-module.exports.mountTag = function mountTag (files) {
+export function mountTag(files) {
   const tagFiles = files.filter(file => file.tag)
 
-  if (tagFiles.length === 0) {
-    return
-  }
+  if (tagFiles.length === 0) return
 
   console.log()
-  log(`You will need the following tags in your /src/index.template.html:\n`)
+  log(`You will need the following tags in your /index.html:\n`)
   tagFiles.forEach(file => {
     console.log(file.tag)
   })

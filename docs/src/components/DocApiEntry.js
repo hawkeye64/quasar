@@ -1,170 +1,190 @@
-import { h } from 'vue'
-import { QBadge } from 'quasar'
+import { h, ref } from 'vue'
+import { Notify, QBadge, QBtn, QBtnToggle } from 'quasar'
+import { copyToClipboard } from '@/assets/page-utils.js'
+import { mdiMinusBox, mdiPlusBox } from '@quasar/extras/mdi-v7'
 
-import './DocApiEntry.sass'
+function copyPropName(propName) {
+  copyToClipboard(propName)
 
-function getEventParams (event) {
-  const params = event.params === void 0 || event.params.length === 0
-    ? ''
-    : Object.keys(event.params).join(', ')
-
-  return ' -> function(' + params + ')'
+  Notify.create({
+    message: `"${propName}" has been copied to clipboard.`,
+    position: 'top',
+    actions: [{ icon: 'cancel', color: 'white', dense: true, round: true }],
+    timeout: 2000
+  })
 }
 
-function getMethodParams (method, noRequired) {
-  if (!method.params || method.params.length === 0) {
+function getEventParams(event) {
+  const params =
+    event.params === void 0 ||
+    event.params === null ||
+    event.params.length === 0
+      ? ''
+      : Object.keys(event.params).join(', ')
+
+  return `(${params}) => void`
+}
+
+function getMethodParams(method, noRequired) {
+  if (
+    method.params === void 0 ||
+    method.params === null ||
+    method.params.length === 0
+  ) {
     return ' ()'
   }
 
-  if (noRequired === true) {
+  if (noRequired) {
     return ` (${Object.keys(method.params).join(', ')})`
   }
 
   const params = Object.keys(method.params)
-  const optionalIndex = params.findIndex(param => method.params[ param ].required !== true)
+  const optionalIndex = params.findIndex(
+    param => method.params[param].required !== true
+  )
 
-  const str = optionalIndex !== -1
-    ? params.slice(0, optionalIndex).join(', ') +
-      (optionalIndex < params.length
-        ? '[' + (optionalIndex > 0 ? ', ' : '') + params.slice(optionalIndex).join(', ') + ']'
-        : '')
-    : params.join(', ')
+  const str =
+    optionalIndex !== -1
+      ? params.slice(0, optionalIndex).join(', ') +
+        (optionalIndex < params.length
+          ? (optionalIndex > 0 ? ', ' : '') +
+            params.slice(optionalIndex).join('?, ') +
+            '?'
+          : '')
+      : params.join(', ')
 
   return ' (' + str + ')'
 }
 
-function getMethodReturnValue (method) {
-  return ' => ' +
-    (!method.returns
-      ? 'void 0'
-      : method.returns.type
-    )
+function getMethodReturnValue(method) {
+  return (
+    ' => ' +
+    (method.returns === void 0 || method.returns === null
+      ? 'void'
+      : getStringType(method.returns.type))
+  )
 }
 
-function getStringType (type) {
-  return Array.isArray(type)
-    ? type.join(' | ')
-    : type
+function getStringType(type) {
+  return Array.isArray(type) ? type.join(' | ') : type
 }
 
-const NAME_PROP_COLOR = [
-  'orange-8',
-  'accent',
-  'secondary'
-]
+const NAME_PROP_COLOR = ['orange-8', 'brand-primary', 'green-5', 'purple-5']
+const NAME_PROP_COLOR_LEN = NAME_PROP_COLOR.length
 
-function getDiv (col, propName, propValue, slot) {
-  return h('div', { class: `api-row__item col-xs-12 col-sm-${col}` }, [
-    h('div', { class: 'api-row__type' }, propName),
+function getDiv(col, propName, propValue, slot) {
+  return h('div', { class: `doc-api-entry__item col-xs-12 col-sm-${col}` }, [
+    h('div', { class: 'doc-api-entry__type' }, propName),
     propValue !== void 0
-      ? h('div', { class: 'api-row__value' }, propValue)
+      ? h('div', { class: 'doc-api-entry__value' }, propValue)
       : slot
   ])
 }
 
-function getNameDiv (label, level) {
-  return h('div', { class: 'api-row__item col-xs-12 col-sm-12' }, [
-    h('div', { class: 'api-row__value' }, [
-      h(QBadge, {
-        color: NAME_PROP_COLOR[ level ],
-        label,
-        style: 'font-size: 1em; line-height: 1.2em'
-      })
-    ])
-  ])
-}
-
-function getExtendedNameDiv (label, level, type, required, addedIn) {
-  const suffix = `${type ? ` : ${type}` : ''}${required ? ' - required!' : ''}`
-
-  const child = [
-    h(QBadge, {
-      color: NAME_PROP_COLOR[ level ],
-      label,
-      style: 'font-size: 1em; line-height: 1.2em'
-    }),
-    suffix
-  ]
-
-  if (addedIn !== void 0) {
-    child.push(
-      h(QBadge, {
-        class: 'q-ml-sm',
-        color: 'black',
-        textColor: 'white',
-        label: addedIn + '+'
-      })
-    )
-  }
-
-  return h('div', { class: 'api-row__item col-xs-12 col-sm-12' }, [
-    h('div', { class: 'api-row__value' }, child)
-  ])
-}
-
-function getProp (prop, propName, level, onlyChildren) {
-  const type = getStringType(prop.type)
+function getNameDiv(prop, label, level, suffix, prefix) {
   const child = []
 
-  if (propName !== void 0) {
-    child.push(
-      getExtendedNameDiv(propName, level, type, type !== 'Function' && prop.required === true, prop.addedIn)
-    )
-
-    if (prop.reactive === true) {
-      child.push(
-        getDiv(3, 'Reactive', 'yes')
-      )
-    }
+  if (prefix !== void 0) {
+    child.push(h('div', { class: 'doc-api-entry__type q-mr-xs' }, prefix))
   }
 
   child.push(
-    getDiv(12, 'Description', prop.desc)
+    h(QBadge, {
+      class: 'doc-api-entry__pill cursor-pointer',
+      label,
+      color: NAME_PROP_COLOR[level % NAME_PROP_COLOR_LEN],
+      onClick: () => {
+        copyPropName(label)
+      }
+    })
   )
 
-  if (type === 'Function') {
+  const suffixLabel = `${suffix ? ` : ${suffix}` : ''}${prop.required ? ' - required!' : ''}`
+  if (suffixLabel !== '') {
+    child.push(h('div', { class: 'doc-api-entry__type q-ml-xs' }, suffixLabel))
+  }
+
+  if (prop.addedIn !== void 0) {
     child.push(
-      getDiv(12, 'Function form', getMethodParams(prop, true) + getMethodReturnValue(prop))
+      h(QBadge, {
+        class: 'q-ml-sm doc-api-entry__added-in',
+        outline: true,
+        label: prop.addedIn + '+'
+      })
     )
   }
 
-  if (prop.sync === true) {
-    child.push(
-      getDiv(3, 'Note', 'Required to be used with v-model!')
-    )
+  return h(
+    'div',
+    { class: 'doc-api-entry__item col-xs-12 col-sm-12 row items-center' },
+    child
+  )
+}
+
+function getExpandable(openState, desc, isExpandable, key, getDetails) {
+  if (isExpandable) {
+    const expanded = openState.value[key] === true
+    const child = [
+      h('div', { class: 'doc-api-entry__item col-xs-12 col-sm-12' }, [
+        h('div', { class: 'doc-api-entry__type row items-center no-wrap' }, [
+          h('span', 'Description'),
+          h(QBtn, {
+            class: 'doc-api-entry__expand-btn header-btn',
+            flat: true,
+            size: '11px',
+            padding: '1px',
+            icon: expanded ? mdiMinusBox : mdiPlusBox,
+            onClick: () => {
+              openState.value[key] = !expanded
+            }
+          })
+        ]),
+        h('div', { class: 'doc-api-entry__value' }, desc)
+      ])
+    ]
+
+    return expanded ? [...child, ...getDetails()] : child
+  }
+
+  return [getDiv(12, 'Description', desc)]
+}
+
+function getPropDetails(openState, masterKey, prop, level) {
+  const details = []
+
+  if (prop.sync) {
+    details.push(getDiv(3, 'Note', 'Required to be used with v-model!'))
   }
 
   if (prop.default !== void 0) {
-    child.push(
+    details.push(
       getDiv(
         3,
         'Default value',
         void 0,
         h(
           'div',
-          { class: 'api-row--indent api-row__value' },
-          h('div', { class: 'api-row__example' }, '' + prop.default)
+          { class: 'doc-api-entry--indent doc-api-entry__value' },
+          h('div', { class: 'doc-token' }, String(prop.default))
         )
       )
     )
   }
 
-  if (prop.link === true) {
-    child.push(
-      getDiv(6, 'External link', prop.link)
-    )
+  if (prop.link) {
+    details.push(getDiv(6, 'External link', prop.link))
   }
 
   if (prop.values !== void 0) {
-    child.push(
+    details.push(
       getDiv(
         12,
         'Accepted values',
         void 0,
         h(
           'div',
-          { class: 'api-row--indent api-row__value' },
-          prop.values.map(val => h('div', { class: 'api-row__example' }, '' + val))
+          { class: 'doc-api-entry--indent doc-api-entry__value' },
+          prop.values.map(val => h('div', { class: 'doc-token' }, String(val)))
         )
       )
     )
@@ -174,52 +194,54 @@ function getProp (prop, propName, level, onlyChildren) {
     const nodes = []
     for (const propName in prop.definition) {
       nodes.push(
-        getProp(prop.definition[ propName ], propName, 2)
+        getProp(
+          openState,
+          masterKey,
+          prop.definition[propName],
+          propName,
+          level
+        )
       )
     }
 
-    child.push(
+    details.push(
       getDiv(
         12,
         'Props',
         void 0,
-        h('div', { class: 'api-row__subitem' }, nodes)
+        h('div', { class: 'doc-api-entry__subitem' }, nodes)
       )
     )
   }
 
   if (prop.params !== void 0 && prop.params !== null) {
-    const
-      nodes = [],
-      newLevel = (level + 1) % NAME_PROP_COLOR.length
+    const nodes = []
 
     for (const propName in prop.params) {
       nodes.push(
-        getProp(prop.params[ propName ], propName, newLevel)
+        getProp(openState, masterKey, prop.params[propName], propName, level)
       )
     }
 
-    child.push(
+    details.push(
       getDiv(
         12,
         'Params',
         void 0,
-        h('div', { class: 'api-row__subitem' }, nodes)
+        h('div', { class: 'doc-api-entry__subitem' }, nodes)
       )
     )
   }
 
   if (prop.returns !== void 0 && prop.returns !== null) {
-    child.push(
+    details.push(
       getDiv(
         12,
-        `Returns <${getStringType(prop.returns.type)}>`,
+        `Return type: ${getStringType(prop.returns.type)}`,
         void 0,
-        h(
-          'div',
-          { class: 'api-row__subitem' },
-          [getProp(prop.returns, void 0, 0)]
-        )
+        h('div', { class: 'doc-api-entry__subitem' }, [
+          getProp(openState, masterKey, prop.returns, void 0, level)
+        ])
       )
     )
   }
@@ -228,67 +250,111 @@ function getProp (prop, propName, level, onlyChildren) {
     const nodes = []
     for (const propName in prop.scope) {
       nodes.push(
-        getProp(prop.scope[ propName ], propName, 1)
+        getProp(openState, masterKey, prop.scope[propName], propName, level)
       )
     }
 
-    child.push(
+    details.push(
       getDiv(
         12,
         'Scope',
         void 0,
-        h('div', { class: 'api-row__subitem' }, nodes)
+        h('div', { class: 'doc-api-entry__subitem' }, nodes)
       )
     )
   }
 
   if (prop.examples !== void 0) {
-    child.push(
+    details.push(
       getDiv(
         12,
         `Example${prop.examples.length > 1 ? 's' : ''}`,
         void 0,
         h(
           'div',
-          { class: 'api-row--indent api-row__value' },
-          prop.examples.map(example => h('div', { class: 'api-row__example' }, '' + example))
+          { class: 'doc-api-entry--indent doc-api-entry__value' },
+          prop.examples.map(example =>
+            h('div', { class: 'doc-token' }, String(example))
+          )
         )
       )
     )
   }
 
+  return details
+}
+
+function getProp(openState, masterKey, prop, propName, level, onlyChildren) {
+  const configToggle = useConfigToggle(openState)
+  if (
+    configToggle.enabled &&
+    configToggle.type === 'configFile' &&
+    prop.configFileType === null
+  ) {
+    return
+  }
+
+  const rawType = configToggle.enabled
+    ? configToggle.type === 'configFile'
+      ? prop.configFileType || prop.type
+      : prop.type
+    : prop.type
+  const type = getStringType(rawType)
+  const child = []
+
+  if (propName !== void 0) {
+    const suffix =
+      type === 'Function'
+        ? `${getMethodParams(prop, true)}${getMethodReturnValue(prop)}`
+        : type
+
+    child.push(getNameDiv(prop, propName, level, suffix))
+
+    if (prop.reactive) {
+      child.push(getDiv(3, 'Reactive', 'yes'))
+    }
+  }
+
+  const isExpandable =
+    prop.sync === true ||
+    prop.default !== void 0 ||
+    prop.link === true ||
+    prop.values !== void 0 ||
+    prop.definition !== void 0 ||
+    (prop.params !== void 0 && prop.params !== null) ||
+    (prop.returns !== void 0 && prop.returns !== null) ||
+    prop.scope !== void 0 ||
+    prop.examples !== void 0
+
+  const childKey = `${masterKey}|||prop|${prop.type}|${propName}|${level}`
+
+  child.push(
+    ...getExpandable(openState, prop.desc, isExpandable, childKey, () =>
+      getPropDetails(openState, childKey, prop, level + 1)
+    )
+  )
+
   return onlyChildren !== true
-    ? h('div', { class: 'api-row row' }, child)
+    ? h('div', { class: 'doc-api-entry row' }, child)
     : child
 }
 
 const describe = {}
 
-describe.props = props => {
+const describePropsLike = masterKey => (openState, props) => {
   const child = []
 
   for (const propName in props) {
-    child.push(
-      getProp(props[ propName ], propName, 0)
-    )
+    child.push(getProp(openState, masterKey, props[propName], propName, 0))
   }
 
   return child
 }
+describe.props = describePropsLike('props')
+describe.computedProps = describePropsLike('computedProps')
+describe.slots = describePropsLike('slots')
 
-describe.slots = slots => {
-  const child = []
-
-  for (const slot in slots) {
-    child.push(
-      getProp(slots[ slot ], slot, 0)
-    )
-  }
-
-  return child
-}
-
-describe.events = events => {
+describe.events = (openState, events) => {
   const child = []
 
   if (events === void 0) {
@@ -296,33 +362,42 @@ describe.events = events => {
   }
 
   for (const eventName in events) {
-    const event = events[ eventName ]
-    const params = []
-
-    if (event.params !== void 0) {
-      for (const paramName in event.params) {
-        params.push(
-          getProp(event.params[ paramName ], paramName, 1)
-        )
-      }
-    }
-    else {
-      params.push(
-        h('div', { class: 'text-italic q-py-xs q-px-md' }, '*None*')
-      )
-    }
+    const event = events[eventName]
+    const masterKey = `event|${eventName}`
 
     child.push(
-      h('div', { class: 'api-row row' }, [
-        getNameDiv(`@${eventName}${getEventParams(event)}`, 0),
-        event.addedIn !== void 0
-          ? getDiv(12, 'Added in', event.addedIn)
-          : null,
-        getDiv(12, 'Description', event.desc),
-        getDiv(12,
-          'Parameters',
-          void 0,
-          h('div', { class: 'api-row__subitem' }, params)
+      h('div', { class: 'doc-api-entry row' }, [
+        getNameDiv(event, `@${eventName}`, 0, getEventParams(event)),
+
+        ...getExpandable(
+          openState,
+          event.desc,
+          event.params !== void 0 && event.params !== null,
+          masterKey,
+          () => {
+            const params = []
+
+            for (const paramName in event.params) {
+              params.push(
+                getProp(
+                  openState,
+                  masterKey,
+                  event.params[paramName],
+                  paramName,
+                  1
+                )
+              )
+            }
+
+            return [
+              getDiv(
+                12,
+                'Parameters',
+                void 0,
+                h('div', { class: 'doc-api-entry__subitem' }, params)
+              )
+            ]
+          }
         )
       ])
     )
@@ -331,86 +406,112 @@ describe.events = events => {
   return child
 }
 
-describe.methods = methods => {
+describe.methods = (openState, methods) => {
   const child = []
 
   for (const methodName in methods) {
-    const method = methods[ methodName ]
+    const method = methods[methodName]
+    const masterKey = `method|${methodName}`
 
-    const nodes = [
-      getNameDiv(`${methodName}${getMethodParams(method)}${getMethodReturnValue(method)}`, 0),
-      method.addedIn !== void 0
-        ? getDiv(12, 'Added in', method.addedIn)
-        : null,
-      getDiv(12, 'Description', method.desc)
-    ]
+    const alias = method.alias ? `Alias: "${method.alias}"; ` : ''
+    const desc = `${alias}${method.desc}`
 
-    if (method.params !== void 0) {
-      const props = []
-      for (const paramName in method.params) {
-        props.push(
-          getProp(method.params[ paramName ], paramName, 1)
-        )
-      }
-      nodes.push(
-        getDiv(
-          12,
-          'Parameters',
-          void 0,
-          h('div', { class: 'api-row__subitem' }, props)
-        )
+    const methodNode = h('div', { class: 'doc-api-entry row' }, [
+      getNameDiv(
+        method,
+        methodName,
+        0,
+        `${getMethodParams(method)}${getMethodReturnValue(method)}`
+      ),
+
+      ...getExpandable(
+        openState,
+        desc,
+        method.params !== void 0 || method.returns !== void 0,
+        masterKey,
+        () => {
+          const nodes = []
+
+          if (method.params !== void 0 && method.params !== null) {
+            const props = []
+            for (const paramName in method.params) {
+              props.push(
+                getProp(
+                  openState,
+                  masterKey,
+                  method.params[paramName],
+                  paramName,
+                  1
+                )
+              )
+            }
+            nodes.push(
+              getDiv(
+                12,
+                'Parameters',
+                void 0,
+                h('div', { class: 'doc-api-entry__subitem' }, props)
+              )
+            )
+          }
+
+          if (method.returns !== void 0 && method.returns !== null) {
+            nodes.push(
+              getDiv(
+                12,
+                `Return type: ${getStringType(method.returns.type)}`,
+                void 0,
+                h('div', { class: 'doc-api-entry__subitem' }, [
+                  getProp(openState, masterKey, method.returns, void 0, 1)
+                ])
+              )
+            )
+          }
+
+          return nodes
+        }
       )
-    }
-    if (method.returns !== void 0) {
-      nodes.push(
-        getDiv(
-          12,
-          `Returns <${getStringType(method.returns.type)}>`,
-          void 0,
-          h(
-            'div',
-            { class: 'api-row__subitem' },
-            [getProp(method.returns, void 0, 0)]
-          )
-        )
-      )
-    }
+    ])
 
-    child.push(
-      h('div', { class: 'api-row row' }, nodes)
-    )
+    child.push(methodNode)
   }
 
   return child
 }
 
-describe.value = value => {
-  return [
-    h('div', { class: 'api-row row' }, [
-      getDiv(12, 'Type', getStringType(value.type))
-    ].concat(getProp(value, void 0, 0, true)))
-  ]
-}
+describe.value = (openState, value) => [
+  h(
+    'div',
+    { class: 'doc-api-entry row' },
+    // oxlint-disable-next-line unicorn/prefer-spread
+    [getDiv(12, 'Type', getStringType(value.type))].concat(
+      getProp(openState, 'value', value, void 0, -1, true)
+    )
+  )
+]
 
-describe.arg = arg => {
-  return [
-    h('div', { class: 'api-row row' }, [
-      getDiv(12, 'Type', getStringType(arg.type))
-    ].concat(getProp(arg, void 0, 0, true)))
-  ]
-}
+describe.arg = (openState, arg) => [
+  h(
+    'div',
+    { class: 'doc-api-entry row' },
+    // oxlint-disable-next-line unicorn/prefer-spread
+    [getDiv(12, 'Type', getStringType(arg.type))].concat(
+      getProp(openState, 'arg', arg, void 0, -1, true)
+    )
+  )
+]
 
-describe.modifiers = modifiers => {
+describe.modifiers = (openState, modifiers) => {
   const child = []
 
   for (const modifierName in modifiers) {
-    const modifier = modifiers[ modifierName ]
+    const modifier = modifiers[modifierName]
 
     child.push(
       h(
         'div',
-        { class: 'api-row row' },
-        getProp(modifier, modifierName, 0, true)
+        { class: 'doc-api-entry row' },
+        getProp(openState, 'modifiers', modifier, modifierName, 0, true)
       )
     )
   }
@@ -418,51 +519,104 @@ describe.modifiers = modifiers => {
   return child
 }
 
-describe.injection = injection => {
-  return [
-    h('div', { class: 'api-row row' }, [
-      getNameDiv(injection, 0)
-    ])
-  ]
+describe.injection = (_, injection) => [
+  h('div', { class: 'doc-api-entry row' }, [
+    getNameDiv(injection, injection, 0)
+  ])
+]
+
+function useConfigToggle(openState) {
+  return {
+    enabled: openState.value.quasarConfOptions !== void 0,
+    type: openState.value.quasarConfOptions ? 'uiConfig' : 'configFile',
+    setType: type => {
+      openState.value.quasarConfOptions = type === 'uiConfig'
+    }
+  }
 }
+describe.quasarConfOptions = (openState, conf) => {
+  const configToggle = useConfigToggle(openState)
 
-describe.quasarConfOptions = conf => {
-  const child = []
-  const entry = [
-    h('div', { class: 'api-row__item col-xs-12 col-sm-12' }, [
-      h('div', { class: 'api-row__value' }, [
-        h('span', { class: 'api-row__type text-grey' }, 'quasar.conf.js > framework > config > '),
-        h(QBadge, {
-          color: NAME_PROP_COLOR[ 0 ],
-          label: conf.propName,
-          style: 'font-size: 1em; line-height: 1.2em'
-        })
+  if (!configToggle.enabled) {
+    const needsConfigToggle =
+      conf.definition &&
+      Object.values(conf.definition).some(
+        ({ configFileType }) => configFileType !== void 0
+      )
+    if (needsConfigToggle) {
+      openState.value.quasarConfOptions = false
+    }
+  }
+
+  const configFileName = () =>
+    getNameDiv(
+      conf,
+      conf.propName,
+      0,
+      false,
+      'quasar.config file > framework > config > '
+    )
+  const uiConfigName = () =>
+    getNameDiv(
+      conf,
+      conf.propName,
+      0,
+      '... }})',
+      'app.use(Quasar, { config: { '
+    )
+
+  const entry = configToggle.enabled
+    ? [
+        configToggle.type === 'configFile' ? configFileName() : uiConfigName(),
+        getDiv(
+          8,
+          'Type',
+          getStringType(conf.configFileType || conf.type || 'Object')
+        ),
+        h(
+          'div',
+          { class: 'doc-api-entry__item col row justify-end items-center' },
+          [
+            h(QBtnToggle, {
+              modelValue: configToggle.type,
+              'onUpdate:modelValue': configToggle.setType,
+              options: [
+                { label: 'quasar.config file', value: 'configFile' },
+                { label: 'UI config', value: 'uiConfig' }
+              ],
+              noCaps: true,
+              rounded: true,
+              outline: true,
+              toggleColor: 'orange-8'
+            })
+          ]
+        )
+      ]
+    : [
+        configFileName(),
+        uiConfigName(),
+        getDiv(12, 'Type', getStringType(conf.type || 'Object'))
+      ]
+
+  if (conf.desc) {
+    entry.push(getDiv(12, 'Description', conf.desc))
+  }
+
+  entry.push(getPropDetails(openState, 'quasarConfOptions', conf, 0))
+
+  if (conf.definition && Object.keys(conf.definition).length === 0) {
+    entry.push(
+      h('div', { class: 'q-pa-md doc-api__nothing-to-show' }, [
+        h('div', 'No matching props found.'),
+        h(
+          'div',
+          'Please check the other tabs/subtabs with a number badge on their label or refine the filter.'
+        )
       ])
-    ])
-  ]
-
-  for (const def in conf.definition) {
-    child.push(
-      getProp(conf.definition[ def ], def, 0)
     )
   }
 
-  conf.addedIn !== void 0 && entry.push(
-    getDiv(12, 'Added in', conf.addedIn)
-  )
-
-  entry.push(
-    getDiv(
-      12,
-      'Definition',
-      void 0,
-      h('div', { class: 'api-row__subitem' }, child)
-    )
-  )
-
-  return [
-    h('div', { class: 'api-row row' }, entry)
-  ]
+  return [h('div', { class: 'doc-api-entry row' }, entry)]
 }
 
 export default {
@@ -470,21 +624,27 @@ export default {
 
   props: {
     type: String,
-    definition: [ Object, String ]
+    definition: [Object, String]
   },
 
-  setup (props) {
-    return () => {
-      const content = Object.keys(props.definition).length !== 0
-        ? describe[ props.type ](props.definition)
-        : [
-            h('div', { class: 'q-pa-md doc-api__nothing-to-show' }, [
-              h('div', 'No matching entries found on this tab.'),
-              h('div', 'Please check the other tabs/subtabs with a number badge on their label or refine the filter.')
-            ])
-          ]
+  setup(props) {
+    const openState = ref({})
 
-      return h('div', { class: 'api-rows' }, content)
+    return () => {
+      const content =
+        Object.keys(props.definition).length !== 0
+          ? describe[props.type](openState, props.definition)
+          : [
+              h('div', { class: 'q-pa-md doc-api__nothing-to-show' }, [
+                h('div', 'No matching entries found on this tab.'),
+                h(
+                  'div',
+                  'Please check the other tabs/subtabs with a number badge on their label or refine the filter.'
+                )
+              ])
+            ]
+
+      return h('div', { class: 'doc-api-entrys' }, content)
     }
   }
 }

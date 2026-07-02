@@ -4,8 +4,8 @@
       <q-img
         v-for="mode in fitModes"
         :key="mode"
-        src="https://placeimg.com/500/300/nature"
-        style="max-width: 300px; height: 150px;"
+        src="https://picsum.photos/500/300"
+        style="max-width: 300px; height: 150px"
         :fit="mode"
       >
         <div class="absolute-bottom text-subtitle1 text-center">
@@ -16,12 +16,6 @@
   </div>
 </template>
 
-<script>
-export default {
-  setup () {
-    return {
-      fitModes: [ 'cover', 'fill', 'contain', 'none', 'scale-down' ]
-    }
-  }
-}
+<script setup>
+const fitModes = ['cover', 'fill', 'contain', 'none', 'scale-down']
 </script>

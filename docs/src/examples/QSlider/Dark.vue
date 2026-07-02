@@ -1,5 +1,5 @@
 <template>
-  <div class="q-pa-md bg-grey-10 text-white">
+  <div class="q-pa-md bg-grey-9 text-white">
     <q-badge color="secondary">
       Model: {{ value }} (-20 to 20, step 4)
     </q-badge>
@@ -32,14 +32,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      value: ref(0)
-    }
-  }
-}
+const value = ref(0)
 </script>

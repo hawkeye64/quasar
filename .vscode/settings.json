@@ -1,10 +1,31 @@
 {
-  "eslint.format.enable": false,
-  "editor.formatOnSave": false,
-  "eslint.workingDirectories": ["./docs", "./ui"],
-  "editor.tabSize": 2,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.format.oxc": "always",
+    "source.fixAll.oxc": "always"
   },
-  "eslint.validate": ["javascript", "vue"]
+
+  "[javascript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+
+  "oxc.unusedDisableDirectives": "deny",
+  "oxc.configPath": ".oxlintrc.json",
+
+  "search.exclude": {
+    "**/dist": true,
+    "**/.quasar": true,
+    "**/quasar.config.js.temporary.*": true,
+    "ui/playground/src/mock-data": true,
+    "utils/render-ssr-error/compiled-assets": true
+  }
 }

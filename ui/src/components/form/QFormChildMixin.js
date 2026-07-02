@@ -1,22 +1,21 @@
-import { noop } from '../../utils/event.js'
-import { formKey } from '../../utils/private/symbols.js'
+import { noop } from '../../utils/event/event.js'
+import { formKey } from '../../utils/private.symbols/symbols.js'
 
 export default {
   inject: {
-    [ formKey ]: {
+    [formKey]: {
       default: noop
     }
   },
 
   watch: {
-    disable (val) {
-      const $form = this.$.provides[ formKey ]
+    disable(val) {
+      const $form = this.$.provides[formKey]
       if ($form !== void 0) {
-        if (val === true) {
+        if (val) {
           this.resetValidation()
           $form.unbindComponent(this)
-        }
-        else {
+        } else {
           $form.bindComponent(this)
         }
       }
@@ -24,17 +23,21 @@ export default {
   },
 
   methods: {
-    validate () {},
-    resetValidation () {}
+    validate() {},
+    resetValidation() {}
   },
 
-  created () {
-    const $form = this.$.provides[ formKey ]
-    $form !== void 0 && this.disable !== true && $form.bindComponent(this)
+  mounted() {
+    // register to parent QForm
+    if (!this.disable) {
+      this.$.provides[formKey]?.bindComponent(this)
+    }
   },
 
-  beforeUnmount () {
-    const $form = this.$.provides[ formKey ]
-    $form !== void 0 && this.disable !== true && $form.unbindComponent(this)
+  beforeUnmount() {
+    // un-register from parent QForm
+    if (!this.disable) {
+      this.$.provides[formKey]?.unbindComponent(this)
+    }
   }
 }

@@ -1,17 +1,28 @@
-import useField, { useFieldState, useFieldProps, useFieldEmits } from '../../composables/private/use-field.js'
+import useField, {
+  useFieldEmits,
+  useFieldProps,
+  useFieldState
+} from '../../composables/private.use-field/use-field.js'
 
-import { createComponent } from '../../utils/private/create.js'
+import { createComponent } from '../../utils/private.create/create.js'
 
 export default createComponent({
   name: 'QField',
 
   inheritAttrs: false,
 
-  props: useFieldProps,
+  props: {
+    ...useFieldProps,
+
+    tag: {
+      type: String,
+      default: 'label'
+    }
+  },
 
   emits: useFieldEmits,
 
-  setup () {
-    return useField(useFieldState())
+  setup() {
+    return useField(useFieldState({ tagProp: true }))
   }
 })

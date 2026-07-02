@@ -12,22 +12,9 @@
 .glossy
   background-image: linear-gradient(to bottom, rgba(#fff, .3), rgba(#fff, 0) 50%, rgba(#000, .12) 51%, rgba(#000, .04)) !important
 
-.q-placeholder
-  &::-webkit-input-placeholder
-    color: inherit
-    opacity: .7
-  &::-moz-placeholder
-    color: inherit
-    opacity: .7
-  &:-ms-input-placeholder
-    color: inherit !important
-    opacity: .7 !important
-  &::-ms-input-placeholder
-    color: inherit
-    opacity: .7
-  &::placeholder
-    color: inherit
-    opacity: .7
+.q-placeholder::placeholder
+  color: inherit
+  opacity: .7
 
 /* body */
 .q-body--fullscreen-mixin, .q-body--prevent-scroll

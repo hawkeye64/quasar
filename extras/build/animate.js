@@ -1,57 +1,54 @@
+import { writeFileSync } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
+import { globSync } from 'tinyglobby'
+import fse from 'fs-extra'
+
 const packageName = 'animate.css'
 
 // ------------
 
-const glob = require('glob')
-const { copySync } = require('fs-extra')
-const { writeFileSync } = require('fs')
-const { join, resolve, basename } = require('path')
+const distFolder = resolve(import.meta.dirname, '../exports/animate')
 
-const dist = resolve(__dirname, '../animate')
-
-const pkgFolder = resolve(__dirname, `../node_modules/${packageName}/`)
-const cssFiles = glob.sync(pkgFolder + '/source/*/*.css')
+const pkgFolder = resolve(
+  import.meta.dirname,
+  `../node_modules/${packageName}/`
+)
+const cssFiles = globSync(pkgFolder + '/source/*/*.css')
 const cssNames = new Set()
 
 const inAnimations = []
 const outAnimations = []
 const generalAnimations = []
 
-function extract (file) {
+function extract(file) {
   const name = basename(file).match(/(.*)\.css/)[1]
 
-  if (cssNames.has(name)) {
-    return
-  }
+  if (cssNames.has(name)) return
 
-  copySync(file, join(dist, name + '.css'))
+  fse.copySync(file, join(distFolder, name + '.css'))
   cssNames.add(name)
 
-  if (name.indexOf('In') > -1) {
+  if (name.includes('In')) {
     inAnimations.push(name)
-  }
-  else if (name.indexOf('Out') > -1) {
+  } else if (name.includes('Out')) {
     outAnimations.push(name)
-  }
-  else {
+  } else {
     generalAnimations.push(name)
   }
 }
 
-function getList (prefix) {
-  return `
-${prefix}generalAnimations = ${JSON.stringify(generalAnimations, null, 2)}
+function getList(prefix) {
+  return `${prefix}generalAnimations = ${JSON.stringify(generalAnimations, null, 2)}
 
 ${prefix}inAnimations = ${JSON.stringify(inAnimations, null, 2)}
 
 ${prefix}outAnimations = ${JSON.stringify(outAnimations, null, 2)}
-`.replace(/"/g, `'`)
+`
 }
 
 if (cssFiles.length === 0) {
   console.log('WARNING. Animate.css skipped completely')
-}
-else {
+} else {
   cssFiles.forEach(file => {
     extract(file)
   })
@@ -60,11 +57,21 @@ else {
   inAnimations.sort()
   outAnimations.sort()
 
-  copySync(join(pkgFolder, 'LICENSE'), join(dist, 'LICENSE'))
+  fse.copySync(join(pkgFolder, 'LICENSE'), join(distFolder, 'LICENSE'))
 
-  writeFileSync(join(dist, 'animate-list.js'), getList(`export const `), 'utf-8')
-  writeFileSync(join(dist, 'animate-list.common.js'), getList(`module.exports.`), 'utf-8')
+  writeFileSync(
+    join(distFolder, 'animate-list.js'),
+    getList('export const ').replaceAll('"', "'"),
+    'utf8'
+  )
 
-  writeFileSync(join(dist, 'animate-list.d.ts'), getList(`export type `).replace(/\[/g, '').replace(/\]/g, ';').replace(/\  '/g, `  | '`).replace(/,/g, ''), 'utf-8')
-  writeFileSync(join(dist, 'animate-list.common.d.ts'), getList(`export type `).replace(/\[/g, '').replace(/\]/g, ';').replace(/\  '/g, `  | '`).replace(/,/g, ''), 'utf-8')
+  writeFileSync(
+    join(distFolder, 'animate-list.d.ts'),
+    getList('export type ')
+      .replaceAll(' [', '')
+      .replaceAll('\n]', ';')
+      .replaceAll(/ {2}"/g, '  | "')
+      .replaceAll(',', ''),
+    'utf8'
+  )
 }

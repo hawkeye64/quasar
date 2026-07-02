@@ -1,12 +1,14 @@
 <template>
   <div class="q-pa-md">
-    <q-badge color="secondary">
-      Model: {{ lazy }}
-    </q-badge>
+    <q-badge color="secondary"> Model: {{ lazy }} </q-badge>
 
     <q-slider
       :model-value="lazy"
-      @change="val => { lazy = val }"
+      @change="
+        val => {
+          lazy = val
+        }
+      "
       :min="0"
       :max="45"
       :step="5"
@@ -16,14 +18,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      lazy: ref(6)
-    }
-  }
-}
+const lazy = ref(6)
 </script>

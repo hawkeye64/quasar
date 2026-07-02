@@ -1,13 +1,13 @@
 <template>
   <div class="q-pa-md">
     <div class="q-gutter-md">
-      <q-btn color="accent" label="Fit Menu" style="width: 280px;">
-
+      <q-btn color="accent" label="Fit Menu" style="width: 280px">
         <q-menu fit>
           <q-list style="min-width: 100px">
             <q-item clickable>
               <q-item-section>New tab</q-item-section>
             </q-item>
+            <!-- #region -->
             <q-item clickable>
               <q-item-section>New incognito tab</q-item-section>
             </q-item>
@@ -29,6 +29,7 @@
             <q-item clickable>
               <q-item-section>Help &amp; Feedback</q-item-section>
             </q-item>
+            <!-- #endregion -->
           </q-list>
         </q-menu>
       </q-btn>
@@ -39,6 +40,7 @@
             <q-item clickable>
               <q-item-section>New tab</q-item-section>
             </q-item>
+            <!-- #region -->
             <q-item clickable>
               <q-item-section>New incognito tab</q-item-section>
             </q-item>
@@ -60,6 +62,7 @@
             <q-item clickable>
               <q-item-section>Help &amp; Feedback</q-item-section>
             </q-item>
+            <!-- #endregion -->
           </q-list>
         </q-menu>
       </q-btn>
@@ -72,6 +75,7 @@
                 <q-item-label lines="1">New tab</q-item-label>
               </q-item-section>
             </q-item>
+            <!-- #region -->
             <q-item clickable>
               <q-item-section>
                 <q-item-label lines="1">New incognito tab</q-item-label>
@@ -105,10 +109,10 @@
                 <q-item-label lines="1">Help & Feedback</q-item-label>
               </q-item-section>
             </q-item>
+            <!-- #endregion -->
           </q-list>
         </q-menu>
       </q-btn>
-
     </div>
   </div>
 </template>

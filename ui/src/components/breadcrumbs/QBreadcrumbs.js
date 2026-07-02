@@ -1,12 +1,14 @@
-import { h, computed } from 'vue'
+import { computed, h } from 'vue'
 
-import useAlign, { useAlignProps } from '../../composables/private/use-align.js'
+import useAlign, {
+  useAlignProps
+} from '../../composables/private.use-align/use-align.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { hSlot } from '../../utils/private/render.js'
-import { getNormalizedVNodes } from '../../utils/private/vm.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { hSlot } from '../../utils/private.render/render.js'
+import { getNormalizedVNodes } from '../../utils/private.vm/vm.js'
 
-const disabledValues = [ void 0, true ]
+const disabledValues = ['', true]
 
 export default createComponent({
   name: 'QBreadcrumbs',
@@ -27,70 +29,83 @@ export default createComponent({
 
     gutter: {
       type: String,
-      validator: v => [ 'none', 'xs', 'sm', 'md', 'lg', 'xl' ].includes(v),
+      validator: v => ['none', 'xs', 'sm', 'md', 'lg', 'xl'].includes(v),
       default: 'sm'
     }
   },
 
-  setup (props, { slots }) {
+  setup(props, { slots }) {
     const alignClass = useAlign(props)
 
-    const classes = computed(() =>
-      `flex items-center ${ alignClass.value }${ props.gutter === 'none' ? '' : ` q-gutter-${ props.gutter }` }`
+    const classes = computed(
+      () =>
+        `flex items-center ${alignClass.value}${props.gutter === 'none' ? '' : ` q-gutter-${props.gutter}`}`
     )
 
-    const sepClass = computed(() => (props.separatorColor ? ` text-${ props.separatorColor }` : ''))
-    const activeClass = computed(() => ` text-${ props.activeColor }`)
+    const sepClass = computed(() =>
+      props.separatorColor ? ` text-${props.separatorColor}` : ''
+    )
+    const activeClass = computed(() => ` text-${props.activeColor}`)
 
     return () => {
-      const vnodes = getNormalizedVNodes(
-        hSlot(slots.default)
-      )
+      if (slots.default === void 0) return
 
-      if (vnodes.length === 0) { return }
+      const vnodes = getNormalizedVNodes(hSlot(slots.default))
+
+      if (vnodes.length === 0) return
 
       let els = 1
 
-      const
-        child = [],
-        len = vnodes.filter(c => c.type !== void 0 && c.type.name === 'QBreadcrumbsEl').length,
-        separator = slots.separator !== void 0
-          ? slots.separator
-          : () => props.separator
+      const child = [],
+        len = vnodes.filter(c => c.type?.name === 'QBreadcrumbsEl').length,
+        separator =
+          slots.separator !== void 0 ? slots.separator : () => props.separator
 
       vnodes.forEach(comp => {
-        if (comp.type !== void 0 && comp.type.name === 'QBreadcrumbsEl') {
+        if (comp.type?.name === 'QBreadcrumbsEl') {
           const middle = els < len
-          const disabled = comp.props !== null && disabledValues.includes(comp.props.disable)
-          const cls = (middle === true ? '' : ' q-breadcrumbs--last')
-            + (disabled !== true && middle === true ? activeClass.value : '')
+          const disabled =
+            comp.props !== null && disabledValues.includes(comp.props.disable)
+
+          const cls =
+            (middle ? '' : ' q-breadcrumbs--last') +
+            (!disabled && middle ? activeClass.value : '')
 
           els++
 
           child.push(
-            h('div', {
-              class: `flex items-center${ cls }`
-            }, [ comp ])
+            h(
+              'div',
+              {
+                class: `flex items-center${cls}`
+              },
+              [comp]
+            )
           )
 
-          if (middle === true) {
+          if (middle) {
             child.push(
-              h('div', {
-                class: 'q-breadcrumbs__separator' + sepClass.value
-              }, separator())
+              h(
+                'div',
+                {
+                  class: 'q-breadcrumbs__separator' + sepClass.value
+                },
+                separator()
+              )
             )
           }
-        }
-        else {
+        } else {
           child.push(comp)
         }
       })
 
-      return h('div', {
-        class: 'q-breadcrumbs'
-      }, [
-        h('div', { class: classes.value }, child)
-      ])
+      return h(
+        'div',
+        {
+          class: 'q-breadcrumbs'
+        },
+        [h('div', { class: classes.value }, child)]
+      )
     }
   }
 })

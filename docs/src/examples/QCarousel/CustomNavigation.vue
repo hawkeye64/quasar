@@ -14,8 +14,26 @@
       class="bg-primary text-white shadow-1 rounded-borders"
     >
       <template v-slot:navigation-icon="{ active, btnProps, onClick }">
-        <q-btn v-if="active" size="lg" icon="home" color="yellow" flat round dense @click="onClick" />
-        <q-btn v-else size="sm" :icon="btnProps.icon" color="white" flat round dense @click="onClick" />
+        <q-btn
+          v-if="active"
+          size="lg"
+          icon="home"
+          color="yellow"
+          flat
+          round
+          dense
+          @click="onClick"
+        />
+        <q-btn
+          v-else
+          size="sm"
+          :icon="btnProps.icon"
+          color="white"
+          flat
+          round
+          dense
+          @click="onClick"
+        />
       </template>
 
       <q-carousel-slide name="style" class="column no-wrap flex-center">
@@ -24,6 +42,7 @@
           {{ lorem }}
         </div>
       </q-carousel-slide>
+      <!-- #region -->
       <q-carousel-slide name="tv" class="column no-wrap flex-center">
         <q-icon name="live_tv" size="56px" />
         <div class="q-mt-md text-center">
@@ -42,19 +61,15 @@
           {{ lorem }}
         </div>
       </q-carousel-slide>
+      <!-- #endregion -->
     </q-carousel>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      slide: ref('style'),
-      lorem: 'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Itaque voluptatem totam, architecto cupiditate officia rerum, error dignissimos praesentium libero ab nemo.'
-    }
-  }
-}
+const slide = ref('style')
+const lorem =
+  'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Itaque voluptatem totam, architecto cupiditate officia rerum, error dignissimos praesentium libero ab nemo.'
 </script>

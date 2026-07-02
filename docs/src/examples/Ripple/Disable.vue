@@ -5,20 +5,18 @@
       class="relative-position container bg-cyan text-black flex flex-center"
     />
 
-    <q-toggle v-model="state" label="Use ripple for container above" class="q-mt-md" />
+    <q-toggle
+      v-model="state"
+      label="Use ripple for container above"
+      class="q-mt-md"
+    />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      state: ref(true)
-    }
-  }
-}
+const state = ref(true)
 </script>
 
 <style lang="sass" scoped>

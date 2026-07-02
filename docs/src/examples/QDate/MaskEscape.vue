@@ -3,9 +3,7 @@
     <div class="q-gutter-md row items-start">
       <div>
         <div class="q-pb-sm">
-          <q-badge color="teal">
-            Model: {{ model1 }}
-          </q-badge>
+          <q-badge color="teal"> Model: {{ model1 }} </q-badge>
         </div>
         <div class="q-pb-sm">
           <q-badge color="purple" text-color="white">
@@ -18,9 +16,7 @@
 
       <div>
         <div class="q-pb-sm">
-          <q-badge color="teal">
-            Model: {{ model2 }}
-          </q-badge>
+          <q-badge color="teal"> Model: {{ model2 }} </q-badge>
         </div>
         <div class="q-pb-sm">
           <q-badge color="purple" text-color="white">
@@ -34,15 +30,9 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      model1: ref('Sunday, Apr 28, 2019'),
-      model2: ref('Month ( March ) 14th, Year ( 2019 )')
-    }
-  }
-}
+const model1 = ref('Sunday, Apr 28, 2019')
+const model2 = ref('Month ( March ) 14th, Year ( 2019 )')
 </script>

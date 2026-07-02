@@ -1,17 +1,28 @@
-import { h, ref, computed, watch, onMounted, onBeforeUnmount, getCurrentInstance } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  h,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from 'vue'
 
 import QIcon from '../icon/QIcon.js'
 import QSpinner from '../spinner/QSpinner.js'
-import TouchPan from '../../directives/TouchPan.js'
+import TouchPan from '../../directives/touch-pan/TouchPan.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { getScrollTarget, getVerticalScrollPosition } from '../../utils/scroll.js'
-import { between } from '../../utils/format.js'
-import { prevent } from '../../utils/event.js'
-import { hSlot, hDir } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import {
+  getScrollTarget,
+  getVerticalScrollPosition,
+  scrollTargetProp
+} from '../../utils/scroll/scroll.js'
+import { between } from '../../utils/format/format.js'
+import { prevent } from '../../utils/event/event.js'
+import { hDir, hSlot } from '../../utils/private.render/render.js'
 
-const
-  PULLER_HEIGHT = 40,
+const PULLER_HEIGHT = 40,
   OFFSET_TOP = 20
 
 export default createComponent({
@@ -24,14 +35,12 @@ export default createComponent({
     noMouse: Boolean,
     disable: Boolean,
 
-    scrollTarget: {
-      default: void 0
-    }
+    scrollTarget: scrollTargetProp
   },
 
-  emits: [ 'refresh' ],
+  emits: ['refresh'],
 
-  setup (props, { slots, emit }) {
+  setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
     const { $q } = proxy
 
@@ -44,26 +53,26 @@ export default createComponent({
 
     const style = computed(() => ({
       opacity: pullRatio.value,
-      transform: `translateY(${ pullPosition.value }px) rotate(${ pullRatio.value * 360 }deg)`
+      transform: `translateY(${pullPosition.value}px) rotate(${pullRatio.value * 360}deg)`
     }))
 
-    const classes = computed(() =>
-      'q-pull-to-refresh__puller row flex-center'
-      + (animating.value === true ? ' q-pull-to-refresh__puller--animating' : '')
-      + (props.bgColor !== void 0 ? ` bg-${ props.bgColor }` : '')
+    const classes = computed(
+      () =>
+        'q-pull-to-refresh__puller row flex-center' +
+        (animating.value ? ' q-pull-to-refresh__puller--animating' : '') +
+        (props.bgColor !== void 0 ? ` bg-${props.bgColor}` : '')
     )
 
-    function pull (event) {
-      if (event.isFinal === true) {
-        if (pulling.value === true) {
+    function pull(event) {
+      if (event.isFinal) {
+        if (pulling.value) {
           pulling.value = false
 
           if (state.value === 'pulled') {
             state.value = 'refreshing'
             animateTo({ pos: OFFSET_TOP })
             trigger()
-          }
-          else if (state.value === 'pull') {
+          } else if (state.value === 'pull') {
             animateTo({ pos: -PULLER_HEIGHT, ratio: 0 })
           }
         }
@@ -71,13 +80,16 @@ export default createComponent({
         return
       }
 
-      if (animating.value === true || state.value === 'refreshing') {
+      if (animating.value || state.value === 'refreshing') {
         return false
       }
 
-      if (event.isFirst === true) {
-        if (getVerticalScrollPosition(localScrollTarget) !== 0 || event.direction !== "down") {
-          if (pulling.value === true) {
+      if (event.isFirst) {
+        if (
+          getVerticalScrollPosition(localScrollTarget) !== 0 ||
+          event.direction !== 'down'
+        ) {
+          if (pulling.value) {
             pulling.value = false
             state.value = 'pull'
             animateTo({ pos: -PULLER_HEIGHT, ratio: 0 })
@@ -88,11 +100,11 @@ export default createComponent({
 
         pulling.value = true
 
-        const { top, left } = $el.getBoundingClientRect()
+        const { top, left } = proxy.$el.getBoundingClientRect()
         positionCSS.value = {
           top: top + 'px',
           left: left + 'px',
-          width: window.getComputedStyle($el).getPropertyValue('width')
+          width: window.getComputedStyle(proxy.$el).getPropertyValue('width')
         }
       }
 
@@ -111,28 +123,21 @@ export default createComponent({
 
     const directives = computed(() => {
       // if props.disable === false
-      const modifiers = {
-        down: true,
-        mightPrevent: true
-      }
+      const modifiers = { down: true }
 
-      if (props.noMouse !== true) {
+      if (!props.noMouse) {
         modifiers.mouse = true
       }
 
-      return [ [
-        TouchPan,
-        pull,
-        void 0,
-        modifiers
-      ] ]
+      return [[TouchPan, pull, void 0, modifiers]]
     })
 
-    const contentClass = computed(() =>
-      `q-pull-to-refresh__content${ pulling.value === true ? ' no-pointer-events' : '' }`
+    const contentClass = computed(
+      () =>
+        `q-pull-to-refresh__content${pulling.value ? ' no-pointer-events' : ''}`
     )
 
-    function trigger () {
+    function trigger() {
       emit('refresh', () => {
         animateTo({ pos: -PULLER_HEIGHT, ratio: 0 }, () => {
           state.value = 'pull'
@@ -140,7 +145,10 @@ export default createComponent({
       })
     }
 
-    function animateTo ({ pos, ratio }, done) {
+    let localScrollTarget,
+      timer = null
+
+    function animateTo({ pos, ratio }, done) {
       animating.value = true
       pullPosition.value = pos
 
@@ -148,57 +156,62 @@ export default createComponent({
         pullRatio.value = ratio
       }
 
-      clearTimeout(timer)
+      if (timer !== null) clearTimeout(timer)
       timer = setTimeout(() => {
+        timer = null
         animating.value = false
-        done && done()
+        done?.()
       }, 300)
     }
 
-    // expose public methods
-    Object.assign(proxy, { trigger, updateScrollTarget })
-
-    let $el, localScrollTarget, timer
-
-    function updateScrollTarget () {
-      localScrollTarget = getScrollTarget($el, props.scrollTarget)
+    function updateScrollTarget() {
+      localScrollTarget = getScrollTarget(proxy.$el, props.scrollTarget)
     }
 
     watch(() => props.scrollTarget, updateScrollTarget)
 
-    onMounted(() => {
-      $el = proxy.$el
-      updateScrollTarget()
-    })
+    onMounted(updateScrollTarget)
 
     onBeforeUnmount(() => {
-      clearTimeout(timer)
+      if (timer !== null) clearTimeout(timer)
     })
+
+    // expose public methods
+    Object.assign(proxy, { trigger, updateScrollTarget })
 
     return () => {
       const child = [
         h('div', { class: contentClass.value }, hSlot(slots.default)),
 
-        h('div', {
-          class: 'q-pull-to-refresh__puller-container fixed row flex-center no-pointer-events z-top',
-          style: positionCSS.value
-        }, [
-          h('div', {
-            class: classes.value,
-            style: style.value
-          }, [
-            state.value !== 'refreshing'
-              ? h(QIcon, {
-                  name: props.icon || $q.iconSet.pullToRefresh.icon,
-                  color: props.color,
-                  size: '32px'
-                })
-              : h(QSpinner, {
-                size: '24px',
-                color: props.color
-              })
-          ])
-        ])
+        h(
+          'div',
+          {
+            class:
+              'q-pull-to-refresh__puller-container fixed row flex-center no-pointer-events z-top',
+            style: positionCSS.value
+          },
+          [
+            h(
+              'div',
+              {
+                class: classes.value,
+                style: style.value
+              },
+              [
+                state.value !== 'refreshing'
+                  ? h(QIcon, {
+                      name: props.icon || $q.iconSet.pullToRefresh.icon,
+                      color: props.color,
+                      size: '32px'
+                    })
+                  : h(QSpinner, {
+                      size: '24px',
+                      color: props.color
+                    })
+              ]
+            )
+          ]
+        )
       ]
 
       return hDir(
@@ -206,7 +219,7 @@ export default createComponent({
         { class: 'q-pull-to-refresh' },
         child,
         'main',
-        props.disable === false,
+        !props.disable,
         () => directives.value
       )
     }

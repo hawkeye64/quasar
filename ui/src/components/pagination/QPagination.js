@@ -1,13 +1,20 @@
-import { h, ref, watch, computed, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, h, ref, watch } from 'vue'
 
 import QBtn from '../btn/QBtn.js'
 import QInput from '../input/QInput.js'
 
-import useDark, { useDarkProps } from '../../composables/private/use-dark.js'
+import useDark, {
+  useDarkProps
+} from '../../composables/private.use-dark/use-dark.js'
+import { btnDesignOptions, btnPadding, getBtnDesign } from '../btn/use-btn.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { between } from '../../utils/format.js'
-import { isKeyCode } from '../../utils/private/key-composition.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { between } from '../../utils/format/format.js'
+import { isKeyCode } from '../../utils/private.keyboard/key-composition.js'
+
+function getBool(val, otherwise) {
+  return val === true || val === false ? val : otherwise
+}
 
 export default createComponent({
   name: 'QPagination',
@@ -20,25 +27,21 @@ export default createComponent({
       required: true
     },
     min: {
-      type: Number,
+      type: [Number, String],
       default: 1
     },
     max: {
-      type: Number,
+      type: [Number, String],
       required: true
     },
-
-    color: {
-      type: String,
-      default: 'primary'
+    maxPages: {
+      type: [Number, String],
+      default: 0,
+      validator: v => (typeof v === 'string' ? Number.parseInt(v, 10) : v) >= 0
     },
-    textColor: String,
 
-    activeColor: String,
-    activeTextColor: String,
-
-    inputStyle: [ Array, String, Object ],
-    inputClass: [ Array, String, Object ],
+    inputStyle: [Array, String, Object],
+    inputClass: [Array, String, Object],
 
     size: String,
 
@@ -69,14 +72,9 @@ export default createComponent({
       type: Boolean,
       default: null
     },
-    maxPages: {
-      type: Number,
-      default: 0,
-      validator: v => v >= 0
-    },
 
     ripple: {
-      type: [ Boolean, Object ],
+      type: [Boolean, Object],
       default: null
     },
 
@@ -89,55 +87,89 @@ export default createComponent({
     push: Boolean,
     glossy: Boolean,
 
-    dense: Boolean,
+    color: {
+      type: String,
+      default: 'primary'
+    },
+    textColor: String,
+
+    activeDesign: {
+      type: String,
+      default: '',
+      values: v => v === '' || btnDesignOptions.includes(v)
+    },
+    activeColor: String,
+    activeTextColor: String,
+
+    gutter: String,
     padding: {
       type: String,
       default: '3px 2px'
     }
   },
 
-  emits: [ 'update:modelValue' ],
+  emits: ['update:modelValue'],
 
-  setup (props, { emit }) {
+  setup(props, { emit }) {
     const { proxy } = getCurrentInstance()
     const { $q } = proxy
 
     const isDark = useDark(props, $q)
 
+    const minProp = computed(() => Number.parseInt(props.min, 10))
+    const maxProp = computed(() => Number.parseInt(props.max, 10))
+    const maxPagesProp = computed(() => Number.parseInt(props.maxPages, 10))
+
+    const inputPlaceholder = computed(() => model.value + ' / ' + maxProp.value)
+    const boundaryLinksProp = computed(() =>
+      getBool(props.boundaryLinks, props.input)
+    )
+    const boundaryNumbersProp = computed(() =>
+      getBool(props.boundaryNumbers, !props.input)
+    )
+    const directionLinksProp = computed(() =>
+      getBool(props.directionLinks, props.input)
+    )
+    const ellipsesProp = computed(() => getBool(props.ellipses, !props.input))
+
     const newPage = ref(null)
     const model = computed({
       get: () => props.modelValue,
       set: val => {
-        val = parseInt(val, 10)
-        if (props.disable || isNaN(val)) {
-          return
-        }
-        const value = between(val, props.min, props.max)
+        val = Number.parseInt(val, 10)
+        if (props.disable || !Number.isFinite(val)) return
+
+        const value = between(val, minProp.value, maxProp.value)
         if (props.modelValue !== value) {
           emit('update:modelValue', value)
         }
       }
     })
 
-    watch(() => props.min + props.max, () => {
-      model.value = props.modelValue
-    })
-
-    function getBool (val, otherwise) {
-      return [ true, false ].includes(val)
-        ? val
-        : otherwise
-    }
-
-    const classes = computed(() =>
-      'q-pagination row no-wrap items-center'
-      + (props.disable === true ? ' disabled' : '')
+    watch(
+      () => `${minProp.value}|${maxProp.value}`,
+      () => {
+        model.value = props.modelValue
+      }
     )
-    const inputPlaceholder = computed(() => model.value + ' / ' + props.max)
-    const __boundaryLinks = computed(() => getBool(props.boundaryLinks, props.input))
-    const __boundaryNumbers = computed(() => getBool(props.boundaryNumbers, !props.input))
-    const __directionLinks = computed(() => getBool(props.directionLinks, props.input))
-    const __ellipses = computed(() => getBool(props.ellipses, !props.input))
+
+    const classes = computed(
+      () =>
+        'q-pagination row no-wrap items-center' +
+        (props.disable ? ' disabled' : '')
+    )
+
+    const gutterProp = computed(() =>
+      props.gutter in btnPadding
+        ? `${btnPadding[props.gutter]}px`
+        : props.gutter || null
+    )
+    const gutterStyle = computed(() =>
+      gutterProp.value !== null
+        ? `--q-pagination-gutter-parent:-${gutterProp.value};--q-pagination-gutter-child:${gutterProp.value}`
+        : null
+    )
+
     const icons = computed(() => {
       const ico = [
         props.iconFirst || $q.iconSet.pagination.first,
@@ -145,63 +177,147 @@ export default createComponent({
         props.iconNext || $q.iconSet.pagination.next,
         props.iconLast || $q.iconSet.pagination.last
       ]
-      return $q.lang.rtl === true ? ico.reverse() : ico
+      return $q.lang.rtl ? ico.reverse() : ico
     })
 
-    const attrs = computed(() => (
-      props.disable === true
-        ? { 'aria-disabled': 'true' }
-        : {}
-    ))
+    const attrs = computed(() => ({
+      'aria-disabled': props.disable ? 'true' : 'false',
+      role: 'navigation'
+    }))
 
+    const btnDesignProp = computed(() => getBtnDesign(props, 'flat'))
     const btnProps = computed(() => ({
+      [btnDesignProp.value]: true,
+
       round: props.round,
       rounded: props.rounded,
 
-      outline: props.outline,
-      unelevated: props.unelevated,
-      push: props.push,
-      glossy: props.glossy,
-
-      dense: props.dense,
       padding: props.padding,
 
       color: props.color,
-      flat: true,
+      textColor: props.textColor,
+
       size: props.size,
-      ripple: props.ripple !== null
-        ? props.ripple
-        : true
+      ripple: props.ripple !== null ? props.ripple : true
     }))
 
+    const btnActiveDesignProp = computed(() => {
+      // we also reset non-active design
+      const acc = { [btnDesignProp.value]: false }
+      if (props.activeDesign !== '') {
+        acc[props.activeDesign] = true
+      }
+      return acc
+    })
     const activeBtnProps = computed(() => ({
-      flat: props.flat,
+      ...btnActiveDesignProp.value,
       color: props.activeColor || props.color,
       textColor: props.activeTextColor || props.textColor
     }))
 
-    function set (value) {
+    const btnConfig = computed(() => {
+      let maxPages = Math.max(
+        maxPagesProp.value,
+        1 + (ellipsesProp.value ? 2 : 0) + (boundaryNumbersProp.value ? 2 : 0)
+      )
+
+      const acc = {
+        pgFrom: minProp.value,
+        pgTo: maxProp.value,
+        ellipsesStart: false,
+        ellipsesEnd: false,
+        boundaryStart: false,
+        boundaryEnd: false,
+        marginalStyle: {
+          minWidth: `${Math.max(2, String(maxProp.value).length)}em`
+        }
+      }
+
+      if (maxPagesProp.value && maxPages < maxProp.value - minProp.value + 1) {
+        maxPages = 1 + Math.floor(maxPages / 2) * 2
+        acc.pgFrom = Math.max(
+          minProp.value,
+          Math.min(
+            maxProp.value - maxPages + 1,
+            props.modelValue - Math.floor(maxPages / 2)
+          )
+        )
+        acc.pgTo = Math.min(maxProp.value, acc.pgFrom + maxPages - 1)
+
+        if (boundaryNumbersProp.value) {
+          acc.boundaryStart = true
+          acc.pgFrom++
+        }
+
+        if (
+          ellipsesProp.value &&
+          acc.pgFrom > minProp.value + (boundaryNumbersProp.value ? 1 : 0)
+        ) {
+          acc.ellipsesStart = true
+          acc.pgFrom++
+        }
+
+        if (boundaryNumbersProp.value) {
+          acc.boundaryEnd = true
+          acc.pgTo--
+        }
+
+        if (
+          ellipsesProp.value &&
+          acc.pgTo < maxProp.value - (boundaryNumbersProp.value ? 1 : 0)
+        ) {
+          acc.ellipsesEnd = true
+          acc.pgTo--
+        }
+      }
+
+      return acc
+    })
+
+    function set(value) {
       model.value = value
     }
 
-    function setByOffset (offset) {
+    function setByOffset(offset) {
       model.value = model.value + offset
     }
 
-    function updateModel () {
+    function updateModel() {
       model.value = newPage.value
       newPage.value = null
+      if ($q.platform.is.mobile) document.activeElement.blur()
     }
 
-    function getBtn (cfg, page) {
-      const data = { ...btnProps.value, ...cfg }
+    function onInputValue(val) {
+      newPage.value = val
+    }
+
+    function onKeyup(e) {
+      if (isKeyCode(e, 13)) updateModel()
+    }
+
+    function getBtn(cfg, page, active) {
+      const data = {
+        'aria-label': page,
+        'aria-current': 'false',
+        ...btnProps.value,
+        ...cfg
+      }
+
+      if (active) {
+        Object.assign(data, {
+          'aria-current': 'true',
+          ...activeBtnProps.value
+        })
+      }
 
       if (page !== void 0) {
         if (props.toFn !== void 0) {
           data.to = props.toFn(page)
-        }
-        else {
-          data.onClick = () => set(page)
+        } else {
+          data.onClick = () => {
+            set(page)
+          }
         }
       }
 
@@ -212,164 +328,193 @@ export default createComponent({
     Object.assign(proxy, { set, setByOffset })
 
     return () => {
-      const
-        contentStart = [],
-        contentEnd = [],
+      const contentStart = []
+      const contentEnd = []
+      let contentMiddle
+
+      if (boundaryLinksProp.value) {
+        contentStart.push(
+          getBtn(
+            {
+              key: 'bls',
+              disable: props.disable || props.modelValue <= minProp.value,
+              icon: icons.value[0],
+              'aria-label': $q.lang.pagination.first
+            },
+            minProp.value
+          )
+        )
+
+        contentEnd.unshift(
+          getBtn(
+            {
+              key: 'ble',
+              disable: props.disable || props.modelValue >= maxProp.value,
+              icon: icons.value[3],
+              'aria-label': $q.lang.pagination.last
+            },
+            maxProp.value
+          )
+        )
+      }
+
+      if (directionLinksProp.value) {
+        contentStart.push(
+          getBtn(
+            {
+              key: 'bdp',
+              disable: props.disable || props.modelValue <= minProp.value,
+              icon: icons.value[1],
+              'aria-label': $q.lang.pagination.prev
+            },
+            props.modelValue - 1
+          )
+        )
+
+        contentEnd.unshift(
+          getBtn(
+            {
+              key: 'bdn',
+              disable: props.disable || props.modelValue >= maxProp.value,
+              icon: icons.value[2],
+              'aria-label': $q.lang.pagination.next
+            },
+            props.modelValue + 1
+          )
+        )
+      }
+
+      if (!props.input) {
+        // has buttons instead of inputbox
         contentMiddle = []
+        const { pgFrom, pgTo, marginalStyle: style } = btnConfig.value
 
-      if (__boundaryLinks.value) {
-        contentStart.push(getBtn({
-          key: 'bls',
-          disable: props.disable || props.modelValue <= props.min,
-          icon: icons.value[ 0 ]
-        }, props.min))
-        contentEnd.unshift(getBtn({
-          key: 'ble',
-          disable: props.disable || props.modelValue >= props.max,
-          icon: icons.value[ 3 ]
-        }, props.max))
-      }
+        if (btnConfig.value.boundaryStart) {
+          contentStart.push(
+            getBtn(
+              {
+                key: 'bns',
+                style,
+                disable: props.disable,
+                label: minProp.value
+              },
+              minProp.value,
+              minProp.value === props.modelValue
+            )
+          )
+        }
 
-      if (__directionLinks.value) {
-        contentStart.push(getBtn({
-          key: 'bdp',
-          disable: props.disable || props.modelValue <= props.min,
-          icon: icons.value[ 1 ]
-        }, props.modelValue - 1))
-        contentEnd.unshift(getBtn({
-          key: 'bdn',
-          disable: props.disable || props.modelValue >= props.max,
-          icon: icons.value[ 2 ]
-        }, props.modelValue + 1))
-      }
+        if (btnConfig.value.boundaryEnd) {
+          contentEnd.unshift(
+            getBtn(
+              {
+                key: 'bne',
+                style,
+                disable: props.disable,
+                label: maxProp.value
+              },
+              maxProp.value,
+              maxProp.value === props.modelValue
+            )
+          )
+        }
 
-      if (props.input === true) {
-        contentMiddle.push(h(QInput, {
-          class: 'inline',
-          style: {
-            width: `${ inputPlaceholder.value.length / 1.5 }em`
-          },
-          type: 'number',
-          dense: true,
-          value: newPage.value,
-          disable: props.disable,
-          dark: isDark.value,
-          borderless: true,
-          inputClass: props.inputClass,
-          inputStyle: props.inputStyle,
-          placeholder: inputPlaceholder.value,
-          min: props.min,
-          max: props.max,
-          'onUpdate:modelValue' (value) { newPage.value = value },
-          onKeyup (e) { isKeyCode(e, 13) === true && updateModel() },
-          onBlur: updateModel
-        }))
-      }
-      else { // is type select
-        let
-          maxPages = Math.max(
-            props.maxPages,
-            1 + (__ellipses.value ? 2 : 0) + (__boundaryNumbers.value ? 2 : 0)
-          ),
-          pgFrom = props.min,
-          pgTo = props.max,
-          ellipsesStart = false,
-          ellipsesEnd = false,
-          boundaryStart = false,
-          boundaryEnd = false
+        if (btnConfig.value.ellipsesStart) {
+          contentStart.push(
+            getBtn(
+              {
+                key: 'bes',
+                style,
+                disable: props.disable,
+                label: '…',
+                ripple: false
+              },
+              pgFrom - 1
+            )
+          )
+        }
 
-        if (props.maxPages && maxPages < (props.max - props.min + 1)) {
-          maxPages = 1 + Math.floor(maxPages / 2) * 2
-          pgFrom = Math.max(props.min, Math.min(props.max - maxPages + 1, props.modelValue - Math.floor(maxPages / 2)))
-          pgTo = Math.min(props.max, pgFrom + maxPages - 1)
-          if (__boundaryNumbers.value) {
-            boundaryStart = true
-            pgFrom += 1
-          }
-          if (__ellipses.value && pgFrom > (props.min + (__boundaryNumbers.value ? 1 : 0))) {
-            ellipsesStart = true
-            pgFrom += 1
-          }
-          if (__boundaryNumbers.value) {
-            boundaryEnd = true
-            pgTo -= 1
-          }
-          if (__ellipses.value && pgTo < (props.max - (__boundaryNumbers.value ? 1 : 0))) {
-            ellipsesEnd = true
-            pgTo -= 1
-          }
+        if (btnConfig.value.ellipsesEnd) {
+          contentEnd.unshift(
+            getBtn(
+              {
+                key: 'bee',
+                style,
+                disable: props.disable,
+                label: '…',
+                ripple: false
+              },
+              pgTo + 1
+            )
+          )
         }
-        const style = {
-          minWidth: `${ Math.max(2, String(props.max).length) }em`
-        }
-        if (boundaryStart) {
-          const active = props.min === props.modelValue
-          contentStart.push(getBtn({
-            key: 'bns',
-            style,
-            disable: props.disable,
-            flat: !active,
-            label: props.min,
-            ...(active ? activeBtnProps.value : {})
-          }, props.min))
-        }
-        if (boundaryEnd) {
-          const active = props.max === props.modelValue
-          contentEnd.unshift(getBtn({
-            key: 'bne',
-            style,
-            disable: props.disable,
-            flat: !active,
-            label: props.max,
-            ...(active ? activeBtnProps.value : {})
-          }, props.max))
-        }
-        if (ellipsesStart) {
-          contentStart.push(getBtn({
-            key: 'bes',
-            style,
-            disable: props.disable,
-            label: '…',
-            ripple: false
-          }, pgFrom - 1))
-        }
-        if (ellipsesEnd) {
-          contentEnd.unshift(getBtn({
-            key: 'bee',
-            style,
-            disable: props.disable,
-            label: '…',
-            ripple: false
-          }, pgTo + 1))
-        }
+
         for (let i = pgFrom; i <= pgTo; i++) {
-          const btn = {
-            key: `bpg${ i }`,
-            style,
-            disable: props.disable,
-            label: i
-          }
-          if (i === props.modelValue) {
-            Object.assign(btn, activeBtnProps.value)
-          }
-          contentMiddle.push(getBtn(btn, i))
+          contentMiddle.push(
+            getBtn(
+              {
+                key: `bpg${i}`,
+                style,
+                disable: props.disable,
+                label: i
+              },
+              i,
+              i === props.modelValue
+            )
+          )
         }
       }
 
-      return h('div', {
-        class: classes.value,
-        ...attrs.value
-      }, [
-        contentStart,
+      return h(
+        'div',
+        {
+          class: classes.value,
+          ...attrs.value
+        },
+        [
+          h(
+            'div',
+            {
+              class: 'q-pagination__content row no-wrap items-center',
+              style: gutterStyle.value
+            },
+            [
+              ...contentStart,
 
-        h('div', {
-          class: 'row justify-center'
-        }, [
-          contentMiddle
-        ]),
+              props.input
+                ? h(QInput, {
+                    class: 'inline',
+                    style: {
+                      width: `${inputPlaceholder.value.length / 1.5}em`
+                    },
+                    type: 'number',
+                    dense: true,
+                    value: newPage.value,
+                    disable: props.disable,
+                    dark: isDark.value,
+                    borderless: true,
+                    inputClass: props.inputClass,
+                    inputStyle: props.inputStyle,
+                    placeholder: inputPlaceholder.value,
+                    min: minProp.value,
+                    max: maxProp.value,
+                    'onUpdate:modelValue': onInputValue,
+                    onKeyup,
+                    onBlur: updateModel
+                  })
+                : h(
+                    'div',
+                    {
+                      class: 'q-pagination__middle row justify-center'
+                    },
+                    contentMiddle
+                  ),
 
-        contentEnd
-      ])
+              ...contentEnd
+            ]
+          )
+        ]
+      )
     }
   }
 })

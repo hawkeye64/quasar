@@ -1,10 +1,10 @@
-const { join } = require('path')
+import { join } from 'node:path'
 
-const { appDir } = require('./app-paths')
+import { appDir } from './app-paths.js'
 
 const tagRegex = /\{(.*?)\}/g
 
-module.exports = function getAssetsFiles (assets) {
+export function getAssetsFiles(assets) {
   const list = []
 
   assets.forEach(({ sizes, ...props }) => {
@@ -12,23 +12,18 @@ module.exports = function getAssetsFiles (assets) {
       sizes.forEach(size => {
         const isArray = Array.isArray(size)
 
-        const [ width, height ] = isArray
-          ? size
-          : [ size, size ]
+        const [width, height] = isArray ? size : [size, size]
 
-        const replacer = isArray
-          ? `${width}x${height}`
-          : width
+        const replacer = isArray ? `${width}x${height}` : width
 
         list.push({
           ...props,
-          name: props.name.replace(/{size}/g, replacer),
+          name: props.name.replaceAll('{size}', replacer),
           width,
           height
         })
       })
-    }
-    else {
+    } else {
       list.push(props)
     }
   })
@@ -41,7 +36,10 @@ module.exports = function getAssetsFiles (assets) {
     }
 
     if (tag) {
-      file.tag = tag.replace(tagRegex, (_, p) => file[p === 'size' ? 'width' : p])
+      file.tag = tag.replace(
+        tagRegex,
+        (_, p) => file[p === 'size' ? 'width' : p]
+      )
     }
 
     return file

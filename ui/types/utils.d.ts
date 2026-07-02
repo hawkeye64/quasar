@@ -1,6 +1,4 @@
-// Error on "quasar" import shown in IDE is normal, as we only have Components/Directives/Plugins types after the build step
-// The import will work correctly at runtime
-import { QUploader } from "quasar";
+import { LiteralUnion, QUploader } from "quasar";
 import {
   ComponentOptionsMixin,
   ComponentPropsOptions,
@@ -9,18 +7,21 @@ import {
   EmitsOptions,
   ExtractPropTypes,
   Ref,
-  SetupContext,
-} from 'vue';
-import { MetaOptions } from './meta';
-
-export * from './utils/colors';
-export * from './utils/date';
-export * from './utils/dom';
-export * from './utils/event';
-export * from './utils/format';
-export * from './utils/scroll';
-
+  SetupContext
+} from "vue";
+import { MetaOptions } from "./meta";
+import { BrandColor } from "./api/color";
 import { VueStyleObjectProp } from "./api/vue-prop-types";
+
+export * from "./utils/colors";
+export * from "./utils/date";
+export * from "./utils/dom";
+export * from "./utils/event";
+export * from "./utils/format";
+export * from "./utils/scroll";
+export * from "./utils/is";
+export * from "./utils/patterns";
+export * from "./utils/run-sequential-promises";
 
 interface ExportFileOpts {
   mimeType?: string;
@@ -30,34 +31,48 @@ interface ExportFileOpts {
 
 // others utils
 export function copyToClipboard(text: string): Promise<void>;
+
 export function debounce<F extends (...args: any[]) => any>(
   fn: F,
   wait?: number,
   immediate?: boolean
-): F & { cancel(): void };
+): ((this: ThisParameterType<F>, ...args: Parameters<F>) => void) & {
+  cancel(): void;
+};
+
+export function frameDebounce<F extends (...args: any[]) => any>(
+  fn: F
+): ((this: ThisParameterType<F>, ...args: Parameters<F>) => void) & {
+  cancel(): void;
+};
+
 export function exportFile(
   fileName: string,
   rawData: string | ArrayBuffer | ArrayBufferView | Blob,
   opts?: string | ExportFileOpts
 ): true | Error;
+
 export function extend<R>(deep: boolean, target: any, ...sources: any[]): R;
 export function extend<R>(target: object, ...sources: any[]): R;
+
 export function openURL<F extends (...args: any[]) => any>(
   url: string,
   reject?: F,
-  windowFeatures?: Object
+  windowFeatures?: object
 ): void;
+
 export function throttle<F extends (...args: any[]) => any>(
   fn: F,
   limit: number
 ): F;
+
 export function uid(): string;
 
 interface MorphOptions {
   from: Element | string | (() => Element | null | undefined);
   to?: Element | string | (() => Element | null | undefined);
   onToggle?: () => void;
-  waitFor?: number | 'transitionend' | Promise<any>;
+  waitFor?: number | "transitionend" | Promise<any>;
 
   duration?: number;
   easing?: string;
@@ -76,17 +91,44 @@ interface MorphOptions {
   tweenFromOpacity?: number;
   tweenToOpacity?: number;
 
-  onEnd?: (direction: 'to' | 'from', aborted: boolean) => void;
+  onEnd?: (direction: "to" | "from", aborted: boolean) => void;
 }
 
 export function morph(options: MorphOptions): (abort?: boolean) => boolean;
 
-export function getCssVar(varName: string, element?: Element): string | null;
+export function getCssVar(
+  varName: LiteralUnion<BrandColor>,
+  element?: Element
+): string | null;
+
 export function setCssVar(
-  varName: string,
+  varName: LiteralUnion<BrandColor>,
   value: string,
   element?: Element
 ): void;
+
+interface Callbacks {
+  [key: string]: (...args: any[]) => void;
+}
+
+export class EventBus<T extends Callbacks = Callbacks> {
+  on<K extends keyof T>(
+    event: K,
+    callback: T[K],
+    ...ctx: unknown extends ThisParameterType<T[K]>
+      ? []
+      : [ctx: ThisParameterType<T[K]>]
+  ): this;
+  once<K extends keyof T>(
+    event: K,
+    callback: T[K],
+    ...ctx: unknown extends ThisParameterType<T[K]>
+      ? []
+      : [ctx: ThisParameterType<T[K]>]
+  ): this;
+  emit<K extends keyof T>(event: K, ...args: Parameters<T[K]>): this;
+  off<K extends keyof T>(event: K, callback?: T[K]): this;
+}
 
 interface CreateMetaMixinContext extends ComponentPublicInstance {
   [index: string]: any;
@@ -106,7 +148,7 @@ interface InjectPluginFnHelpers {
   uploadedSize: Ref<number>;
   updateFileStatus: (
     file: File,
-    status: 'failed' | 'idle' | 'uploaded' | 'uploading',
+    status: "failed" | "idle" | "uploaded" | "uploading",
     uploadedSize?: number
   ) => void;
   isAlive: () => boolean;
@@ -114,8 +156,9 @@ interface InjectPluginFnHelpers {
 
 interface InjectPluginFnOptions<Props> {
   props: ExtractPropTypes<Props>;
-  emit: SetupContext['emit'];
+  emit: SetupContext["emit"];
   helpers: InjectPluginFnHelpers;
+  exposeApi: (api: Record<string, any>) => void;
 }
 
 interface InjectPluginFnReturn {

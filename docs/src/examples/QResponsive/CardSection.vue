@@ -5,23 +5,21 @@
         <q-item>
           <q-item-section avatar>
             <q-avatar>
-              <img src="https://cdn.quasar.dev/img/boy-avatar.png">
+              <img src="https://cdn.quasar.dev/img/boy-avatar.png" />
             </q-avatar>
           </q-item-section>
 
           <q-item-section>
             <q-item-label>Title</q-item-label>
-            <q-item-label caption>
-              Subhead
-            </q-item-label>
+            <q-item-label caption> Subhead </q-item-label>
           </q-item-section>
         </q-item>
 
         <q-separator />
 
-        <q-responsive :ratio="16/9">
+        <q-responsive :ratio="16 / 9">
           <!-- notice "border-radius-inherit" below; it's important when in a QCard -->
-          <q-card-section class="border-radius-inherit flex flex-center bg-grey-1">
+          <q-card-section class="border-radius-inherit flex flex-center">
             <div>QCardSection with ratio 16:9</div>
           </q-card-section>
         </q-responsive>
@@ -31,15 +29,13 @@
         <q-item>
           <q-item-section avatar>
             <q-avatar>
-              <img src="https://cdn.quasar.dev/img/boy-avatar.png">
+              <img src="https://cdn.quasar.dev/img/boy-avatar.png" />
             </q-avatar>
           </q-item-section>
 
           <q-item-section>
             <q-item-label>Title</q-item-label>
-            <q-item-label caption>
-              Subhead
-            </q-item-label>
+            <q-item-label caption> Subhead </q-item-label>
           </q-item-section>
         </q-item>
 
@@ -47,7 +43,7 @@
 
         <q-responsive :ratio="1">
           <!-- notice "border-radius-inherit" below; it's important when in a QCard -->
-          <q-card-section class="border-radius-inherit flex flex-center bg-grey-1">
+          <q-card-section class="border-radius-inherit flex flex-center">
             <div>QCardSection with ratio 1:1</div>
           </q-card-section>
         </q-responsive>
@@ -56,14 +52,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      slide: ref(1)
-    }
-  }
-}
+const slide = ref(1)
 </script>

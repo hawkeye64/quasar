@@ -1,22 +1,24 @@
-const { existsSync, lstatSync } = require('fs')
-const { resolve, normalize, join } = require('path')
-const untildify = require('untildify')
+import { existsSync, lstatSync } from 'node:fs'
+import { isAbsolute, join, normalize, resolve } from 'node:path'
+import untildify from 'untildify'
 
-const getPngSize = require('./get-png-size')
-const { warn } = require('./logger')
-const generators = require('../generators')
-const defaultParams = require('./default-params')
+import { getPngSize } from './get-png-size.js'
+import { warn } from './logger.js'
+import { generators } from '../generators/index.js'
+import { defaultParams } from './default-params.js'
+import { appDir } from './app-paths.js'
+import { modes } from '../modes/index.js'
 
-function die (msg) {
+const modesList = Object.keys(modes)
+
+function die(msg) {
   warn(msg)
   warn()
   process.exit(1)
 }
 
-function profile (value, argv) {
-  if (!value) {
-    return
-  }
+function profile(value, argv) {
+  if (!value) return
 
   const profilePath = resolve(process.cwd(), untildify(value))
 
@@ -24,64 +26,55 @@ function profile (value, argv) {
     die(`Profile param does not point to a file or folder that exists!`)
   }
 
-  if (
-    !value.endsWith('.json') &&
-    !lstatSync(profilePath).isDirectory()
-  ) {
+  if (!value.endsWith('.json') && !lstatSync(profilePath).isDirectory()) {
     die(`Specified profile (${value}) is not a .json file`)
   }
 
   argv.profile = profilePath
 }
 
-function mode (value, argv) {
-  const possibleValues = Object.keys(require('../modes'))
-
+function mode(value, argv) {
   if (!value) {
-    argv.mode = possibleValues
+    argv.mode = modesList
     return
   }
 
   const list = value.split(',')
 
   if (list.includes('all')) {
-    argv.mode = possibleValues
+    argv.mode = modesList
     return
   }
 
-  if (list.some(mode => !possibleValues.includes(mode))) {
+  if (list.some(item => !modesList.includes(item))) {
     die(`Invalid mode requested: "${value}"`)
   }
 
   argv.mode = list
 }
 
-function include (value, argv) {
-  if (!value) {
-    return
-  }
-
-  const possibleValues = Object.keys(require('../modes'))
+function include(value, argv) {
+  if (!value) return
 
   if (value.includes('all')) {
-    argv.include = possibleValues
+    argv.include = modesList
     return
   }
 
-  if (value.some(mode => !possibleValues.includes(mode))) {
+  if (value.some(item => !modesList.includes(item))) {
     die(`Invalid include requested: "${value}"`)
   }
 }
 
-function quality (value, argv) {
+function quality(value, argv) {
   if (!value) {
     argv.quality = defaultParams.quality
     return
   }
 
-  const numeric = parseInt(value, 10)
+  const numeric = Number.parseInt(value, 10)
 
-  if (isNaN(numeric)) {
+  if (Number.isNaN(numeric)) {
     die(`Invalid quality level number specified`)
   }
   if (numeric < 1 || numeric > 12) {
@@ -91,27 +84,28 @@ function quality (value, argv) {
   argv.quality = numeric
 }
 
-function filter (value) {
+function filter(value) {
   if (value && !Object.keys(generators).includes(value)) {
     die(`Unknown filter value specified (${value}); there is no such generator`)
   }
 }
 
-function padding (value, argv) {
+function padding(value, argv) {
   if (!value) {
-    argv.padding = [ 0, 0 ]
+    argv.padding = [0, 0]
     return
   }
 
-  const sizes = (Array.isArray(value) ? value : value.split(','))
-    .map(val => parseInt(val, 10))
+  const sizes = (Array.isArray(value) ? value : value.split(',')).map(val =>
+    Number.parseInt(val, 10)
+  )
 
   if (sizes.length > 2) {
     die(`Invalid padding specified`)
   }
 
   sizes.forEach(size => {
-    if (isNaN(size)) {
+    if (Number.isNaN(size)) {
       die(`Invalid padding specified (not numbers)`)
     }
     if (size < 0) {
@@ -119,24 +113,39 @@ function padding (value, argv) {
     }
   })
 
-  argv.padding = sizes.length === 1
-    ? [ sizes[0], sizes[0] ]
-    : sizes
+  argv.padding = sizes.length === 1 ? [sizes[0], sizes[0]] : sizes
 }
 
-function icon (value, argv) {
+function parseIconPath(value) {
+  const __path = untildify(value)
+
+  if (isAbsolute(__path)) {
+    return existsSync(__path) ? __path : null
+  }
+
+  let localIcon = resolve(process.cwd(), __path)
+
+  if (existsSync(localIcon)) {
+    return localIcon
+  }
+
+  localIcon = resolve(appDir, __path)
+
+  return existsSync(localIcon) ? localIcon : null
+}
+
+function icon(value, argv) {
   if (!value) {
     warn(`No source icon file specified, so using the sample one`)
-    argv.icon = normalize(join(__dirname, '../../samples/icongenie-icon.png'))
+    argv.icon = normalize(
+      join(import.meta.dirname, '../../samples/icongenie-icon.png')
+    )
     return
   }
 
+  argv.icon = parseIconPath(value)
 
-  const { appDir } = require('./app-paths')
-
-  argv.icon = resolve(appDir, untildify(value))
-
-  if (!existsSync(argv.icon)) {
+  if (!argv.icon) {
     die(`Path to source icon file does not exists: "${value}"`)
   }
 
@@ -151,12 +160,8 @@ function icon (value, argv) {
   }
 }
 
-function background (value, argv) {
-  if (!value) {
-    return
-  }
-
-  const { appDir } = require('./app-paths')
+function background(value, argv) {
+  if (!value) return
 
   argv.background = resolve(appDir, untildify(value))
 
@@ -175,7 +180,7 @@ function background (value, argv) {
   }
 }
 
-function getColorParser (name, defaultValue) {
+function getColorParser(name, defaultValue) {
   return (value, argv) => {
     if (!value) {
       argv[name] = argv.themeColor || defaultValue
@@ -193,33 +198,33 @@ function getColorParser (name, defaultValue) {
   }
 }
 
-function splashscreenIconRatio (value, argv) {
+function splashscreenIconRatio(value, argv) {
   if (!value && value !== 0) {
     argv.splashscreenIconRatio = defaultParams.splashscreenIconRatio
     return
   }
 
-  const numeric = parseFloat(value)
+  const numeric = Number.parseFloat(value)
 
-  if (isNaN(numeric)) {
+  if (Number.isNaN(numeric)) {
     die(`Invalid splashscreen icon ratio number specified`)
   }
   if (numeric < 0 || numeric > 100) {
-    die(`Invalid splashscreen icon ratio specified (${value}) - should be between 0 - 100`)
+    die(
+      `Invalid splashscreen icon ratio specified (${value}) - should be between 0 - 100`
+    )
   }
 
   argv.splashscreenIconRatio = numeric
 }
 
-function output (value) {
+function output(value) {
   if (!value) {
     die(`The "output" param is required`)
   }
 }
 
-function assets (value, argv) {
-  const possibleValues = Object.keys(require('../modes'))
-
+function assets(value, argv) {
   if (!value) {
     argv.assets = []
     return
@@ -228,11 +233,11 @@ function assets (value, argv) {
   const list = value.split(',')
 
   if (list.includes('all')) {
-    argv.assets = possibleValues
+    argv.assets = modesList
     return
   }
 
-  if (list.some(mode => !possibleValues.includes(mode))) {
+  if (list.some(item => !modesList.includes(item))) {
     die(`Invalid assets requested: "${value}"`)
   }
 
@@ -251,7 +256,10 @@ const parsers = {
 
   themeColor: getColorParser('themeColor'),
   pngColor: getColorParser('pngColor', defaultParams.pngColor),
-  splashscreenColor: getColorParser('splashscreenColor', defaultParams.splashscreenColor),
+  splashscreenColor: getColorParser(
+    'splashscreenColor',
+    defaultParams.splashscreenColor
+  ),
   svgColor: getColorParser('svgColor', defaultParams.svgColor),
 
   include, // profile file param
@@ -260,7 +268,7 @@ const parsers = {
   assets // profile cmd
 }
 
-module.exports = function (argv, list) {
+export function parseArgv(argv, list) {
   list.forEach(name => {
     const fn = parsers[name]
     if (fn === void 0) {

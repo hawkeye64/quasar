@@ -1,25 +1,25 @@
-const sharp = require('sharp')
+import sharp from 'sharp'
 
-const { getPngCompression, getIcoCompression } = require('./get-compression')
+import { getIcoCompression, getPngCompression } from './get-compression.js'
 
-function getRgbColor (color) {
+function getRgbColor(color) {
   let hex = color.replace(/^#/, '')
 
   if (hex.length === 3) {
     hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
   }
 
-  const num = parseInt(hex, 16)
+  const num = Number.parseInt(hex, 16)
 
   return {
     r: num >> 16,
-    g: num >> 8 & 255,
+    g: (num >> 8) & 255,
     b: num & 255,
     alpha: 1
   }
 }
 
-module.exports = async function getFilesOptions ({
+export async function getFilesOptions({
   quality,
   padding,
 
@@ -31,29 +31,27 @@ module.exports = async function getFilesOptions ({
 
   ...opts
 }) {
-  const qualityLevel = parseInt(quality, 10)
+  const qualityLevel = Number.parseInt(quality, 10)
   const sharpIcon = sharp(icon).withMetadata()
   const sharpBackground = background
     ? sharp(background).withMetadata()
     : sharp({
-      create: {
-        width: 12,
-        height: 12,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 }
-      }
-    })
+        create: {
+          width: 12,
+          height: 12,
+          channels: 4,
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        }
+      })
 
   if (opts.skipTrim !== true) {
     sharpIcon.trim()
   }
 
   const computedPadding = padding
-    ? (
-      padding.length === 1
-        ? { horiz: padding[0], vert: padding[0] }
-        : { horiz: padding[0], vert: padding[1] }
-    )
+    ? padding.length === 1
+      ? { horiz: padding[0], vert: padding[0] }
+      : { horiz: padding[0], vert: padding[1] }
     : { horiz: 0, vert: 0 }
 
   return {
@@ -65,7 +63,7 @@ module.exports = async function getFilesOptions ({
 
     compression: {
       ico: getIcoCompression(qualityLevel),
-      png: getPngCompression(qualityLevel),
+      png: getPngCompression(qualityLevel)
     },
 
     padding: computedPadding,

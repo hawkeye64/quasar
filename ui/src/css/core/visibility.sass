@@ -28,7 +28,8 @@
 .readonly
   cursor: default !important
 .disabled, [disabled]
-  &, * // @stylint ignore
+  &,
+  *
     outline: 0 !important
     cursor: not-allowed !important
 .disabled, [disabled]
@@ -36,8 +37,10 @@
 
 .hidden
   display: none !important
-.invisible
+.invisible, .invisible *
   visibility: hidden !important
+  transition: none !important
+  animation: none !important
 .transparent
   background: transparent !important
 

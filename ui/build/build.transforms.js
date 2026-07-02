@@ -1,110 +1,103 @@
 // Partly used with babel-plugin-transform-imports
-// and by @quasar/app auto-import feature
+// and by @quasar/app-* auto-import feature
 
-const glob = require('glob')
-const path = require('path')
+import path from 'node:path'
+import { globSync } from 'tinyglobby'
 
-const root = path.resolve(__dirname, '..')
-const resolvePath = file => path.resolve(root, file)
-const { writeFile, kebabCase } = require('./build.utils')
+import {
+  filterOutPrivateFiles,
+  kebabCase,
+  relativeToRoot,
+  resolveToRoot,
+  rootFolder,
+  writeFile
+} from './build.utils.js'
 
-function relative (name) {
-  return path.relative(root, name).split('\\').join('/')
+function relative(name) {
+  return relativeToRoot(name).split('\\').join('/')
 }
 
-function getWithoutExtension (filename) {
+function getWithoutExtension(filename) {
   const insertionPoint = filename.lastIndexOf('.')
   return filename.slice(0, insertionPoint)
 }
 
-function lowerCamelCase (name) {
-  return name.replace(/-([a-z])/g, g => g[ 1 ].toUpperCase())
+function lowerCamelCase(name) {
+  return name.replaceAll(/-([a-z])/g, g => g[1].toUpperCase())
 }
 
-function addComponents (map, autoImport) {
-  glob.sync(resolvePath('src/components/**/Q*.js'))
+function addComponents(map, autoImport) {
+  globSync('src/components/*/Q*.js', { cwd: rootFolder, absolute: true })
+    .filter(filterOutPrivateFiles)
     .map(relative)
     .forEach(file => {
-      const
-        name = getWithoutExtension(path.basename(file)),
+      const name = getWithoutExtension(path.basename(file)),
         kebab = kebabCase(name)
 
-      map[ name ] = file
+      map[name] = file
 
       autoImport.kebabComponents.push(kebab)
       autoImport.pascalComponents.push(name)
-      autoImport.importName[ name ] = name
-      autoImport.importName[ kebab ] = name
+      autoImport.importName[name] = name
+      autoImport.importName[kebab] = name
     })
 }
 
-function addDirectives (map, autoImport) {
-  glob.sync(resolvePath('src/directives/*.js'))
-    .filter(file => file.endsWith('.ssr.js') === false)
+function addDirectives(map, autoImport) {
+  globSync('src/directives/*/*.js', { cwd: rootFolder, absolute: true })
+    .filter(filterOutPrivateFiles)
     .map(relative)
     .forEach(file => {
-      const
-        name = getWithoutExtension(path.basename(file)),
+      const name = getWithoutExtension(path.basename(file)),
         kebab = 'v-' + kebabCase(name)
 
-      map[ name ] = file
+      map[name] = file
 
       autoImport.directives.push(kebab)
-      autoImport.importName[ kebab ] = name
+      autoImport.importName[kebab] = name
     })
 }
 
-function addPlugins (map) {
-  glob.sync(resolvePath('src/plugins/*.js'))
+function addPlugins(map) {
+  globSync('src/plugins/*/*.js', { cwd: rootFolder, absolute: true })
+    .filter(filterOutPrivateFiles)
     .map(relative)
     .forEach(file => {
       const name = getWithoutExtension(path.basename(file))
-      map[ name ] = file
+      map[name] = file
     })
 }
 
-function addComposables (map) {
-  glob.sync(resolvePath('src/composables/*.js'))
+function addComposables(map) {
+  globSync('src/composables/*/*.js', { cwd: rootFolder, absolute: true })
+    .filter(filterOutPrivateFiles)
     .map(relative)
     .forEach(file => {
       const name = getWithoutExtension(path.basename(file))
-      map[ lowerCamelCase(name) ] = file
+      map[lowerCamelCase(name)] = file
     })
 }
 
-function addUtils (map) {
-  glob.sync(resolvePath('src/utils/*.js'))
+function addUtils(map) {
+  globSync('src/utils/*/*.js', { cwd: rootFolder, absolute: true })
+    .filter(filterOutPrivateFiles)
     .map(relative)
     .forEach(file => {
       const name = getWithoutExtension(path.basename(file))
-      map[ name === 'open-url' ? 'openURL' : lowerCamelCase(name) ] = file
+      map[name === 'open-url' ? 'openURL' : lowerCamelCase(name)] = file
     })
 }
 
-function getImportMapContent (map) {
-  return JSON.stringify(map, null, 2)
-}
-
-function getImportTransformationsContent () {
-  return `const map = require('./import-map.json')
-
-module.exports = function (importName) {
-  const file = map[importName]
-  if (file === void 0) {
-    throw new Error('Unknown import from Quasar: ' + importName)
-  }
-  return 'quasar/' + file
-}
-`
-}
-
-function getAutoImportFile (autoImport) {
+function getAutoImportFile(autoImport, encodeFn) {
   autoImport.kebabComponents.sort((a, b) => (a.length > b.length ? -1 : 1))
   autoImport.pascalComponents.sort((a, b) => (a.length > b.length ? -1 : 1))
-  autoImport.components = autoImport.kebabComponents.concat(autoImport.pascalComponents)
+  autoImport.components = [
+    ...autoImport.kebabComponents,
+    ...autoImport.pascalComponents
+  ]
   autoImport.directives.sort((a, b) => (a.length > b.length ? -1 : 1))
 
-  return JSON.stringify({
+  return encodeFn({
     importName: autoImport.importName,
     regex: {
       kebabComponents: '(' + autoImport.kebabComponents.join('|') + ')',
@@ -112,12 +105,16 @@ function getAutoImportFile (autoImport) {
       components: '(' + autoImport.components.join('|') + ')',
       directives: '(' + autoImport.directives.join('|') + ')'
     }
-  }, null, 2)
+  })
 }
 
-module.exports.generate = function () {
+export function generate({ compact = false } = {}) {
+  const encodeFn = compact
+    ? JSON.stringify
+    : json => JSON.stringify(json, null, 2)
+
   const map = {
-    Quasar: relative(resolvePath('src/vue-plugin.js'))
+    Quasar: relative('src/vue-plugin.js')
   }
   const autoImport = {
     kebabComponents: [],
@@ -132,18 +129,10 @@ module.exports.generate = function () {
   addComposables(map)
   addUtils(map)
 
-  writeFile(
-    resolvePath('dist/transforms/import-map.json'),
-    getImportMapContent(map)
-  )
+  writeFile(resolveToRoot('dist/transforms/import-map.json'), encodeFn(map))
 
   writeFile(
-    resolvePath('dist/transforms/import-transformation.js'),
-    getImportTransformationsContent()
-  )
-
-  writeFile(
-    resolvePath('dist/transforms/auto-import.json'),
-    getAutoImportFile(autoImport)
+    resolveToRoot('dist/transforms/auto-import.json'),
+    getAutoImportFile(autoImport, encodeFn)
   )
 }

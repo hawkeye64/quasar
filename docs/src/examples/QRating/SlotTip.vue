@@ -1,11 +1,6 @@
 <template>
   <div class="q-pa-md">
-    <q-rating
-      v-model="ratingModel"
-      size="2em"
-      :max="3"
-      color="primary"
-    >
+    <q-rating v-model="ratingModel" size="2em" :max="3" color="primary">
       <template v-slot:tip-1>
         <q-tooltip>Not bad</q-tooltip>
       </template>
@@ -19,14 +14,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      ratingModel: ref(2)
-    }
-  }
-}
+const ratingModel = ref(2)
 </script>

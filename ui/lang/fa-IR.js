@@ -1,5 +1,8 @@
 const days = 'یکشنبه_دوشنبه_سه‌شنبه_چهارشنبه_پنجشنبه_جمعه_شنبه'.split('_')
-const monthsShort = 'فروردین_اردیبهشت_خرداد_تیر_مرداد_شهریور_مهر_آبان_آذر_دی_بهمن_اسفند'.split('_')
+const monthsShort =
+  'فروردین_اردیبهشت_خرداد_تیر_مرداد_شهریور_مهر_آبان_آذر_دی_بهمن_اسفند'.split(
+    '_'
+  )
 
 export default {
   isoName: 'fa-IR',
@@ -18,27 +21,47 @@ export default {
     create: 'ساخت',
     search: 'جستجو',
     filter: 'فیلتر',
-    refresh: 'تازه‌سازی'
+    refresh: 'تازه‌سازی',
+    expand: label => (label ? `"${label}" گسترش` : 'بسط دادن'),
+    collapse: label => (label ? `"${label}" کوچک کردن` : 'سقوط - فروپاشی')
   },
   date: {
-    days: days,
+    days,
     daysShort: 'ی_د_س_چ_پ_ج_ش'.split('_'),
-    months: 'فروردین_اردیبهشت_خرداد_تیر_مرداد_شهریور_مهر_آبان_آذر_دی_بهمن_اسفند'.split('_'),
-    monthsShort: monthsShort,
-    headerTitle: (date, model) => `${ days[ date.getDay() ] }، ${ model.day } ${ monthsShort[ model.month - 1 ] }`,
+    months:
+      'فروردین_اردیبهشت_خرداد_تیر_مرداد_شهریور_مهر_آبان_آذر_دی_بهمن_اسفند'.split(
+        '_'
+      ),
+    monthsShort,
+    headerTitle: (date, model) =>
+      `${days[date.getDay()]}، ${model.day} ${monthsShort[model.month - 1]}`,
     firstDayOfWeek: 6,
     format24h: true,
-    pluralDay: 'روز'
+    pluralDay: 'روز',
+    prevMonth: 'ماه قبل',
+    nextMonth: 'ماه بعد',
+    prevYear: 'سال قبل',
+    nextYear: 'سال دیگر',
+    today: 'امروز',
+    prevRangeYears: range => `قبلی ${range} سال`,
+    nextRangeYears: range => `بعد ${range} سالها`
   },
   table: {
     noData: 'اطلاعاتی موجود نیست',
     noResults: 'هیچ موردی یافت نشد',
     loading: 'در حال بارگذاری ...',
-    selectedRecords: rows => (rows === 0 ? 'رکوردی انتخاب نشده' : rows + ' رکورد انتخاب شده'),
+    selectedRecords: rows =>
+      rows === 0 ? 'رکوردی انتخاب نشده' : rows + ' رکورد انتخاب شده',
     recordsPerPage: 'رکورد در صفحه:',
     allRows: 'همه',
-    pagination: (start, end, total) => start + '-' + end + ' از ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' از ' + total,
     columns: 'ستون'
+  },
+  pagination: {
+    first: 'صفحه اول',
+    prev: 'صفحه قبلی',
+    next: 'صفحه بعدی',
+    last: 'صفحه آخر'
   },
   editor: {
     url: 'آدرس',

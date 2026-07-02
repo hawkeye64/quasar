@@ -12,17 +12,9 @@
   </div>
 </template>
 
-<script>
-import { ref, computed } from 'vue'
+<script setup>
+import { computed, ref } from 'vue'
 
-export default {
-  setup () {
-    const model = ref('')
-
-    return {
-      model,
-      isValid: computed(() => model.value.length <= 3)
-    }
-  }
-}
+const model = ref('')
+const isValid = computed(() => model.value.length <= 3)
 </script>

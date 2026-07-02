@@ -7,9 +7,9 @@
       push
       glossy
       :options="[
-        {label: 'One', value: 'one'},
-        {label: 'Two', value: 'two'},
-        {label: 'Three', value: 'three'}
+        { label: 'One', value: 'one' },
+        { label: 'Two', value: 'two' },
+        { label: 'Three', value: 'three' }
       ]"
     />
 
@@ -21,22 +21,16 @@
       glossy
       class="q-ml-md"
       :options="[
-        {label: 'One', value: 'one'},
-        {label: 'Two', value: 'two'},
-        {label: 'Three', value: 'three'}
+        { label: 'One', value: 'one' },
+        { label: 'Two', value: 'two' },
+        { label: 'Three', value: 'three' }
       ]"
     />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      model: ref('two')
-    }
-  }
-}
+const model = ref('two')
 </script>

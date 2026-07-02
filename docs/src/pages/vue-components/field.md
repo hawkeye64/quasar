@@ -2,6 +2,7 @@
 title: Field
 desc: The QField Vue component is used to provide common functionality and aspect to form components.
 keys: QField
+examples: QField
 ---
 
 The QField component is used to provide common functionality and aspect to form components. It uses `:model-value` (or `v-model` if you want to use `clearable` property) to have knowledge of the model of the component inside. It has support for labels, hints, errors, validation, and comes in a variety of styles and colors.
@@ -12,9 +13,7 @@ QField allows you to display any form control (or almost anything as a matter of
 Do NOT wrap QInput, QFile or QSelect with QField as these components already inherit QField.
 :::
 
-## QField API
-
-<doc-api file="QField" />
+<DocApi file="QField" />
 
 ## Design
 
@@ -30,65 +29,71 @@ QField does not (and should not) manage your `control` slot, so if you use `labe
 
 For your QField you can use only one of the main designs (`filled`, `outlined`, `standout`, `borderless`). You cannot use multiple as they are self-exclusive.
 
-<doc-example title="Design Overview" file="QField/DesignOverview" />
+<DocExample title="Design Overview" file="DesignOverview" />
 
 ### Coloring
 
-<doc-example title="Coloring" file="QField/Coloring" />
+<DocExample title="Coloring" file="Coloring" />
 
 ### Standard
-<doc-example title="Standard" file="QField/DesignStandard" />
+
+<DocExample title="Standard" file="DesignStandard" />
 
 ### Filled
-<doc-example title="Filled" file="QField/DesignFilled" />
+
+<DocExample title="Filled" file="DesignFilled" />
 
 ### Outlined
-<doc-example title="Outlined" file="QField/DesignOutlined" />
+
+<DocExample title="Outlined" file="DesignOutlined" />
 
 ### Standout
-<doc-example title="Standout" file="QField/DesignStandout" />
+
+<DocExample title="Standout" file="DesignStandout" />
 
 One of the most appropriate use cases for Standout design is in a QToolbar:
 
-<doc-example title="Standout in QToolbar" file="QField/StandoutToolbar" />
+<DocExample title="Standout in QToolbar" file="StandoutToolbar" />
 
 ### Borderless
+
 The `borderless` design allows you to seamlessly integrate your QField into other components without QField drawing a border around itself or changing its background color:
 
-<doc-example title="Borderless" file="QField/Borderless" />
+<DocExample title="Borderless" file="Borderless" />
 
 ### Rounded design
 
 The `rounded` prop only works along with Filled, Outlined and Standout designs, as showcased in the example below:
 
-<doc-example title="Rounded" file="QField/Rounded" />
+<DocExample title="Rounded" file="Rounded" />
 
 ### Square borders
 
 The `square` prop only makes sense along with Filled, Outlined and Standout designs, as showcased in the example below:
 
-<doc-example title="Square borders" file="QField/SquareBorders" />
+<DocExample title="Square borders" file="SquareBorders" />
 
-### Dark background
+### Force dark mode
 
-<doc-example title="Dark" file="QField/Dark" dark />
+<DocExample title="Force dark mode" file="Dark" />
 
 ## Basic features
 
 ### Clearable
+
 As a helper, you can use `clearable` prop so user can reset model to `null` through an appended icon.
 
 ::: warning
 If using `clearable` you must use `v-model` or listen on `@update:model-value` and update the value.
 :::
 
-<doc-example title="Clearable" file="QField/Clearable" />
+<DocExample title="Clearable" file="Clearable" />
 
 ### Control types
 
 Anything you place inside the `control` slot will be used as content of the field. We provide a few examples of controls below.
 
-<doc-example title="Control types" file="QField/ControlTypes" />
+<DocExample title="Control types" file="ControlTypes" />
 
 ::: tip
 Most of the form controls always render something visible, so you if you're using a `label` then you might want to set it along with `stack-label`, otherwise the label will overlap the enclosed control.
@@ -96,7 +101,7 @@ Most of the form controls always render something visible, so you if you're usin
 
 ### Prefix and suffix
 
-<doc-example title="Prefix and suffix" file="QField/PrefixSuffix" />
+<DocExample title="Prefix and suffix" file="PrefixSuffix" />
 
 ### Custom Label
 
@@ -108,7 +113,7 @@ Do not forget to set the `label-slot` property.
 If you want to interact with the content of the label (QTooltip) add the `all-pointer-events` class on the element in the slot.
 :::
 
-<doc-example title="Custom label" file="QField/CustomLabel" />
+<DocExample title="Custom label" file="CustomLabel" />
 
 ### Slots with QBtn type "submit"
 
@@ -118,7 +123,7 @@ When placing a QBtn with type "submit" in one of the "before", "after", "prepend
 
 ### Loading state
 
-<doc-example title="Loading state" file="QField/LoadingState" />
+<DocExample title="Loading state" file="LoadingState" />
 
 ## Validation
 
@@ -134,41 +139,44 @@ This is so you can write convenient rules of shape like:
 
 ```js
 value => condition || errorMessage
- ```
+```
+
 For example:
- ```js
+
+```js
 value => value < 10 || 'Value should be lower'
 ```
 
 You can reset the validation by calling `resetValidation()` method on the QField.
 
-<doc-example title="Basic" file="QField/ValidationRequired" />
+<DocExample title="Basic" file="ValidationRequired" />
 
-<doc-example title="Maximum value" file="QField/ValidationMaxValue" />
+<DocExample title="Maximum value" file="ValidationMaxValue" />
 
 If you set `lazy-rules`, validation starts after first blur. If `lazy-rules` is set to `ondemand` String, then validation will be triggered only when component's validate() method is manually called or when the wrapper QForm submits itself.
 
-<doc-example title="Lazy rules" file="QField/ValidationLazy" />
+<DocExample title="Lazy rules" file="ValidationLazy" />
 
 #### Async rules
+
 Rules can be async too, by using async/await or by directly returning a Promise.
 
 ::: tip
 Consider coupling async rules with `debounce` prop to avoid calling the async rules immediately on each keystroke, which might be detrimental to performance.
 :::
 
-<doc-example title="Async rules" file="QField/ValidationAsync" />
+<DocExample title="Async rules" file="ValidationAsync" />
 
 ### External validation
 
 You can also use external validation and only pass `error` and `error-message` (enable `bottom-slots` to display this error message).
 
 ::: tip
-Depending on your needs, you might connect [Vuelidate](https://vuelidate.netlify.com/) (our recommended approach) or some other validation library to QField.
+Depending on your needs, you might connect [Regle](https://reglejs.dev/) (our recommended approach) or some other validation library to QField.
 :::
 
-<doc-example title="External" file="QField/ValidationExternal" />
+<DocExample title="External" file="ValidationExternal" />
 
 You can also customize the slot for error message:
 
-<doc-example title="Slot for error message" file="QField/ValidationSlots" />
+<DocExample title="Slot for error message" file="ValidationSlots" />

@@ -14,17 +14,28 @@ export default {
     create: 'Vytvořit',
     search: 'Hledat',
     filter: 'Filtrovat',
-    refresh: 'Obnovit'
+    refresh: 'Obnovit',
+    expand: label => (label ? `Rozbalit "${label}"` : 'Rozšířit'),
+    collapse: label => (label ? `Sbalit "${label}"` : 'Kolaps')
   },
   date: {
     days: 'Neděle_Pondělí_Úterý_Středa_Čtvrtek_Pátek_Sobota'.split('_'),
     daysShort: 'Ne_Po_Út_St_Čt_Pá_So'.split('_'),
-    months: 'Leden_Únor_Březen_Duben_Květen_Červen_Červenec_Srpen_Září_Říjen_Listopad_Prosinec'.split(
-      '_'),
+    months:
+      'Leden_Únor_Březen_Duben_Květen_Červen_Červenec_Srpen_Září_Říjen_Listopad_Prosinec'.split(
+        '_'
+      ),
     monthsShort: 'Led_Úno_Bře_Dub_Kvě_Čvn_Čvc_Srp_Zář_Říj_Lis_Pro'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'dny'
+    pluralDay: 'dny',
+    prevMonth: '"Předchozí měsíc',
+    nextMonth: 'Příští měsíc',
+    prevYear: 'Předchozí rok',
+    nextYear: 'Příští rok',
+    today: 'Dnes',
+    prevRangeYears: range => `Předchozí ${range} roky`,
+    nextRangeYears: range => `Další ${range} roky`
   },
   table: {
     noData: 'Žádná data k dispozici',
@@ -32,23 +43,34 @@ export default {
     loading: 'Načítá se...',
     selectedRecords: rows => {
       switch (rows) {
-        case 0:
+        case 0: {
           return 'Nejsou vybrány žádné řádky.'
-        case 1:
+        }
+        case 1: {
           return 'Vybrán 1 řádek.'
-        case 2:
+        }
+        case 2: {
           return 'Vybrány 2 řádky.'
-        case 3:
+        }
+        case 3: {
           return 'Vybrány 3 řádky.'
-        case 4:
+        }
+        case 4: {
           return 'Vybrány 4 řádky.'
+        }
       }
-      return ('Vybráno ' + rows + ' řádků.')
+      return 'Vybráno ' + rows + ' řádků.'
     },
     recordsPerPage: 'Počet řádků na stránku:',
     allRows: 'Všechny',
-    pagination: (start, end, total) => start + '-' + end + ' z ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' z ' + total,
     columns: 'Sloupce'
+  },
+  pagination: {
+    first: 'První stránka',
+    prev: 'Předchozí stránka',
+    next: 'Další stránka',
+    last: 'Poslední stránka'
   },
   editor: {
     url: 'URL',

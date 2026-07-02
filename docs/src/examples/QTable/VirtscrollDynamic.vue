@@ -2,6 +2,8 @@
   <div class="q-pa-md">
     <q-table
       class="my-sticky-dynamic"
+      flat
+      bordered
       title="Treats"
       :rows="rows"
       :columns="columns"
@@ -17,10 +19,11 @@
   </div>
 </template>
 
-<script>
-import { ref, computed, nextTick } from 'vue'
+<script setup>
+import { computed, nextTick, ref } from 'vue'
 
 const columns = [
+  // #region
   {
     name: 'index',
     label: '#',
@@ -35,22 +38,42 @@ const columns = [
     format: val => val,
     sortable: true
   },
-  { name: 'calories', align: 'center', label: 'Calories', field: 'calories', sortable: true },
+  {
+    name: 'calories',
+    align: 'center',
+    label: 'Calories',
+    field: 'calories',
+    sortable: true
+  },
   { name: 'fat', label: 'Fat (g)', field: 'fat', sortable: true },
   { name: 'carbs', label: 'Carbs (g)', field: 'carbs' },
   { name: 'protein', label: 'Protein (g)', field: 'protein' },
   { name: 'sodium', label: 'Sodium (mg)', field: 'sodium' },
-  { name: 'calcium', label: 'Calcium (%)', field: 'calcium', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) },
-  { name: 'iron', label: 'Iron (%)', field: 'iron', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) }
+  {
+    name: 'calcium',
+    label: 'Calcium (%)',
+    field: 'calcium',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  },
+  {
+    name: 'iron',
+    label: 'Iron (%)',
+    field: 'iron',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  }
+  // #endregion
 ]
 
 const seed = [
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24,
-    protein: 4.0,
+    protein: 4,
     sodium: 87,
     calcium: '14%',
     iron: '1%'
@@ -58,7 +81,7 @@ const seed = [
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37,
     protein: 4.3,
     sodium: 129,
@@ -68,9 +91,9 @@ const seed = [
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23,
-    protein: 6.0,
+    protein: 6,
     sodium: 337,
     calcium: '6%',
     iron: '7%'
@@ -88,7 +111,7 @@ const seed = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49,
     protein: 3.9,
     sodium: 327,
@@ -98,9 +121,9 @@ const seed = [
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94,
-    protein: 0.0,
+    protein: 0,
     sodium: 50,
     calcium: '0%',
     iron: '0%'
@@ -128,7 +151,7 @@ const seed = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51,
     protein: 4.9,
     sodium: 326,
@@ -138,19 +161,20 @@ const seed = [
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65,
     protein: 7,
     sodium: 54,
     calcium: '12%',
     iron: '6%'
   }
+  // #endregion
 ]
 
 // we generate lots of rows here
-let allRows = []
+const allRows = []
 for (let i = 0; i < 1000; i++) {
-  allRows = allRows.concat(seed.slice(0).map(r => ({ ...r })))
+  allRows.push(...seed.map(r => ({ ...r })))
 }
 allRows.forEach((row, index) => {
   row.index = index
@@ -159,38 +183,25 @@ allRows.forEach((row, index) => {
 const pageSize = 50
 const lastPage = Math.ceil(allRows.length / pageSize)
 
-export default {
-  setup () {
-    const nextPage = ref(2)
-    const loading = ref(false)
+const pagination = { rowsPerPage: 0 }
+const nextPage = ref(2)
+const loading = ref(false)
 
-    const rows = computed(() => allRows.slice(0, pageSize * (nextPage.value - 1)))
+const rows = computed(() => allRows.slice(0, pageSize * (nextPage.value - 1)))
 
-    return {
-      columns,
-      rows,
+function onScroll({ to, ref: compRef }) {
+  const lastIndex = rows.value.length - 1
 
-      nextPage,
-      loading,
+  if (loading.value !== true && nextPage.value < lastPage && to === lastIndex) {
+    loading.value = true
 
-      pagination: { rowsPerPage: 0 },
-
-      onScroll ({ to, ref }) {
-        const lastIndex = rows.value.length - 1
-
-        if (loading.value !== true && nextPage.value < lastPage && to === lastIndex) {
-          loading.value = true
-
-          setTimeout(() => {
-            nextPage.value++
-            nextTick(() => {
-              ref.refresh()
-              loading.value = false
-            })
-          }, 500)
-        }
-      }
-    }
+    setTimeout(() => {
+      nextPage.value++
+      nextTick(() => {
+        compRef.refresh()
+        loading.value = false
+      })
+    }, 500)
   }
 }
 </script>
@@ -203,7 +214,7 @@ export default {
   .q-table__top,
   .q-table__bottom,
   thead tr:first-child th /* bg color is important for th; just specify one */
-    background-color: #fff
+    background-color: #00b4ff
 
   thead tr th
     position: sticky
@@ -214,4 +225,9 @@ export default {
     top: 48px
   thead tr:first-child th
     top: 0
+
+  /* prevent scrolling behind sticky top row on focus */
+  tbody
+    /* height of all previous header rows */
+    scroll-margin-top: 48px
 </style>

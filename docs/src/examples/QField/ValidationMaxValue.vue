@@ -6,32 +6,37 @@
       :model-value="slider"
       label="Maximum 60"
       stack-label
-      :rules="[ val => val <= 60 || 'Please set value to maximum 60' ]"
+      :rules="[val => val <= 60 || 'Please set value to maximum 60']"
     >
       <template v-slot:control>
-        <q-slider v-model="slider" :min="0" :max="100" label label-always class="q-mt-lg" style="width: 200px" />
+        <q-slider
+          v-model="slider"
+          :min="0"
+          :max="100"
+          label
+          label-always
+          class="q-mt-lg"
+          style="width: 200px"
+        />
       </template>
     </q-field>
 
-    <q-btn class="q-mt-sm" label="Reset Validation" @click="reset" color="primary"/>
+    <q-btn
+      class="q-mt-sm"
+      label="Reset Validation"
+      @click="reset"
+      color="primary"
+    />
   </div>
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+import { ref, useTemplateRef } from 'vue'
 
-export default {
-  setup () {
-    const fieldRef = ref(null)
+const fieldRef = useTemplateRef('fieldRef')
+const slider = ref(50)
 
-    return {
-      slider: ref(50),
-      fieldRef,
-
-      reset () {
-        fieldRef.value.resetValidation()
-      }
-    }
-  }
+function reset() {
+  fieldRef.value.resetValidation()
 }
 </script>

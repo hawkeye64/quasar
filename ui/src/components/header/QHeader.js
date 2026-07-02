@@ -1,10 +1,27 @@
-import { h, ref, computed, watch, onBeforeUnmount, inject, getCurrentInstance } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  h,
+  inject,
+  onBeforeUnmount,
+  ref,
+  watch
+} from 'vue'
 
 import QResizeObserver from '../resize-observer/QResizeObserver.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { hUniqueSlot } from '../../utils/private/render.js'
-import { layoutKey } from '../../utils/private/symbols.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { hUniqueSlot } from '../../utils/private.render/render.js'
+import {
+  emptyRenderFn,
+  layoutKey
+} from '../../utils/private.symbols/symbols.js'
+
+function updateLocal(prop, val) {
+  if (prop.value !== val) {
+    prop.value = val
+  }
+}
 
 export default createComponent({
   name: 'QHeader',
@@ -23,107 +40,107 @@ export default createComponent({
     elevated: Boolean,
 
     heightHint: {
-      type: [ String, Number ],
+      type: [String, Number],
       default: 50
     }
   },
 
-  emits: [ 'reveal', 'focusin' ],
+  emits: ['reveal', 'focusin'],
 
-  setup (props, { slots, emit }) {
-    const { proxy: { $q } } = getCurrentInstance()
+  setup(props, { slots, emit }) {
+    const {
+      proxy: { $q }
+    } = getCurrentInstance()
 
-    const $layout = inject(layoutKey, () => {
+    const $layout = inject(layoutKey, emptyRenderFn)
+    if ($layout === emptyRenderFn) {
       console.error('QHeader needs to be child of QLayout')
-    })
+      return emptyRenderFn
+    }
 
-    const size = ref(parseInt(props.heightHint, 10))
+    const size = ref(Number.parseInt(props.heightHint, 10))
     const revealed = ref(true)
 
-    const fixed = computed(() =>
-      props.reveal === true
-      || $layout.view.value.indexOf('H') > -1
-      || ($q.platform.is.ios && $layout.isContainer.value === true)
+    const fixed = computed(
+      () =>
+        props.reveal ||
+        $layout.view.value.includes('H') ||
+        ($q.platform.is.ios && $layout.isContainer.value)
     )
 
     const offset = computed(() => {
-      if (props.modelValue !== true) {
-        return 0
-      }
-      if (fixed.value === true) {
-        return revealed.value === true ? size.value : 0
-      }
-      const offset = size.value - $layout.scroll.value.position
-      return offset > 0 ? offset : 0
+      if (!props.modelValue) return 0
+      if (fixed.value) return revealed.value ? size.value : 0
+
+      const localOffset = size.value - $layout.scroll.value.position
+      return Math.max(localOffset, 0)
     })
 
-    const hidden = computed(() => props.modelValue !== true
-      || (fixed.value === true && revealed.value !== true)
+    const hidden = computed(
+      () => !props.modelValue || (fixed.value && !revealed.value)
     )
 
-    const revealOnFocus = computed(() =>
-      props.modelValue === true && hidden.value === true && props.reveal === true
+    const revealOnFocus = computed(
+      () => props.modelValue && hidden.value && props.reveal
     )
 
-    const classes = computed(() =>
-      'q-header q-layout__section--marginal '
-      + (fixed.value === true ? 'fixed' : 'absolute') + '-top'
-      + (props.bordered === true ? ' q-header--bordered' : '')
-      + (hidden.value === true ? ' q-header--hidden' : '')
-      + (props.modelValue !== true ? ' q-layout--prevent-focus' : '')
+    const classes = computed(
+      () =>
+        'q-header q-layout__section--marginal ' +
+        (fixed.value ? 'fixed' : 'absolute') +
+        '-top' +
+        (props.bordered ? ' q-header--bordered' : '') +
+        (hidden.value ? ' q-header--hidden' : '') +
+        (props.modelValue ? '' : ' q-layout--prevent-focus')
     )
 
     const style = computed(() => {
-      const
-        view = $layout.rows.value.top,
+      const view = $layout.rows.value.top,
         css = {}
 
-      if (view[ 0 ] === 'l' && $layout.left.space === true) {
-        css[ $q.lang.rtl === true ? 'right' : 'left' ] = `${ $layout.left.size }px`
+      if (view[0] === 'l' && $layout.left.space) {
+        css[$q.lang.rtl ? 'right' : 'left'] = `${$layout.left.size}px`
       }
-      if (view[ 2 ] === 'r' && $layout.right.space === true) {
-        css[ $q.lang.rtl === true ? 'left' : 'right' ] = `${ $layout.right.size }px`
+      if (view[2] === 'r' && $layout.right.space) {
+        css[$q.lang.rtl ? 'left' : 'right'] = `${$layout.right.size}px`
       }
 
       return css
     })
 
-    function updateLayout (prop, val) {
+    function updateLayout(prop, val) {
       $layout.update('header', prop, val)
     }
 
-    function updateLocal (prop, val) {
-      if (prop.value !== val) {
-        prop.value = val
-      }
-    }
-
-    function onResize ({ height }) {
+    function onResize({ height }) {
       updateLocal(size, height)
       updateLayout('size', height)
     }
 
-    function onFocusin (evt) {
-      if (revealOnFocus.value === true) {
-        updateLocal(revealed, true)
-      }
-
+    function onFocusin(evt) {
+      if (revealOnFocus.value) updateLocal(revealed, true)
       emit('focusin', evt)
     }
 
-    watch(() => props.modelValue, val => {
-      updateLayout('space', val)
-      updateLocal(revealed, true)
-      $layout.animate()
-    })
+    watch(
+      () => props.modelValue,
+      val => {
+        updateLayout('space', val)
+        updateLocal(revealed, true)
+        $layout.animate()
+      }
+    )
 
     watch(offset, val => {
       updateLayout('offset', val)
     })
 
-    watch(() => props.reveal, val => {
-      val === false && updateLocal(revealed, props.modelValue)
-    })
+    watch(
+      () => props.reveal,
+      val => {
+        if (!val) updateLocal(revealed, props.modelValue)
+      }
+    )
 
     watch(revealed, val => {
       $layout.animate()
@@ -131,17 +148,20 @@ export default createComponent({
     })
 
     watch($layout.scroll, scroll => {
-      props.reveal === true && updateLocal(revealed,
-        scroll.direction === 'up'
-        || scroll.position <= props.revealOffset
-        || scroll.position - scroll.inflectionPoint < 100
-      )
+      if (props.reveal) {
+        updateLocal(
+          revealed,
+          scroll.direction === 'up' ||
+            scroll.position <= props.revealOffset ||
+            scroll.position - scroll.inflectionPoint < 100
+        )
+      }
     })
 
     const instance = {}
 
     $layout.instances.header = instance
-    props.modelValue === true && updateLayout('size', size.value)
+    if (props.modelValue) updateLayout('size', size.value)
     updateLayout('space', props.modelValue)
     updateLayout('offset', offset.value)
 
@@ -157,11 +177,14 @@ export default createComponent({
     return () => {
       const child = hUniqueSlot(slots.default, [])
 
-      props.elevated === true && child.push(
-        h('div', {
-          class: 'q-layout__shadow absolute-full overflow-hidden no-pointer-events'
-        })
-      )
+      if (props.elevated) {
+        child.push(
+          h('div', {
+            class:
+              'q-layout__shadow absolute-full overflow-hidden no-pointer-events'
+          })
+        )
+      }
 
       child.push(
         h(QResizeObserver, {
@@ -170,11 +193,15 @@ export default createComponent({
         })
       )
 
-      return h('header', {
-        class: classes.value,
-        style: style.value,
-        onFocusin
-      }, child)
+      return h(
+        'header',
+        {
+          class: classes.value,
+          style: style.value,
+          onFocusin
+        },
+        child
+      )
     }
   }
 })

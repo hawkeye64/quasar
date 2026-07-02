@@ -27,16 +27,7 @@
             label: $q.lang.editor.formatting,
             icon: $q.iconSet.editor.formatting,
             list: 'no-icons',
-            options: [
-              'p',
-              'h1',
-              'h2',
-              'h3',
-              'h4',
-              'h5',
-              'h6',
-              'code'
-            ]
+            options: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'code']
           },
           {
             label: $q.lang.editor.fontSize,
@@ -89,20 +80,14 @@
         verdana: 'Verdana'
       }"
     />
-    </div>
+  </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      qeditor: ref(
-        '<pre>Check out the two different types of dropdowns' +
-        ' in each of the "Align" buttons.</pre> '
-      )
-    }
-  }
-}
+const qeditor = ref(
+  '<pre>Check out the two different types of dropdowns' +
+    ' in each of the "Align" buttons.</pre> '
+)
 </script>

@@ -1,13 +1,13 @@
-const { mountCordova, isCordovaFile, verifyCordova } = require('./mount-cordova')
-const { mountTag } = require('./mount-tag')
+import { mountCapacitor } from './mount-capacitor.js'
+import { isCordovaFile, mountCordova, verifyCordova } from './mount-cordova.js'
+import { mountTag } from './mount-tag.js'
 
-module.exports.mount = function mount (files) {
-  mountCordova(files)
+export async function mount(files) {
+  await mountCapacitor(files)
+  await mountCordova(files)
   mountTag(files)
 }
 
-module.exports.verifyMount = function verifyMount (file) {
-  return isCordovaFile(file)
-    ? verifyCordova(file)
-    : ''
+export function verifyMount(file) {
+  return isCordovaFile(file) ? verifyCordova(file) : ''
 }

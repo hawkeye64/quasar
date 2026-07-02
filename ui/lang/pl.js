@@ -14,30 +14,49 @@ export default {
     create: 'Utwórz',
     search: 'Szukaj',
     filter: 'Filtruj',
-    refresh: 'Odśwież'
+    refresh: 'Odśwież',
+    expand: label => (label ? `Rozwiń "${label}"` : 'Zwiększać'),
+    collapse: label => (label ? `Zwiń "${label}"` : 'Upadek')
   },
   date: {
-    days: 'Niedziela_Poniedziałek_Wtorek_Środa_Czwartek_Piątek_Sobota'.split('_'),
+    days: 'Niedziela_Poniedziałek_Wtorek_Środa_Czwartek_Piątek_Sobota'.split(
+      '_'
+    ),
     daysShort: 'Nd_Pon_Wt_Śr_Czw_Ptk_Sob'.split('_'),
-    months: 'Styczeń_Luty_Marzec_Kwiecień_Maj_Czerwiec_Lipiec_Sierpień_Wrzesień_Październik_Listopad_Grudzień'.split('_'),
+    months:
+      'Styczeń_Luty_Marzec_Kwiecień_Maj_Czerwiec_Lipiec_Sierpień_Wrzesień_Październik_Listopad_Grudzień'.split(
+        '_'
+      ),
     monthsShort: 'Sty_Lut_Mar_Kwi_Maj_Cze_Lip_Sie_Wrz_Paź_Lis_Gru'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'dni'
+    pluralDay: 'dni',
+    prevMonth: 'Poprzedni miesiąc',
+    nextMonth: 'Następny miesiąc',
+    prevYear: 'Poprzedni rok',
+    nextYear: 'Następny rok',
+    today: 'Dzisiaj',
+    prevRangeYears: range => `Poprzedni ${range} lata`,
+    nextRangeYears: range => `Następnie ${range} lata`
   },
   table: {
     noData: 'Brak dostępnych danych',
     noResults: 'Nie znaleziono pasujących wpisów',
     loading: 'Ładowanie...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows > 1
         ? rows + ' zaznaczony(ch) wiersz(y).'
-        : (rows === 0 ? 'Brak' : '1') + ' zaznaczony wiersz.'
-    ),
+        : (rows === 0 ? 'Brak' : '1') + ' zaznaczony wiersz.',
     recordsPerPage: 'Wierszy na stronę:',
     allRows: 'Wszystkie',
-    pagination: (start, end, total) => start + '-' + end + ' z ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' z ' + total,
     columns: 'Kolumny'
+  },
+  pagination: {
+    first: 'Pierwsza strona',
+    prev: 'Poprzednia strona',
+    next: 'Następna strona',
+    last: 'Ostatnia strona'
   },
   editor: {
     url: 'URL',

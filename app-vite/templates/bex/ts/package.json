@@ -1,0 +1,10 @@
+{
+  "name": "quasar-bex-app",
+  "version": "1.0.0",
+  "description": "Quasar BEX Folder",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@types/chrome": "^0.1.40"
+  }
+}

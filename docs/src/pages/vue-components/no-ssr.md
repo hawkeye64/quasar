@@ -3,17 +3,17 @@ title: No SSR
 desc: The QNoSsr Vue component makes it easy to differentiate content between server-side and client-side.
 keys: QNoSsr
 related:
-  - /quasar-cli/developing-ssr/introduction
+  - /quasar-cli-vite/developing-ssr/introduction
+  - /vue-composables/use-hydration
 ---
+
 The QNoSsr component makes sense only if you are creating a SSR website/app.
 
 It avoids rendering its content on the server and leaves that for client only. Useful when you got code that is not isomorphic and can only run on the client side, in a browser.
 
 Alternatively, you can also use it to render content only on server-side and it automatically removes it if it ends up running on a client browser.
 
-## QNoSsr API
-
-<doc-api file="QNoSsr" />
+<DocApi file="QNoSsr" />
 
 ## Usage
 

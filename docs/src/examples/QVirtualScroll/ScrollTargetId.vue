@@ -1,6 +1,6 @@
 <template>
   <div id="virtual-scroll-target" class="scroll" style="max-height: 230px">
-    <div class="q-pa-md bg-yellow">
+    <div class="q-pa-md bg-purple text-white">
       Above the list - scrolls with the list
     </div>
 
@@ -8,42 +8,28 @@
       scroll-target="#virtual-scroll-target"
       :items="heavyList"
       separator
+      v-slot="{ item, index }"
     >
-      <template v-slot="{ item, index }">
-        <q-item
-          :key="index"
-          dense
-        >
-          <q-item-section>
-            <q-item-label>
-              #{{ index }} - {{ item.label }}
-            </q-item-label>
-          </q-item-section>
-        </q-item>
-      </template>
+      <q-item :key="index" dense>
+        <q-item-section>
+          <q-item-label> #{{ index }} - {{ item.label }} </q-item-label>
+        </q-item-section>
+      </q-item>
     </q-virtual-scroll>
 
-    <div class="q-pa-md bg-yellow">
+    <div class="q-pa-md bg-purple text-white">
       Below the list - scrolls with the list
     </div>
   </div>
 </template>
 
-<script>
-const maxSize = 10000
+<script setup>
+const maxSize = 10_000
 const heavyList = []
 
 for (let i = 0; i < maxSize; i++) {
   heavyList.push({
     label: 'Option ' + (i + 1)
   })
-}
-
-export default {
-  setup () {
-    return {
-      heavyList
-    }
-  }
 }
 </script>

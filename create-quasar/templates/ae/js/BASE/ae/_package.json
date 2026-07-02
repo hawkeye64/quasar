@@ -1,0 +1,38 @@
+{
+  "name": "<%= scope.aeFullName %>",
+  "version": "0.0.1",
+  "description": "A Quasar App Extension",
+  <% if (scope.author) { %>
+  "author": "<%= scope.author %>",
+  <% } %>
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.js",
+  "imports": {
+    "#q-app": "@quasar/app-vite"
+  },
+<% if (scope.preset.prompts) { %>
+  "dependencies": {
+    "@clack/prompts": "^1.4.0"
+  },
+<% } %>
+  "devDependencies": {
+    "@quasar/app-vite": "catalog:",
+    "quasar": "catalog:",
+    "vue": "catalog:"
+  },
+  "peerDependencies": {
+    "@quasar/app-vite": "^3.0.0-rc.5"
+  },
+  "keywords": [
+    "quasar",
+    "quasar-app-extension",
+    "quasar-cli",
+    "quasar-app-vite",
+    "vue",
+    "vuejs"
+  ],
+  "engines": {
+    "node": ">= 26 || ^24 || ^22.12"
+  }
+}

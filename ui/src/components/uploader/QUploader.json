@@ -1,5 +1,8 @@
 {
-  "mixins": [ "composables/private/use-file", "components/uploader/xhr-uploader-plugin" ],
+  "mixins": [
+    "composables/private.use-file/use-file",
+    "components/uploader/xhr-uploader-plugin"
+  ],
 
   "meta": {
     "docsUrl": "https://v2.quasar.dev/vue-components/uploader"
@@ -9,7 +12,7 @@
     "label": {
       "type": "String",
       "desc": "Label for the uploader",
-      "examples": ["Upload photo here"],
+      "examples": ["'Upload photo here'"],
       "category": "content"
     },
 
@@ -55,6 +58,15 @@
       "category": "behavior"
     },
 
+    "thumbnail-fit": {
+      "type": "String",
+      "desc": "How the thumbnail image will fit into the container; Equivalent of the background-size prop",
+      "default": "'cover'",
+      "examples": ["'cover'", "'contain'", "'auto'", "'50%'"],
+      "category": "style",
+      "addedIn": "v2.17"
+    },
+
     "disable": {
       "extends": "disable"
     },
@@ -94,8 +106,7 @@
       "params": {
         "files": {
           "type": "Array",
-          "desc": "Array of files that were added",
-          "__exemption": ["examples"]
+          "desc": "Array of files that were added"
         }
       }
     },
@@ -105,8 +116,7 @@
       "params": {
         "files": {
           "type": "Array",
-          "desc": "Array of files that were removed",
-          "__exemption": ["examples"]
+          "desc": "Array of files that were removed"
         }
       }
     },
@@ -122,35 +132,143 @@
 
   "methods": {
     "upload": {
-      "desc": "Start uploading (same as clicking the upload button)"
+      "desc": "Start uploading (same as clicking the upload button)",
+      "params": null,
+      "returns": null
     },
 
     "abort": {
-      "desc": "Abort upload of all files (same as clicking the abort button)"
+      "desc": "Abort upload of all files (same as clicking the abort button)",
+      "params": null,
+      "returns": null
     },
 
     "reset": {
-      "desc": "Resets uploader to default; Empties queue, aborts current uploads"
+      "desc": "Resets uploader to default; Empties queue, aborts current uploads",
+      "params": null,
+      "returns": null
     },
 
     "removeUploadedFiles": {
-      "desc": "Removes already uploaded files from the list"
+      "desc": "Removes already uploaded files from the list",
+      "params": null,
+      "returns": null
     },
 
     "removeQueuedFiles": {
-      "desc": "Remove files that are waiting for upload to start (same as clicking the left clear button)"
+      "desc": "Remove files that are waiting for upload to start (same as clicking the left clear button)",
+      "params": null,
+      "returns": null
     },
 
     "removeFile": {
       "desc": "Remove specified file from the queue",
       "params": {
         "file": {
-          "type": "Object",
-          "desc": "File to remove (instance of File)",
-          "required": true,
-          "__exemption": ["examples"]
+          "type": "File",
+          "desc": "The file to remove",
+          "required": true
         }
+      },
+      "returns": null
+    },
+
+    "updateFileStatus": {
+      "desc": "Update the status of a file",
+      "params": {
+        "file": {
+          "type": "File",
+          "desc": "The file to update",
+          "required": true
+        },
+        "status": {
+          "type": "String",
+          "desc": "Status of file",
+          "values": ["'idle'", "'failed'", "'uploading'", "'uploaded'"],
+          "required": true
+        },
+        "uploadedSize": {
+          "type": "Number",
+          "desc": "The number of uploaded bytes of the file; Is required explicitly only when status is NOT 'uploaded'",
+          "required": true
+        }
+      },
+      "returns": null
+    },
+
+    "isAlive": {
+      "desc": "Is the component alive (activated but not unmounted); Useful to determine if you still need to compute anything going further",
+      "params": null,
+      "returns": {
+        "type": "Boolean",
+        "desc": "If true, the current component is still activated and mounted"
       }
+    },
+
+    "pickFiles": {
+      "desc": "Trigger the file picker dialog; The event must come from a user interaction event handler",
+      "params": {
+        "evt": {
+          "extends": "evt",
+          "required": true,
+          "desc": "JS event object of the original user interaction handler"
+        }
+      },
+      "returns": null
+    }
+  },
+
+  "computedProps": {
+    "files": {
+      "type": "Array",
+      "desc": "List of all files"
+    },
+
+    "queuedFiles": {
+      "type": "Array",
+      "desc": "List of files that are waiting to be uploaded"
+    },
+
+    "uploadedFiles": {
+      "type": "Array",
+      "desc": "List of files that have been uploaded"
+    },
+
+    "uploadedSize": {
+      "type": "Number",
+      "desc": "Size of all uploaded files in bytes"
+    },
+
+    "uploadSizeLabel": {
+      "type": "String",
+      "desc": "Label for the size total of all files",
+      "examples": ["'1.0MB'"]
+    },
+
+    "uploadProgressLabel": {
+      "type": "String",
+      "desc": "Label for the upload progress (in %)",
+      "examples": ["'52.76%'"]
+    },
+
+    "canAddFiles": {
+      "type": "Boolean",
+      "desc": "Whether new files can be added to the list"
+    },
+
+    "canUpload": {
+      "type": "Boolean",
+      "desc": "Whether the files can be uploaded"
+    },
+
+    "isBusy": {
+      "type": "Boolean",
+      "desc": "The component state is set as busy; User should not be able to interact with the component"
+    },
+
+    "isUploading": {
+      "type": "Boolean",
+      "desc": "The component is uploading files"
     }
   }
 }

@@ -1,6 +1,7 @@
 <template>
   <div class="q-pa-md">
     <q-slider
+      class="q-mt-lg"
       v-model="value"
       :min="-20"
       :max="20"
@@ -13,14 +14,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      value: ref(16)
-    }
-  }
-}
+const value = ref(16)
 </script>

@@ -3,6 +3,8 @@
     <q-table
       grid
       grid-header
+      flat
+      bordered
       title="Treats"
       :rows="rows"
       :columns="columns"
@@ -11,7 +13,13 @@
       hide-header
     >
       <template v-slot:top-right>
-        <q-input borderless dense debounce="300" v-model="filter" placeholder="Search">
+        <q-input
+          borderless
+          dense
+          debounce="300"
+          v-model="filter"
+          placeholder="Search"
+        >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
@@ -21,7 +29,7 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
 const columns = [
@@ -33,28 +41,35 @@ const columns = [
     field: row => row.name,
     sortable: true
   },
-  { name: 'calories', align: 'center', label: 'Calories', field: 'calories', sortable: true },
+  {
+    name: 'calories',
+    align: 'center',
+    label: 'Calories',
+    field: 'calories',
+    sortable: true
+  },
   { name: 'fat', label: 'Fat (g)', field: 'fat', sortable: true },
   { name: 'carbs', label: 'Carbs (g)', field: 'carbs' }
 ]
 
 const rows = [
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24
   },
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37
   },
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23
   },
   {
@@ -66,13 +81,13 @@ const rows = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49
   },
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94
   },
   {
@@ -90,24 +105,17 @@ const rows = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51
   },
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65
   }
+  // #endregion
 ]
 
-export default {
-  setup () {
-    return {
-      filter: ref(''),
-      columns,
-      rows
-    }
-  }
-}
+const filter = ref('')
 </script>

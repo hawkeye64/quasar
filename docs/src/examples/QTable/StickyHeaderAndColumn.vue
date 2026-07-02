@@ -2,6 +2,8 @@
   <div class="q-pa-md">
     <q-table
       class="my-sticky-header-column-table"
+      flat
+      bordered
       title="Treats"
       :rows="rows"
       :columns="columns"
@@ -10,8 +12,9 @@
   </div>
 </template>
 
-<script>
+<script setup>
 const columns = [
+  // #region
   {
     name: 'name',
     required: true,
@@ -21,22 +24,42 @@ const columns = [
     format: val => `${val}`,
     sortable: true
   },
-  { name: 'calories', align: 'center', label: 'Calories', field: 'calories', sortable: true },
+  {
+    name: 'calories',
+    align: 'center',
+    label: 'Calories',
+    field: 'calories',
+    sortable: true
+  },
   { name: 'fat', label: 'Fat (g)', field: 'fat', sortable: true },
   { name: 'carbs', label: 'Carbs (g)', field: 'carbs' },
   { name: 'protein', label: 'Protein (g)', field: 'protein' },
   { name: 'sodium', label: 'Sodium (mg)', field: 'sodium' },
-  { name: 'calcium', label: 'Calcium (%)', field: 'calcium', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) },
-  { name: 'iron', label: 'Iron (%)', field: 'iron', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) }
+  {
+    name: 'calcium',
+    label: 'Calcium (%)',
+    field: 'calcium',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  },
+  {
+    name: 'iron',
+    label: 'Iron (%)',
+    field: 'iron',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  }
+  // #endregion
 ]
 
 const rows = [
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24,
-    protein: 4.0,
+    protein: 4,
     sodium: 87,
     calcium: '14%',
     iron: '1%'
@@ -44,7 +67,7 @@ const rows = [
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37,
     protein: 4.3,
     sodium: 129,
@@ -54,9 +77,9 @@ const rows = [
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23,
-    protein: 6.0,
+    protein: 6,
     sodium: 337,
     calcium: '6%',
     iron: '7%'
@@ -74,7 +97,7 @@ const rows = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49,
     protein: 3.9,
     sodium: 327,
@@ -84,9 +107,9 @@ const rows = [
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94,
-    protein: 0.0,
+    protein: 0,
     sodium: 50,
     calcium: '0%',
     iron: '0%'
@@ -114,7 +137,7 @@ const rows = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51,
     protein: 4.9,
     sodium: 326,
@@ -124,23 +147,15 @@ const rows = [
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65,
     protein: 7,
     sodium: 54,
     calcium: '12%',
     iron: '6%'
   }
+  // #endregion
 ]
-
-export default {
-  setup () {
-    return {
-      columns,
-      rows
-    }
-  }
-}
 </script>
 
 <style lang="sass">
@@ -154,14 +169,14 @@ export default {
 
   td:first-child
     /* bg color is important for td; just specify one */
-    background-color: #c1f4cd !important
+    background-color: #00b4ff
 
   tr th
     position: sticky
     /* higher than z-index for td below */
     z-index: 2
     /* bg color is important; just specify one */
-    background: #fff
+    background: #00b4ff
 
   /* this will be the loading indicator */
   thead tr:last-child th
@@ -182,4 +197,9 @@ export default {
   td:first-child, th:first-child
     position: sticky
     left: 0
+
+  /* prevent scrolling behind sticky top row on focus */
+  tbody
+    /* height of all previous header rows */
+    scroll-margin-top: 48px
 </style>

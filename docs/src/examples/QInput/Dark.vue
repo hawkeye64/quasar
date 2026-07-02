@@ -1,5 +1,5 @@
 <template>
-  <div class="q-pa-md bg-grey-10 text-white">
+  <div class="q-pa-md bg-grey-9 text-white">
     <div class="q-gutter-y-md column" style="max-width: 300px">
       <div>
         <q-toggle v-model="readonly" label="Readonly" dark />
@@ -12,21 +12,42 @@
         </template>
       </q-input>
 
-      <q-input dark filled v-model="text" :readonly="readonly" :disable="disable">
+      <q-input
+        dark
+        filled
+        v-model="text"
+        :readonly="readonly"
+        :disable="disable"
+      >
         <template v-slot:prepend>
           <q-icon name="event" />
-          </template>
+        </template>
       </q-input>
 
-      <q-input dark outlined v-model="text" :readonly="readonly" :disable="disable">
+      <q-input
+        dark
+        outlined
+        v-model="text"
+        :readonly="readonly"
+        :disable="disable"
+      >
         <template v-slot:append>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo-dark.svg">
+            <img src="https://cdn.quasar.dev/logo-v2/svg/logo-dark.svg" />
           </q-avatar>
         </template>
       </q-input>
 
-      <q-input dark standout bottom-slots v-model="text" label="Label" counter :readonly="readonly" :disable="disable">
+      <q-input
+        dark
+        standout
+        bottom-slots
+        v-model="text"
+        label="Label"
+        counter
+        :readonly="readonly"
+        :disable="disable"
+      >
         <template v-slot:prepend>
           <q-icon name="place" />
         </template>
@@ -34,12 +55,16 @@
           <q-icon name="close" @click="text = ''" class="cursor-pointer" />
         </template>
 
-        <template v-slot:hint>
-          Field hint
-        </template>
+        <template v-slot:hint> Field hint </template>
       </q-input>
 
-      <q-input dark borderless v-model="text" :readonly="readonly" :disable="disable">
+      <q-input
+        dark
+        borderless
+        v-model="text"
+        :readonly="readonly"
+        :disable="disable"
+      >
         <template v-slot:append>
           <q-icon name="search" />
         </template>
@@ -48,16 +73,10 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      text: ref(''),
-      readonly: ref(false),
-      disable: ref(false)
-    }
-  }
-}
+const text = ref('')
+const readonly = ref(false)
+const disable = ref(false)
 </script>

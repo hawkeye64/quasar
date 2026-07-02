@@ -16,10 +16,14 @@
         <div
           v-for="marker in scope.markerList"
           :key="marker.index"
-          :class="[ `text-deep-orange-${2 + Math.ceil(marker.value / 2) }`, marker.classes ]"
+          :class="[
+            `text-deep-orange-${2 + Math.ceil(marker.value / 2)}`,
+            marker.classes
+          ]"
           :style="marker.style"
           @click="model = marker.value"
-        >{{ marker.value }}</div>
+          >{{ marker.value }}</div
+        >
       </template>
     </q-slider>
 
@@ -40,7 +44,8 @@
           :class="markerList[val].classes"
           :style="markerList[val].style"
           @click="secondModel = val"
-        >{{ val }}</div>
+          >{{ val }}</div
+        >
 
         <q-icon
           v-for="val in [0, 5]"
@@ -102,16 +107,10 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      firstModel: ref(2),
-      secondModel: ref(3),
-      thirdModel: ref(3.5)
-    }
-  }
-}
+const firstModel = ref(2)
+const secondModel = ref(3)
+const thirdModel = ref(3.5)
 </script>

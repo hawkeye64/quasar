@@ -1,7 +1,7 @@
-import { h, computed } from 'vue'
+import { computed, h } from 'vue'
 
-import { createComponent } from '../../utils/private/create.js'
-import { hSlot } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { hSlot } from '../../utils/private.render/render.js'
 
 export default createComponent({
   name: 'QCardSection',
@@ -15,10 +15,11 @@ export default createComponent({
     horizontal: Boolean
   },
 
-  setup (props, { slots }) {
-    const classes = computed(() =>
-      'q-card__section'
-      + ` q-card__section--${ props.horizontal === true ? 'horiz row no-wrap' : 'vert' }`
+  setup(props, { slots }) {
+    const classes = computed(
+      () =>
+        'q-card__section' +
+        ` q-card__section--${props.horizontal ? 'horiz row no-wrap' : 'vert'}`
     )
 
     return () => h(props.tag, { class: classes.value }, hSlot(slots.default))

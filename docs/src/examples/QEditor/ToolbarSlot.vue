@@ -9,17 +9,20 @@
       :toolbar="[
         ['token'],
         ['bold', 'italic', 'underline'],
-        [{
-          label: $q.lang.editor.formatting,
-          icon: $q.iconSet.editor.formatting,
-          list: 'no-icons',
-          options: ['p', 'h3', 'h4', 'h5', 'h6', 'code']
-        }]
+        [
+          {
+            label: $q.lang.editor.formatting,
+            icon: $q.iconSet.editor.formatting,
+            list: 'no-icons',
+            options: ['p', 'h3', 'h4', 'h5', 'h6', 'code']
+          }
+        ]
       ]"
     >
       <template v-slot:token>
         <q-btn-dropdown
-          dense no-caps
+          dense
+          no-caps
           ref="tokenRef"
           no-wrap
           unelevated
@@ -48,30 +51,25 @@
   </div>
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+import { ref, useTemplateRef } from 'vue'
 
-export default {
-  setup () {
-    const editorRef = ref(null)
-    const tokenRef = ref(null)
+const editorRef = useTemplateRef('editorRef')
+const tokenRef = useTemplateRef('tokenRef')
+const editor = ref('Customize it.')
 
-    return {
-      editorRef,
-      tokenRef,
-      editor: ref('Customize it.'),
-
-      add (name) {
-        const edit = editorRef.value
-        tokenRef.value.hide()
-        edit.caret.restore()
-        edit.runCmd('insertHTML', `&nbsp;<div class="editor_token row inline items-center" contenteditable="false">&nbsp;<span>${name}</span>&nbsp;<i class="q-icon material-icons cursor-pointer" onclick="this.parentNode.parentNode.removeChild(this.parentNode)">close</i></div>&nbsp;`)
-        edit.focus()
-      }
-    }
-  }
+function add(name) {
+  const edit = editorRef.value
+  tokenRef.value.hide()
+  edit.caret.restore()
+  edit.runCmd(
+    'insertHTML',
+    `&nbsp;<div class="editor_token row inline items-center" contenteditable="false">&nbsp;<span>${name}</span>&nbsp;<i class="q-icon material-icons cursor-pointer" onclick="this.parentNode.parentNode.removeChild(this.parentNode)">close</i></div>&nbsp;`
+  )
+  edit.focus()
 }
 </script>
+
 <style lang="sass">
 .editor_token
   background: rgba(0, 0, 0, .6)

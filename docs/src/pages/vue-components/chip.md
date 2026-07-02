@@ -2,6 +2,7 @@
 title: Chip
 desc: The QChip Vue component is a simple UI block entity, representing for example more advanced underlying data, such as a contact, but in a compact way.
 keys: QChip
+examples: QChip
 related:
   - /vue-components/avatar
   - /vue-components/icon
@@ -16,26 +17,24 @@ Chips can contain entities such as an avatar, text or an icon, optionally having
 Also check out [QBadge](/vue-components/badge).
 :::
 
-
-## QChip API
-
-<doc-api file="QChip" />
+<DocApi file="QChip" />
 
 ## Usage
-<doc-example title="Basic" file="QChip/Basic" />
 
-<doc-example title="Dense" file="QChip/Dense" />
+<DocExample title="Basic" file="Basic" />
 
-<doc-example title="Custom size" file="QChip/Sizes" />
+<DocExample title="Dense" file="Dense" />
 
-<doc-example title="Square" file="QChip/Square" />
+<DocExample title="Custom size" file="Sizes" />
 
-<doc-example title="Outline" file="QChip/Outline" />
+<DocExample title="Square" file="Square" />
 
-<doc-example title="Clickable" file="QChip/Clickable" />
+<DocExample title="Outline" file="Outline" />
 
-<doc-example title="Selected" file="QChip/Selected" />
+<DocExample title="Clickable" file="Clickable" />
 
-<doc-example title="Removable" file="QChip/Removable" />
+<DocExample title="Selected" file="Selected" />
 
-<doc-example title="Long label truncation" file="QChip/LongLabel" />
+<DocExample title="Removable" file="Removable" />
+
+<DocExample title="Long label truncation" file="LongLabel" />

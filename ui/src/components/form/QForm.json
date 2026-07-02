@@ -40,9 +40,8 @@
       "desc": "Emitted when all validations have passed when tethered to a submit button",
       "params": {
         "evt": {
-          "type": [ "Event", "SubmitEvent" ],
-          "desc": "Form submission event object",
-          "__exemption": [ "examples" ]
+          "type": ["Event", "SubmitEvent"],
+          "desc": "Form submission event object"
         }
       }
     },
@@ -68,7 +67,9 @@
 
   "methods": {
     "focus": {
-      "desc": "Focus on first focusable element/component in the form"
+      "desc": "Focus on first focusable element/component in the form",
+      "params": null,
+      "returns": null
     },
 
     "validate": {
@@ -82,14 +83,14 @@
       "returns": {
         "type": "Promise<boolean>",
         "desc": "Promise is always fulfilled and receives the outcome (true -> validation was a success, false -> invalid models detected)",
-        "examples": [
-          "validate().then(outcome => { ... })"
-        ]
+        "examples": ["validate().then(outcome => { ... })"]
       }
     },
 
     "resetValidation": {
-      "desc": "Resets the validation on all applicable inner Quasar components"
+      "desc": "Resets the validation on all applicable inner Quasar components",
+      "params": null,
+      "returns": null
     },
 
     "submit": {
@@ -98,7 +99,8 @@
         "evt": {
           "extends": "evt"
         }
-      }
+      },
+      "returns": null
     },
 
     "reset": {
@@ -107,15 +109,17 @@
         "evt": {
           "extends": "evt"
         }
-      }
+      },
+      "returns": null
     },
 
     "getValidationComponents": {
-      "desc": "Get array of children vue components that support validation",
+      "desc": "Get an array of children Vue component instances that support Quasar validation API (derived from QField, or using useFormChild()/QFormChildMixin)",
+      "params": null,
       "returns": {
         "type": "Array",
-        "desc": "Vue components that support Quasar validation API",
-        "__exemption": [ "examples" ]
+        "tsType": "QFormChildComponent",
+        "desc": "Quasar validation API-compatible Vue component instances"
       }
     }
   }

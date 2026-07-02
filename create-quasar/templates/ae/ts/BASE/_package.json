@@ -1,0 +1,34 @@
+{
+  "name": "quasar-app-extension",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A Quasar App Extension Project",
+  <% if (scope.author) { %>
+  "author": "<%= scope.author %>",
+  <% } %>
+  "type": "module",
+  "scripts": {
+<% if (scope.linter === 'oxlint') { %>
+    "lint": "oxfmt && oxlint --fix",
+    "lint:check": "oxfmt --check && oxlint",
+<% } %>
+    "typecheck": "vue-tsc --noEmit",
+    "dev": "pnpm --filter playground dev",
+    "invoke": "pnpm --filter playground invoke",
+    "cycle": "pnpm --filter playground cycle",
+    "postinstall": "pnpm --filter playground prepare"
+  },
+  "devDependencies": {
+<% if (scope.linter === 'oxlint') { %>
+    "oxfmt": "^0.x",
+    "oxlint": "^1.x",
+    "oxlint-tsgolint": "^0.x",
+<% } %>
+    "typescript": "^6.0.0",
+    "vue-tsc": "^3.3.3"
+  },
+  "engines": {
+    "node": ">= 26 || ^24 || ^22.12"
+  },
+  "productName": "Quasar App Extension"
+}

@@ -1,22 +1,14 @@
 <template>
   <div class="q-pa-md">
-    <q-badge color="secondary">
-      Model: {{ standard }} (0 to 50)
-    </q-badge>
+    <q-badge color="secondary"> Model: {{ standard }} (0 to 50) </q-badge>
 
-    <q-slider v-model="standard" :min="0" :max="50"/>
-    <q-slider v-model="standard" :min="0" :max="50" color="green"/>
+    <q-slider v-model="standard" :min="0" :max="50" />
+    <q-slider v-model="standard" :min="0" :max="50" color="green" />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      standard: ref(2)
-    }
-  }
-}
+const standard = ref(2)
 </script>

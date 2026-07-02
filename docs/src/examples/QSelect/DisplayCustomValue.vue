@@ -1,9 +1,7 @@
 <template>
   <div class="q-pa-md" style="max-width: 300px">
     <div class="q-gutter-md">
-      <q-badge color="secondary" multi-line>
-        Model: "{{ model }}"
-      </q-badge>
+      <q-badge color="secondary" multi-line> Model: "{{ model }}" </q-badge>
 
       <q-select
         filled
@@ -18,7 +16,7 @@
             v-if="model !== null"
             class="cursor-pointer"
             name="clear"
-            @click.stop="model = null"
+            @click.stop.prevent="model = null"
           />
         </template>
       </q-select>
@@ -26,17 +24,9 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      model: ref('Twitter'),
-      options: [
-        'Google', 'Facebook', 'Twitter', 'Apple', 'Oracle'
-      ]
-    }
-  }
-}
+const model = ref('Twitter')
+const options = ['Google', 'Facebook', 'Twitter', 'Apple', 'Oracle']
 </script>

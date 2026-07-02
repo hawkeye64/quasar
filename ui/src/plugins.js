@@ -1,33 +1,17 @@
-import AddressbarColor from './plugins/AddressbarColor.js'
-import AppFullscreen from './plugins/AppFullscreen.js'
-import AppVisibility from './plugins/AppVisibility.js'
-import BottomSheet from './plugins/BottomSheet.js'
-import Cookies from './plugins/Cookies.js'
-import Dark from './plugins/Dark.js'
-import Dialog from './plugins/Dialog.js'
-import LoadingBar from './plugins/LoadingBar.js'
-import Loading from './plugins/Loading.js'
-import Meta from './plugins/Meta.js'
-import Notify from './plugins/Notify.js'
-import Platform from './plugins/Platform.js'
-import Screen from './plugins/Screen.js'
-import LocalStorage from './plugins/LocalStorage.js'
-import SessionStorage from './plugins/SessionStorage.js'
-
-export {
-  AddressbarColor,
-  AppFullscreen,
-  AppVisibility,
-  BottomSheet,
-  Cookies,
-  Dark,
-  Dialog,
-  LoadingBar,
-  Loading,
-  Meta,
-  Notify,
-  Platform,
-  Screen,
-  LocalStorage,
-  SessionStorage
-}
+export { default as AddressbarColor } from './plugins/addressbar/AddressbarColor.js'
+export { default as AppFullscreen } from './plugins/app-fullscreen/AppFullscreen.js'
+export { default as AppVisibility } from './plugins/app-visibility/AppVisibility.js'
+export { default as BottomSheet } from './plugins/bottom-sheet/BottomSheet.js'
+export { default as Cookies } from './plugins/cookies/Cookies.js'
+export { default as Dark } from './plugins/dark/Dark.js'
+export { default as Dialog } from './plugins/dialog/Dialog.js'
+export { default as IconSet } from './plugins/icon-set/IconSet.js'
+export { default as Lang } from './plugins/lang/Lang.js'
+export { default as Loading } from './plugins/loading/Loading.js'
+export { default as LoadingBar } from './plugins/loading-bar/LoadingBar.js'
+export { default as Meta } from './plugins/meta/Meta.js'
+export { default as Notify } from './plugins/notify/Notify.js'
+export { default as Platform } from './plugins/platform/Platform.js'
+export { default as Screen } from './plugins/screen/Screen.js'
+export { default as LocalStorage } from './plugins/storage/LocalStorage.js'
+export { default as SessionStorage } from './plugins/storage/SessionStorage.js'

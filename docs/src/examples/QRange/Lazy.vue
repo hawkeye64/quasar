@@ -6,7 +6,11 @@
 
     <q-range
       :model-value="lazy"
-      @change="val => { lazy = val }"
+      @change="
+        val => {
+          lazy = val
+        }
+      "
       :min="0"
       :max="50"
       label
@@ -14,17 +18,11 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      lazy: ref({
-        min: 10,
-        max: 35
-      })
-    }
-  }
-}
+const lazy = ref({
+  min: 10,
+  max: 35
+})
 </script>

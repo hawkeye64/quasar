@@ -3,7 +3,7 @@
     <q-btn label="Click me" color="primary" @click="layout = true" />
 
     <q-dialog v-model="layout">
-      <q-layout view="Lhh lpR fff" container class="bg-white">
+      <q-layout view="Lhh lpR fff" container class="bg-white text-dark">
         <q-header class="bg-primary">
           <q-toolbar>
             <q-btn flat @click="drawer = !drawer" round dense icon="menu" />
@@ -14,16 +14,29 @@
         </q-header>
 
         <q-footer class="bg-black text-white">
-          <q-toolbar inset>
+          <q-toolbar>
             <q-toolbar-title>Footer</q-toolbar-title>
           </q-toolbar>
         </q-footer>
 
-        <q-drawer bordered v-model="drawer" :width="200" :breakpoint="600" class="bg-grey-3 q-pa-sm">
+        <q-drawer
+          bordered
+          v-model="drawer"
+          :width="200"
+          :breakpoint="600"
+          class="bg-grey-3 text-dark q-pa-sm"
+        >
           <div v-for="n in 50" :key="n">Drawer {{ n }} / 50</div>
         </q-drawer>
 
-        <q-drawer side="right" bordered v-model="drawerR" :width="200" :breakpoint="300" class="bg-grey-3 q-pa-sm">
+        <q-drawer
+          side="right"
+          bordered
+          v-model="drawerR"
+          :width="200"
+          :breakpoint="300"
+          class="bg-grey-3 text-dark q-pa-sm"
+        >
           <div v-for="n in 50" :key="n">Drawer {{ n }} / 50</div>
         </q-drawer>
 
@@ -39,23 +52,14 @@
   </div>
 </template>
 
-<script>
-import { ref, computed } from 'vue'
+<script setup>
+import { computed, ref } from 'vue'
 
-export default {
-  setup () {
-    const moreContent = ref(true)
-
-    return {
-      layout: ref(false),
-
-      moreContent,
-      contentSize: computed(() => moreContent.value ? 150 : 5),
-      drawer: ref(false),
-      drawerR: ref(false),
-
-      lorem: 'Lorem ipsum dolor sit amet consectetur, adipisicing elit. Natus, ratione eum minus fuga, quasi dicta facilis corporis magnam, suscipit at quo nostrum!'
-    }
-  }
-}
+const moreContent = ref(true)
+const layout = ref(false)
+const contentSize = computed(() => (moreContent.value ? 150 : 5))
+const drawer = ref(false)
+const drawerR = ref(false)
+const lorem =
+  'Lorem ipsum dolor sit amet consectetur, adipisicing elit. Natus, ratione eum minus fuga, quasi dicta facilis corporis magnam, suscipit at quo nostrum!'
 </script>

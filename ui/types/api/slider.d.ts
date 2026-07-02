@@ -24,9 +24,10 @@ interface SliderMarkerLabelObjectDefinition {
 
 export type SliderMarkerLabels =
   | boolean
-  | Array<SliderMarkerLabelDefinitionRequiredValue>
+  // using a number is shorthand for { value: number }
+  | (SliderMarkerLabelDefinitionRequiredValue | number)[]
   | SliderMarkerLabelObjectDefinition
-  | ((value: number) => string | SliderMarkerLabelDefinition)
+  | ((value: number) => string | SliderMarkerLabelDefinition);
 
 // --- Slots
 
@@ -35,10 +36,8 @@ export type SliderMarkerLabelConfig = {
   value: number;
   label: number | string;
   classes: string;
-  style: VueStyleObjectProp
+  style: VueStyleObjectProp;
 };
-
-export type SliderMarkerLabelArrayConfig = SliderMarkerLabelConfig[];
 
 export interface SliderMarkerLabelObjectConfig {
   [value: number]: SliderMarkerLabelConfig;

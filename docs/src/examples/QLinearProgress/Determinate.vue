@@ -8,27 +8,36 @@
 
     <q-linear-progress :value="progress" color="secondary" class="q-mt-sm" />
 
-    <q-linear-progress :value="progress" rounded color="accent" class="q-mt-sm" />
+    <q-linear-progress
+      :value="progress"
+      rounded
+      color="accent"
+      class="q-mt-sm"
+    />
 
-    <q-linear-progress :value="progress" rounded color="purple" track-color="orange" class="q-mt-sm" />
+    <q-linear-progress
+      :value="progress"
+      rounded
+      color="purple"
+      track-color="orange"
+      class="q-mt-sm"
+    />
 
-    <q-linear-progress :value="progress" rounded color="negative" class="q-mt-sm" />
+    <q-linear-progress
+      :value="progress"
+      rounded
+      color="negative"
+      class="q-mt-sm"
+    />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    const progress = ref(0.4)
+const progress = ref(0.4)
 
-    return {
-      progress,
-      randomize () {
-        progress.value = Math.random()
-      }
-    }
-  }
+function randomize() {
+  progress.value = Math.random()
 }
 </script>

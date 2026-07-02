@@ -14,30 +14,47 @@ export default {
     create: 'Δημιουργία',
     search: 'Αναζήτηση',
     filter: 'Φίλτρο',
-    refresh: 'Ανανέωση'
+    refresh: 'Ανανέωση',
+    expand: label => (label ? `Επέκταση "${label}"` : 'Επεκτείνουν'),
+    collapse: label => (label ? `Σύμπτυξη "${label}"` : 'Κατάρρευση')
   },
   date: {
     days: 'Κυριακή_Δευτέρα_Τρίτη_Τετάρτη_Πέμπτη_Παρασκευή_Σάββατο'.split('_'),
     daysShort: 'Κυρ_Δευ_Τρι_Τετ_Πεμ_Παρ_Σαβ'.split('_'),
-    months: 'Ιανουάριος_Φεβρουάριος_Μάρτιος_Απρίλιος_Μάιος_Ιούνιος_Ιούλιος_Αύγουστος_Σεπτέμβριος_Οκτώβριος_Νοέμβριος_Δεκέμβριος'.split('_'),
+    months:
+      'Ιανουάριος_Φεβρουάριος_Μάρτιος_Απρίλιος_Μάιος_Ιούνιος_Ιούλιος_Αύγουστος_Σεπτέμβριος_Οκτώβριος_Νοέμβριος_Δεκέμβριος'.split(
+        '_'
+      ),
     monthsShort: 'Ιαν_Φεβ_Μαρ_Απρ_Μαϊ_Ιουν_Ιουλ_Αυγ_Σεπ_Οκτ_Νοε_Δεκ'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'ημέρες'
+    pluralDay: 'ημέρες',
+    prevMonth: 'Προηγούμενος μήνας',
+    nextMonth: 'Τον επόμενο μήνα',
+    prevYear: 'Προηγούμενο έτος',
+    nextYear: 'Προσεχές έτος',
+    today: 'Σήμερα',
+    prevRangeYears: range => `Προηγούμενο ${range} χρόνια`,
+    nextRangeYears: range => `Επόμενο ${range} χρόνια`
   },
   table: {
     noData: 'Χωρίς δεδομένα',
     noResults: 'Δεν βρέθηκαν αποτελέσματα',
     loading: 'Φόρτωση...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows === 1
         ? '1 επιλεγμένη εγγραφή.'
-        : (rows === 0 ? 'Καμμία' : rows) + ' επιλεγμένες εγγραφές.'
-    ),
+        : (rows === 0 ? 'Καμμία' : rows) + ' επιλεγμένες εγγραφές.',
     recordsPerPage: 'Εγγραφές ανα σελίδα:',
     allRows: 'Όλες',
-    pagination: (start, end, total) => start + '-' + end + ' από ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' από ' + total,
     columns: 'Στήλες'
+  },
+  pagination: {
+    first: 'Πρώτη σελίδα',
+    prev: 'Προηγούμενη σελίδα',
+    next: 'Επόμενη σελίδα',
+    last: 'Τελευταία σελίδα'
   },
   editor: {
     url: 'Διεύθυνση URL', // Needs Translation

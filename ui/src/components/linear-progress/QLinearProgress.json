@@ -1,5 +1,5 @@
 {
-  "mixins": [ "composables/private/use-size" ],
+  "mixins": ["composables/private.use-size/use-size"],
 
   "meta": {
     "docsUrl": "https://v2.quasar.dev/vue-components/linear-progress"
@@ -9,15 +9,13 @@
     "value": {
       "type": "Number",
       "desc": "Progress value (0.0 < x < 1.0)",
-      "default": 0,
-      "examples": [ ":value=\"0.28\"" ],
+      "default": "0",
       "category": "model"
     },
 
     "buffer": {
       "type": "Number",
       "desc": "Optional buffer value (0.0 < x < 1.0)",
-      "examples": [ ":buffer=\"0.78\"" ],
       "category": "behavior"
     },
 
@@ -34,7 +32,7 @@
       "extends": "dark"
     },
 
-    "reverse":  {
+    "reverse": {
       "type": "Boolean",
       "desc": "Reverse direction of progress",
       "category": "behavior"
@@ -42,7 +40,7 @@
 
     "stripe": {
       "type": "Boolean",
-      "desc":  "Draw stripes; For determinate state only (for performance reasons)",
+      "desc": "Draw stripes; For determinate state only (for performance reasons)",
       "category": "content"
     },
 
@@ -70,7 +68,7 @@
 
     "animation-speed": {
       "extends": "animation-speed",
-      "default": 2100,
+      "default": "2100",
       "addedIn": "v2.3"
     }
   },

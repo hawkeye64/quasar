@@ -13,7 +13,7 @@
 
           <q-btn round flat>
             <q-avatar>
-              <img :src="currentConversation.avatar">
+              <img :src="currentConversation.avatar" />
             </q-avatar>
           </q-btn>
 
@@ -21,7 +21,7 @@
             {{ currentConversation.person }}
           </span>
 
-          <q-space/>
+          <q-space />
 
           <q-btn round flat icon="search" />
           <q-btn round flat>
@@ -103,7 +103,15 @@
         </q-toolbar>
 
         <q-toolbar class="bg-grey-2">
-          <q-input rounded outlined dense class="WAL__field full-width" bg-color="white" v-model="search" placeholder="Search or start a new conversation">
+          <q-input
+            rounded
+            outlined
+            dense
+            class="WAL__field full-width"
+            bg-color="white"
+            v-model="search"
+            placeholder="Search or start a new conversation"
+          >
             <template v-slot:prepend>
               <q-icon name="search" />
             </template>
@@ -121,7 +129,7 @@
             >
               <q-item-section avatar>
                 <q-avatar>
-                  <img :src="conversation.avatar">
+                  <img :src="conversation.avatar" />
                 </q-avatar>
               </q-item-section>
 
@@ -154,7 +162,15 @@
       <q-footer>
         <q-toolbar class="bg-grey-3 text-black row">
           <q-btn round flat icon="insert_emoticon" class="q-mr-sm" />
-          <q-input rounded outlined dense class="WAL__field col-grow q-mr-sm" bg-color="white" v-model="message" placeholder="Type a message" />
+          <q-input
+            rounded
+            outlined
+            dense
+            class="WAL__field col-grow q-mr-sm"
+            bg-color="white"
+            v-model="message"
+            placeholder="Type a message"
+          />
           <q-btn round flat icon="mic" />
         </q-toolbar>
       </q-footer>
@@ -162,16 +178,16 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { useQuasar } from 'quasar'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const conversations = [
   {
     id: 1,
     person: 'Razvan Stoenescu',
     avatar: 'https://cdn.quasar.dev/team/razvan_stoenescu.jpeg',
-    caption: 'I\'m working on Quasar!',
+    caption: "I'm working on Quasar!",
     time: '15:00',
     sent: true
   },
@@ -179,7 +195,7 @@ const conversations = [
     id: 2,
     person: 'Dan Popescu',
     avatar: 'https://cdn.quasar.dev/team/dan_popescu.jpg',
-    caption: 'I\'m working on Quasar!',
+    caption: "I'm working on Quasar!",
     time: '16:00',
     sent: true
   },
@@ -187,7 +203,7 @@ const conversations = [
     id: 3,
     person: 'Jeff Galbraith',
     avatar: 'https://cdn.quasar.dev/team/jeff_galbraith.jpg',
-    caption: 'I\'m working on Quasar!',
+    caption: "I'm working on Quasar!",
     time: '18:00',
     sent: true
   },
@@ -195,53 +211,33 @@ const conversations = [
     id: 4,
     person: 'Allan Gaunt',
     avatar: 'https://cdn.quasar.dev/team/allan_gaunt.png',
-    caption: 'I\'m working on Quasar!',
+    caption: "I'm working on Quasar!",
     time: '17:00',
     sent: true
   }
 ]
 
-export default {
-  name: 'WhatsappLayout',
+const $q = useQuasar()
 
-  setup () {
-    const $q = useQuasar()
+const leftDrawerOpen = ref(false)
+const search = ref('')
+const message = ref('')
+const currentConversationIndex = ref(0)
 
-    const leftDrawerOpen = ref(false)
-    const search = ref('')
-    const message = ref('')
-    const currentConversationIndex = ref(0)
+const currentConversation = computed(
+  () => conversations[currentConversationIndex.value]
+)
 
-    const currentConversation = computed(() => {
-      return conversations[ currentConversationIndex.value ]
-    })
+const style = computed(() => ({
+  height: $q.screen.height + 'px'
+}))
 
-    const style = computed(() => ({
-      height: $q.screen.height + 'px'
-    }))
+function toggleLeftDrawer() {
+  leftDrawerOpen.value = !leftDrawerOpen.value
+}
 
-    function toggleLeftDrawer () {
-      leftDrawerOpen.value = !leftDrawerOpen.value
-    }
-
-    function setCurrentConversation (index) {
-      currentConversationIndex.value = index
-    }
-
-    return {
-      leftDrawerOpen,
-      search,
-      message,
-      currentConversationIndex,
-      conversations,
-
-      currentConversation,
-      setCurrentConversation,
-      style,
-
-      toggleLeftDrawer
-    }
-  }
+function setCurrentConversation(index) {
+  currentConversationIndex.value = index
 }
 </script>
 

@@ -3,7 +3,10 @@
     <div class="example-area q-pa-lg scroll">
       <div class="example-filler" />
 
-      <div v-intersection.once="onIntersection" class="example-observed text-center rounded-borders">
+      <div
+        v-intersection.once="onIntersection"
+        class="example-observed text-center rounded-borders"
+      >
         Observed Element
       </div>
 
@@ -14,34 +17,26 @@
       class="example-state rounded-borders text-center absolute-top q-mt-md q-ml-md q-mr-lg text-white"
       :class="visibleClass"
     >
-      {{ visible === true ? 'Visible' : 'Hidden' }}
+      {{ visible ? 'Visible' : 'Hidden' }}
     </div>
   </div>
 </template>
 
-<script>
-import { ref, computed } from 'vue'
+<script setup>
+import { computed, ref } from 'vue'
 
-export default {
-  setup () {
-    const visible = ref(false)
+const visible = ref(false)
 
-    return {
-      visible,
+const visibleClass = computed(
+  () => `bg-${visible.value ? 'positive' : 'negative'}`
+)
 
-      visibleClass: computed(
-        () => `bg-${visible.value ? 'positive' : 'negative'}`
-      ),
+const message = computed(() =>
+  visible.value ? "Visible. We're done." : 'Hidden'
+)
 
-      message: computed(
-        () => visible.value ? 'Visible. We\'re done.' : 'Hidden'
-      ),
-
-      onIntersection (entry) {
-        visible.value = entry.isIntersecting
-      }
-    }
-  }
+function onIntersection(entry) {
+  visible.value = entry.isIntersecting
 }
 </script>
 
@@ -57,7 +52,7 @@ export default {
   width: 100%
   font-size: 20px
   color: #ccc
-  background: #282a37
+  background: #424242
   padding: 10px
 
 .example-area

@@ -20,6 +20,7 @@
             <div class="q-mt-md">
               {{ lorem }}
             </div>
+            <!-- #region -->
             <div class="q-mt-md">
               {{ lorem }}
             </div>
@@ -32,10 +33,12 @@
             <div class="q-mt-md">
               {{ lorem }}
             </div>
+            <!-- #endregion -->
           </div>
         </q-scroll-area>
       </q-carousel-slide>
 
+      <!-- #region -->
       <q-carousel-slide name="tv" class="q-pa-none">
         <q-scroll-area class="fit">
           <div class="column no-wrap flex-center q-carousel--padding">
@@ -104,19 +107,15 @@
           </div>
         </q-scroll-area>
       </q-carousel-slide>
+      <!-- #endregion -->
     </q-carousel>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      slide: ref('style'),
-      lorem: 'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Itaque voluptatem totam, architecto cupiditate officia rerum, error dignissimos praesentium libero ab nemo.'
-    }
-  }
-}
+const slide = ref('style')
+const lorem =
+  'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Itaque voluptatem totam, architecto cupiditate officia rerum, error dignissimos praesentium libero ab nemo.'
 </script>

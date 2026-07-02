@@ -1,0 +1,19 @@
+{
+  "name": "upload-server",
+  "version": "1.0.0",
+  "private": true,
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.22.1",
+    "express-throttle-bandwidth": "^1.0.1",
+    "formidable": "^1.2.1",
+    "fs-extra": "^11.2.0"
+  }
+}

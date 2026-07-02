@@ -1,12 +1,12 @@
-import { h, ref, computed, nextTick, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, h, nextTick, ref } from 'vue'
 
 import QMenu from '../menu/QMenu.js'
 import QBtn from '../btn/QBtn.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import clone from '../../utils/clone.js'
-import { isDeepEqual } from '../../utils/private/is.js'
-import { injectProp } from '../../utils/private/inject-obj-prop.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import clone from '../../utils/clone/clone.js'
+import { isDeepEqual } from '../../utils/is/is.js'
+import { injectProp } from '../../utils/private.inject-obj-prop/inject-obj-prop.js'
 
 export default createComponent({
   name: 'QPopupEdit',
@@ -42,11 +42,16 @@ export default createComponent({
   },
 
   emits: [
-    'update:modelValue', 'save', 'cancel',
-    'before-show', 'show', 'before-hide', 'hide'
+    'update:modelValue',
+    'save',
+    'cancel',
+    'beforeShow',
+    'show',
+    'beforeHide',
+    'hide'
   ],
 
-  setup (props, { slots, emit }) {
+  setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
     const { $q } = proxy
 
@@ -57,25 +62,27 @@ export default createComponent({
 
     let validated = false
 
-    const scope = computed(() => {
-      const acc = {
-        initialValue: initialValue.value,
-        validate: props.validate,
-        set,
-        cancel,
-        updatePosition
-      }
+    const scope = computed(() =>
+      injectProp(
+        {
+          initialValue: initialValue.value,
+          validate: props.validate,
+          set,
+          cancel,
+          updatePosition
+        },
+        'value',
+        () => currentModel.value,
+        val => {
+          currentModel.value = val
+        }
+      )
+    )
 
-      injectProp(acc, 'value', () => currentModel.value, val => { currentModel.value = val })
-      return acc
-    })
+    function set() {
+      if (!props.validate(currentModel.value)) return
 
-    function set () {
-      if (props.validate(currentModel.value) === false) {
-        return
-      }
-
-      if (hasModelChanged() === true) {
+      if (hasModelChanged()) {
         emit('save', currentModel.value, initialValue.value)
         emit('update:modelValue', currentModel.value)
       }
@@ -83,109 +90,123 @@ export default createComponent({
       closeMenu()
     }
 
-    function cancel () {
-      if (hasModelChanged() === true) {
+    function cancel() {
+      if (hasModelChanged()) {
         emit('cancel', currentModel.value, initialValue.value)
       }
 
       closeMenu()
     }
 
-    function updatePosition () {
+    function updatePosition() {
       nextTick(() => {
         menuRef.value.updatePosition()
       })
     }
 
-    function hasModelChanged () {
-      return isDeepEqual(currentModel.value, initialValue.value) === false
+    function hasModelChanged() {
+      return !isDeepEqual(currentModel.value, initialValue.value)
     }
 
-    function closeMenu () {
+    function closeMenu() {
       validated = true
       menuRef.value.hide()
     }
 
-    function onBeforeShow () {
+    function onBeforeShow() {
       validated = false
       initialValue.value = clone(props.modelValue)
       currentModel.value = clone(props.modelValue)
-      emit('before-show')
+      emit('beforeShow')
     }
 
-    function onShow () {
+    function onShow() {
       emit('show')
     }
 
-    function onBeforeHide () {
-      if (validated === false && hasModelChanged() === true) {
-        if (props.autoSave === true && props.validate(currentModel.value) === true) {
+    function onBeforeHide() {
+      if (!validated && hasModelChanged()) {
+        if (props.autoSave && props.validate(currentModel.value)) {
           emit('save', currentModel.value, initialValue.value)
           emit('update:modelValue', currentModel.value)
-        }
-        else {
+        } else {
           emit('cancel', currentModel.value, initialValue.value)
         }
       }
 
-      emit('before-hide')
+      emit('beforeHide')
     }
 
-    function onHide () {
+    function onHide() {
       emit('hide')
+    }
+
+    function getContent() {
+      const child =
+        slots.default !== void 0 ? [slots.default(scope.value)].flat() : []
+
+      if (props.title) {
+        child.unshift(
+          h('div', { class: 'q-dialog__title q-mt-sm q-mb-sm' }, props.title)
+        )
+      }
+
+      if (props.buttons) {
+        child.push(
+          h(
+            'div',
+            { class: 'q-popup-edit__buttons row justify-center no-wrap' },
+            [
+              h(QBtn, {
+                flat: true,
+                color: props.color,
+                label: props.labelCancel || $q.lang.label.cancel,
+                onClick: cancel
+              }),
+              h(QBtn, {
+                flat: true,
+                color: props.color,
+                label: props.labelSet || $q.lang.label.set,
+                onClick: set
+              })
+            ]
+          )
+        )
+      }
+
+      return child
     }
 
     // expose public methods
     Object.assign(proxy, {
       set,
       cancel,
-      show (e) { menuRef.value !== null && menuRef.value.show(e) },
-      hide (e) { menuRef.value !== null && menuRef.value.hide(e) },
+      show(e) {
+        menuRef.value?.show(e)
+      },
+      hide(e) {
+        menuRef.value?.hide(e)
+      },
       updatePosition
     })
 
-    function getContent () {
-      const child = slots.default !== void 0
-        ? [].concat(slots.default(scope.value))
-        : []
-
-      props.title && child.unshift(
-        h('div', { class: 'q-dialog__title q-mt-sm q-mb-sm' }, props.title)
-      )
-
-      props.buttons === true && child.push(
-        h('div', { class: 'q-popup-edit__buttons row justify-center no-wrap' }, [
-          h(QBtn, {
-            flat: true,
-            color: props.color,
-            label: props.labelCancel || $q.lang.label.cancel,
-            onClick: cancel
-          }),
-          h(QBtn, {
-            flat: true,
-            color: props.color,
-            label: props.labelSet || $q.lang.label.set,
-            onClick: set
-          })
-        ])
-      )
-
-      return child
-    }
-
     return () => {
-      if (props.disable === true) { return }
+      if (props.disable) return
 
-      return h(QMenu, {
-        ref: menuRef,
-        class: 'q-popup-edit',
-        cover: props.cover,
-        onBeforeShow,
-        onShow,
-        onBeforeHide,
-        onHide,
-        onEscapeKey: cancel
-      }, getContent)
+      return h(
+        QMenu,
+        {
+          ref: menuRef,
+          class: 'q-popup-edit',
+          cover: props.cover,
+          onBeforeShow,
+          onShow,
+          onBeforeHide,
+          onHide,
+          onEscapeKey: cancel
+        },
+        getContent
+      )
     }
   }
 })

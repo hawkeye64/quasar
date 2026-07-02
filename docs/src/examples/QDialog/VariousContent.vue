@@ -24,6 +24,7 @@
             {{ lorem }}
           </div>
         </q-carousel-slide>
+        <!-- #region -->
         <q-carousel-slide :name="2" class="column no-wrap flex-center">
           <q-icon name="live_tv" color="primary" size="56px" />
           <div class="q-mt-md text-center">
@@ -42,6 +43,7 @@
             {{ lorem }}
           </div>
         </q-carousel-slide>
+        <!-- #endregion -->
       </q-carousel>
     </q-dialog>
 
@@ -55,14 +57,14 @@
             color="primary"
             icon="place"
             class="absolute"
-            style="top: 0; right: 12px; transform: translateY(-50%);"
+            style="top: 0; right: 12px; transform: translateY(-50%)"
           />
 
           <div class="row no-wrap items-center">
-            <div class="col text-h6 ellipsis">
-              Cafe Basilico
-            </div>
-            <div class="col-auto text-grey text-caption q-pt-md row no-wrap items-center">
+            <div class="col text-h6 ellipsis"> Cafe Basilico </div>
+            <div
+              class="col-auto text-grey text-caption q-pt-md row no-wrap items-center"
+            >
               <q-icon name="place" />
               250 ft
             </div>
@@ -72,9 +74,7 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          <div class="text-subtitle1">
-            $・Italian, Cafe
-          </div>
+          <div class="text-subtitle1"> $・Italian, Cafe </div>
           <div class="text-caption text-grey">
             Small plates, salads & sandwiches in an intimate setting.
           </div>
@@ -129,25 +129,20 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      carousel: ref(false),
-      card: ref(false),
-      sliders: ref(false),
+const carousel = ref(false)
+const card = ref(false)
+const sliders = ref(false)
 
-      slide: ref(1),
-      lorem: 'Lorem ipsum dolor sit amet consectetur, adipisicing elit. Natus, ratione eum minus fuga, quasi dicta facilis corporis magnam, suscipit at quo nostrum!',
+const slide = ref(1)
+const lorem =
+  'Lorem ipsum dolor sit amet consectetur, adipisicing elit. Natus, ratione eum minus fuga, quasi dicta facilis corporis magnam, suscipit at quo nostrum!'
 
-      stars: ref(3),
+const stars = ref(3)
 
-      slideVol: ref(39),
-      slideAlarm: ref(56),
-      slideVibration: ref(63)
-    }
-  }
-}
+const slideVol = ref(39)
+const slideAlarm = ref(56)
+const slideVibration = ref(63)
 </script>

@@ -3,20 +3,27 @@ title: Icon Genie CLI Installation
 desc: How to install the Icon Genie CLI on your development machine.
 ---
 
-Make sure that you have Node >=12.22.1 and NPM >=6.14.12 installed on your machine.
+Make sure that you have Node.js >=16 installed on your machine.
 
 ::: warning
-**Do not use uneven versions of Node i.e. 13, 15 etc.** These versions aren't tested with Quasar and often cause issues due to their experimental nature. We highly recommend always using the LTS version of Node.
+**Do not use uneven versions of Node.js i.e. 19, 21, 23 etc.** These versions aren't tested with Quasar and often cause issues due to their experimental nature. We highly recommend always using the LTS version of Node.
 :::
 
 You will be installing the Icon Genie CLI globally. You don't need to install it in your project folder.
 
-```bash
-# Node.js >=12.22.1 is required.
-
-$ yarn global add @quasar/icongenie
-# or
-$ npm install -g @quasar/icongenie
+```tabs
+<<| bash PNPM |>>
+# Node.js >=22 is required.
+pnpm add -g @quasar/icongenie
+<<| bash Yarn |>>
+# Node.js >=22 is required.
+yarn global add @quasar/icongenie
+<<| bash NPM |>>
+# Node.js >=22 is required.
+npm i -g @quasar/icongenie
+<<| bash Bun |>>
+# Node.js >=22 is required.
+bun install -g @quasar/icongenie
 ```
 
 This will install the `icongenie` command line tool.
@@ -48,7 +55,7 @@ As a consequence, please uninstall Icon Genie v1 from your project folder:
 
 ```bash
 # from your Quasar CLI project folder:
-$ quasar ext remove @quasar/icon-genie
+quasar ext remove @quasar/icon-genie
 ```
 
 ### Input files
@@ -59,7 +66,7 @@ The splash screens work in a completely different manner too. They will get gene
 
 ### Output files
 
-We have refined the list of icons and splash screens that are generated to match the latest standards and to also avoid duplication. So you will notice that some of the older files don't get generated anymore and some are completely new. Icon Genie will now tell you what tags you need to add (if any) to your /src/index.template.html (**you can copy paste the tags and replace your old ones**) -- so be mindful about the list of tags.
+We have refined the list of icons and splash screens that are generated to match the latest standards and to also avoid duplication. So you will notice that some of the older files don't get generated anymore and some are completely new. Icon Genie will now tell you what tags you need to add (if any) to your /index.html (**you can copy paste the tags and replace your old ones**) -- so be mindful about the list of tags.
 
 It might be a good idea to delete all your current icon/splashscreen files and let Icon Genie do its job again. This way you will be sure that what you're left with is actually used in your Quasar App.
 
@@ -67,17 +74,17 @@ It might be a good idea to delete all your current icon/splashscreen files and l
 
 Icon Genie v2 is a complete rewrite from top to bottom.
 
-* Icon Genie is now a CLI on its own, not a Quasar App Extension any more.
-* The input files (for the icon and the background) can have any name, be placed anywhere, and they don't need to have a fixed width + height. Starting with v2.1, the icon input file does not needs to have same width and height. Also, the icon input file is now automatically trimmed.
-* You can now configure a padding for the icon input file. (v2.1+)
-* We have refined the list of icons and splash screens that get generated to match the latest standards and to also avoid duplication.
-* Splash screens are created in a better manner, with the icon on top of the background (with the icon having any size ratio that you want, including 0 which means: "I only want the background image with no icon on top")
-* New commands: [generate](/icongenie/command-list#generate), [verify](/icongenie/command-list#verify), and [profile](/icongenie/command-list#profile), each with its own purpose.
-* The `generate` command now also shows you what tags you need in your `/src/index.template.html` file.
-* The `verify` command can even check if every file is in the right place and it has the right width by height.
-* A lot of new parameters: quality, svg-color, png-color, splashscreen-color, splashscreen-icon-ratio, etc etc. Check the [command list](/icongenie/command-list) page.
-* You can now control each type of asset (ico, png, splashscreen, ...) for each Quasar mode individually, each with its own settings/parameters. Check the `--filter`, `--quality` and all the color parameters. One good use case is with the `.ico` files.
-* Automation is now possible through Icon Genie [profile files](/icongenie/profile-files).
-* You can now **generate your own custom image files** using the Icon Genie API through the [profile files](/icongenie/profile-files).
+- Icon Genie is now a CLI on its own, not a Quasar App Extension any more.
+- The input files (for the icon and the background) can have any name, be placed anywhere, and they don't need to have a fixed width + height. Starting with v2.1, the icon input file does not needs to have same width and height. Also, the icon input file is now automatically trimmed.
+- You can now configure a padding for the icon input file. (v2.1+)
+- We have refined the list of icons and splash screens that get generated to match the latest standards and to also avoid duplication.
+- Splash screens are created in a better manner, with the icon on top of the background (with the icon having any size ratio that you want, including 0 which means: "I only want the background image with no icon on top")
+- New commands: [generate](/icongenie/command-list#generate), [verify](/icongenie/command-list#verify), and [profile](/icongenie/command-list#profile), each with its own purpose.
+- The `generate` command now also shows you what tags you need in your `/index.html` file.
+- The `verify` command can even check if every file is in the right place and it has the right width by height.
+- A lot of new parameters: quality, svg-color, png-color, splashscreen-color, splashscreen-icon-ratio, etc etc. Check the [command list](/icongenie/command-list) page.
+- You can now control each type of asset (ico, png, splashscreen, ...) for each Quasar mode individually, each with its own settings/parameters. Check the `--filter`, `--quality` and all the color parameters. One good use case is with the `.ico` files.
+- Automation is now possible through Icon Genie [profile files](/icongenie/profile-files).
+- You can now **generate your own custom image files** using the Icon Genie API through the [profile files](/icongenie/profile-files).
 
 Finally, we need to emphasize again on the `quality` parameter, which will dictate how good-looking and how big (KB) your images will be.

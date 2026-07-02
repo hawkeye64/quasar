@@ -14,30 +14,47 @@ export default {
     create: 'Creează',
     search: 'Caută',
     filter: 'Filtrează',
-    refresh: 'Actualizează'
+    refresh: 'Actualizează',
+    expand: label => (label ? `Deschideți "${label}"` : 'Deschide'),
+    collapse: label => (label ? `Închide "${label}"` : 'Închide')
   },
   date: {
     days: 'Duminică_Luni_Marți_Miercuri_Joi_Vineri_Sâmbătă'.split('_'),
     daysShort: 'Dum_Lun_Mar_Mie_Joi_Vin_Sâm'.split('_'),
-    months: 'Ianuarie_Februarie_Martie_Aprilie_Mai_Iunie_Iulie_August_Septembrie_Octombrie_Noiembrie_Decembrie'.split('_'),
+    months:
+      'Ianuarie_Februarie_Martie_Aprilie_Mai_Iunie_Iulie_August_Septembrie_Octombrie_Noiembrie_Decembrie'.split(
+        '_'
+      ),
     monthsShort: 'Ian_Feb_Mar_Apr_Mai_Iun_Iul_Aug_Sep_Oct_Nov_Dec'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'zile'
+    pluralDay: 'zile',
+    prevMonth: 'Luna anterioară',
+    nextMonth: 'Luna viitoare',
+    prevYear: 'Anul precedent',
+    nextYear: 'Anul viitor',
+    today: 'Astăzi',
+    prevRangeYears: range => `Anterior ${range} ani`,
+    nextRangeYears: range => `Următorul ${range} ani`
   },
   table: {
     noData: 'Nu sunt date disponibile',
     noResults: 'Nu am găsit înregistrări care să corespundă',
     loading: 'Se încarcă...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows > 1
         ? rows + ' înregistrări selectate.'
-        : (rows === 0 ? 'Nici o' : '1') + ' înregistrare selectată.'
-    ),
+        : (rows === 0 ? 'Nici o' : '1') + ' înregistrare selectată.',
     recordsPerPage: 'Înregistrări pe pagină:',
     allRows: 'Toate',
-    pagination: (start, end, total) => start + '-' + end + ' din ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' din ' + total,
     columns: 'Coloane'
+  },
+  pagination: {
+    first: 'Prima pagină',
+    prev: 'Pagina anterioară',
+    next: 'Pagina următoare',
+    last: 'Ultima pagină'
   },
   editor: {
     url: 'URL',

@@ -1,26 +1,29 @@
-import { h, computed, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, h } from 'vue'
 
-import useSize, { useSizeProps } from '../../composables/private/use-size.js'
+import useSize, {
+  useSizeProps
+} from '../../composables/private.use-size/use-size.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { hSlot, hMergeSlot } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { hMergeSlot, hSlot } from '../../utils/private.render/render.js'
 
 const defaultViewBox = '0 0 24 24'
 
 const sameFn = i => i
-const ionFn = i => `ionicons ${ i }`
+const ionFn = i => `ionicons ${i}`
 
 const libMap = {
+  'mdi-': i => `mdi ${i}`,
   'icon-': sameFn, // fontawesome equiv
-  'bt-': i => `bt ${ i }`,
-  'eva-': i => `eva ${ i }`,
+  'bt-': i => `bt ${i}`,
+  'eva-': i => `eva ${i}`,
   'ion-md': ionFn,
   'ion-ios': ionFn,
   'ion-logo': ionFn,
-  'mdi-': i => `mdi ${ i }`,
   'iconfont ': sameFn,
-  'ti-': i => `themify-icon ${ i }`,
-  'bi-': i => `bootstrap-icons ${ i }`
+  'ti-': i => `themify-icon ${i}`,
+  'bi-': i => `bootstrap-icons ${i}`,
+  'i-': sameFn // UnoCSS pure icons
 }
 
 const matMap = {
@@ -29,13 +32,21 @@ const matMap = {
   s_: '-sharp'
 }
 
+const symMap = {
+  sym_o_: '-outlined',
+  sym_r_: '-rounded',
+  sym_s_: '-sharp'
+}
+
 const libRE = new RegExp('^(' + Object.keys(libMap).join('|') + ')')
 const matRE = new RegExp('^(' + Object.keys(matMap).join('|') + ')')
+const symRE = new RegExp('^(' + Object.keys(symMap).join('|') + ')')
 const mRE = /^[Mm]\s?[-+]?\.?\d/
 const imgRE = /^img:/
 const svgUseRE = /^svguse:/
 const ionRE = /^ion-/
-const faLaRE = /^[lf]a[srlbdk]? /
+const faRE =
+  /^(fa-(classic|sharp|solid|regular|light|brands|duotone|thin)|[lf]a[srlbdk]?) /
 
 export default createComponent({
   name: 'QIcon',
@@ -54,15 +65,18 @@ export default createComponent({
     right: Boolean
   },
 
-  setup (props, { slots }) {
-    const { proxy: { $q } } = getCurrentInstance()
+  setup(props, { slots }) {
+    const {
+      proxy: { $q }
+    } = getCurrentInstance()
     const sizeStyle = useSize(props)
 
-    const classes = computed(() =>
-      'q-icon'
-      + (props.left === true ? ' on-left' : '') // TODO Qv3: drop this
-      + (props.right === true ? ' on-right' : '')
-      + (props.color !== void 0 ? ` text-${ props.color }` : '')
+    const classes = computed(
+      () =>
+        'q-icon' +
+        (props.left ? ' on-left' : '') + // TODO Qv3: drop this
+        (props.right ? ' on-right' : '') +
+        (props.color !== void 0 ? ` text-${props.color}` : '')
     )
 
     const type = computed(() => {
@@ -81,44 +95,41 @@ export default createComponent({
             if (icon === 'none' || !icon) {
               return { none: true }
             }
-          }
-          else {
+          } else {
             return {
               cls: res.cls,
-              content: res.content !== void 0
-                ? res.content
-                : ' '
+              content: res.content !== void 0 ? res.content : ' '
             }
           }
         }
       }
 
-      if (mRE.test(icon) === true) {
-        const [ def, viewBox = defaultViewBox ] = icon.split('|')
+      if (mRE.test(icon)) {
+        const [def, viewBox = defaultViewBox] = icon.split('|')
 
         return {
           svg: true,
           viewBox,
           nodes: def.split('&&').map(path => {
-            const [ d, style, transform ] = path.split('@@')
+            const [d, style, transform] = path.split('@@')
             return h('path', { style, d, transform })
           })
         }
       }
 
-      if (imgRE.test(icon) === true) {
+      if (imgRE.test(icon)) {
         return {
           img: true,
-          src: icon.substring(4)
+          src: icon.slice(4)
         }
       }
 
-      if (svgUseRE.test(icon) === true) {
-        const [ def, viewBox = defaultViewBox ] = icon.split('|')
+      if (svgUseRE.test(icon)) {
+        const [def, viewBox = defaultViewBox] = icon.split('|')
 
         return {
           svguse: true,
-          src: def.substring(7),
+          src: def.slice(7),
           viewBox
         }
       }
@@ -127,15 +138,27 @@ export default createComponent({
       const matches = icon.match(libRE)
 
       if (matches !== null) {
-        cls = libMap[ matches[ 1 ] ](icon)
-      }
-      else if (faLaRE.test(icon) === true) {
+        cls = libMap[matches[1]](icon)
+      } else if (faRE.test(icon)) {
         cls = icon
-      }
-      else if (ionRE.test(icon) === true) {
-        cls = `ionicons ion-${ $q.platform.is.ios === true ? 'ios' : 'md' }${ icon.substr(3) }`
-      }
-      else {
+      } else if (ionRE.test(icon)) {
+        cls = `ionicons ion-${$q.platform.is.ios ? 'ios' : 'md'}${icon.slice(3)}`
+      } else if (symRE.test(icon)) {
+        // "notranslate" class is for Google Translate
+        // to avoid tampering with Material Symbols ligature font
+        //
+        // Caution: To be able to add suffix to the class name,
+        // keep the 'material-symbols' at the end of the string.
+        cls = 'notranslate material-symbols'
+
+        const symMatches = icon.match(symRE)
+        if (symMatches !== null) {
+          icon = icon.slice(6)
+          cls += symMap[symMatches[1]]
+        }
+
+        content = icon
+      } else {
         // "notranslate" class is for Google Translate
         // to avoid tampering with Material Icons ligature font
         //
@@ -143,10 +166,10 @@ export default createComponent({
         // keep the 'material-icons' at the end of the string.
         cls = 'notranslate material-icons'
 
-        const matches = icon.match(matRE)
-        if (matches !== null) {
-          icon = icon.substring(2)
-          cls += matMap[ matches[ 1 ] ]
+        const matMatches = icon.match(matRE)
+        if (matMatches !== null) {
+          icon = icon.slice(2)
+          cls += matMap[matMatches[1]]
         }
 
         content = icon
@@ -162,45 +185,58 @@ export default createComponent({
       const data = {
         class: classes.value,
         style: sizeStyle.value,
-        'aria-hidden': 'true',
-        role: 'presentation'
+        'aria-hidden': 'true'
       }
 
-      if (type.value.none === true) {
+      if (type.value.none) {
         return h(props.tag, data, hSlot(slots.default))
       }
 
-      if (type.value.img === true) {
-        return h('span', data, hMergeSlot(slots.default, [
-          h('img', { src: type.value.src })
-        ]))
+      if (type.value.img) {
+        return h(
+          props.tag,
+          data,
+          hMergeSlot(slots.default, [h('img', { src: type.value.src })])
+        )
       }
 
-      if (type.value.svg === true) {
-        return h('span', data, hMergeSlot(slots.default, [
-          h('svg', {
-            viewBox: type.value.viewBox
-          }, type.value.nodes)
-        ]))
-      }
-
-      if (type.value.svguse === true) {
-        return h('span', data, hMergeSlot(slots.default, [
-          h('svg', {
-            viewBox: type.value.viewBox
-          }, [
-            h('use', { 'xlink:href': type.value.src })
+      if (type.value.svg) {
+        return h(
+          props.tag,
+          data,
+          hMergeSlot(slots.default, [
+            h(
+              'svg',
+              {
+                viewBox: type.value.viewBox || '0 0 24 24'
+              },
+              type.value.nodes
+            )
           ])
-        ]))
+        )
+      }
+
+      if (type.value.svguse) {
+        return h(
+          props.tag,
+          data,
+          hMergeSlot(slots.default, [
+            h(
+              'svg',
+              {
+                viewBox: type.value.viewBox
+              },
+              [h('use', { 'xlink:href': type.value.src })]
+            )
+          ])
+        )
       }
 
       if (type.value.cls !== void 0) {
         data.class += ' ' + type.value.cls
       }
 
-      return h(props.tag, data, hMergeSlot(slots.default, [
-        type.value.content
-      ]))
+      return h(props.tag, data, hMergeSlot(slots.default, [type.value.content]))
     }
   }
 })

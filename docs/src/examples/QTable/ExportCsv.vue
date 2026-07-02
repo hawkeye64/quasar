@@ -1,6 +1,8 @@
 <template>
   <div class="q-pa-md">
     <q-table
+      flat
+      bordered
       title="Treats"
       :rows="rows"
       :columns="columns"
@@ -20,10 +22,11 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { exportFile, useQuasar } from 'quasar'
 
 const columns = [
+  // #region
   {
     name: 'name',
     required: true,
@@ -33,22 +36,42 @@ const columns = [
     format: val => `${val}`,
     sortable: true
   },
-  { name: 'calories', align: 'center', label: 'Calories', field: 'calories', sortable: true },
+  {
+    name: 'calories',
+    align: 'center',
+    label: 'Calories',
+    field: 'calories',
+    sortable: true
+  },
   { name: 'fat', label: 'Fat (g)', field: 'fat', sortable: true },
   { name: 'carbs', label: 'Carbs (g)', field: 'carbs' },
   { name: 'protein', label: 'Protein (g)', field: 'protein' },
   { name: 'sodium', label: 'Sodium (mg)', field: 'sodium' },
-  { name: 'calcium', label: 'Calcium (%)', field: 'calcium', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) },
-  { name: 'iron', label: 'Iron (%)', field: 'iron', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) }
+  {
+    name: 'calcium',
+    label: 'Calcium (%)',
+    field: 'calcium',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  },
+  {
+    name: 'iron',
+    label: 'Iron (%)',
+    field: 'iron',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  }
+  // #endregion
 ]
 
 const rows = [
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24,
-    protein: 4.0,
+    protein: 4,
     sodium: 87,
     calcium: '14%',
     iron: '1%'
@@ -56,7 +79,7 @@ const rows = [
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37,
     protein: 4.3,
     sodium: 129,
@@ -66,9 +89,9 @@ const rows = [
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23,
-    protein: 6.0,
+    protein: 6,
     sodium: 337,
     calcium: '6%',
     iron: '7%'
@@ -86,7 +109,7 @@ const rows = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49,
     protein: 3.9,
     sodium: 327,
@@ -96,9 +119,9 @@ const rows = [
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94,
-    protein: 0.0,
+    protein: 0,
     sodium: 50,
     calcium: '0%',
     iron: '0%'
@@ -126,7 +149,7 @@ const rows = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51,
     protein: 4.9,
     sodium: 326,
@@ -136,23 +159,21 @@ const rows = [
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65,
     protein: 7,
     sodium: 54,
     calcium: '12%',
     iron: '6%'
   }
+  // #endregion
 ]
 
-function wrapCsvValue (val, formatFn) {
-  let formatted = formatFn !== void 0
-    ? formatFn(val)
-    : val
+function wrapCsvValue(val, formatFn, row) {
+  let formatted = formatFn !== void 0 ? formatFn(val, row) : val
 
-  formatted = formatted === void 0 || formatted === null
-    ? ''
-    : String(formatted)
+  formatted =
+    formatted === void 0 || formatted === null ? '' : String(formatted)
 
   formatted = formatted.split('"').join('""')
   /**
@@ -165,40 +186,35 @@ function wrapCsvValue (val, formatFn) {
   return `"${formatted}"`
 }
 
-export default {
-  setup () {
-    const $q = useQuasar()
+const $q = useQuasar()
 
-    return {
-      columns,
-      rows,
-
-      exportTable () {
-        // naive encoding to csv format
-        const content = [columns.map(col => wrapCsvValue(col.label))].concat(
-          rows.map(row => columns.map(col => wrapCsvValue(
+function exportTable() {
+  // naive encoding to csv format
+  const content = [
+    ...columns.map(col => wrapCsvValue(col.label)),
+    ...rows.map(row =>
+      columns
+        .map(col =>
+          wrapCsvValue(
             typeof col.field === 'function'
               ? col.field(row)
-              : row[ col.field === void 0 ? col.name : col.field ],
-            col.format
-          )).join(','))
-        ).join('\r\n')
-
-        const status = exportFile(
-          'table-export.csv',
-          content,
-          'text/csv'
+              : row[col.field === void 0 ? col.name : col.field],
+            col.format,
+            row
+          )
         )
+        .join(',')
+    )
+  ].join('\r\n')
 
-        if (status !== true) {
-          $q.notify({
-            message: 'Browser denied file download...',
-            color: 'negative',
-            icon: 'warning'
-          })
-        }
-      }
-    }
+  const status = exportFile('table-export.csv', content, 'text/csv')
+
+  if (status !== true) {
+    $q.notify({
+      message: 'Browser denied file download...',
+      color: 'negative',
+      icon: 'warning'
+    })
   }
 }
 </script>

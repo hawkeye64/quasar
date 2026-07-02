@@ -1,0 +1,31 @@
+packages:
+  - app-vite
+  - app-vite/playground-js
+  - app-vite/playground-ts
+  - vite-plugin
+  - vite-plugin/playground
+  - extras
+  - ui
+  - ui/playground
+  - ui/testing
+  - create-quasar
+  - cli
+  - utils/art
+  - utils/render-ssr-error
+  - utils/ssl-certificate
+  - docs
+
+# The packages below are not included. Use their individual folders.
+# - icongenie
+
+linkWorkspacePackages: true
+publishBranch: dev
+
+allowBuilds:
+  '@parcel/watcher': true
+  core-js: true
+  electron-winstaller: true
+  esbuild: true
+  lightningcss: true
+  rolldown: true
+  unrs-resolver: true

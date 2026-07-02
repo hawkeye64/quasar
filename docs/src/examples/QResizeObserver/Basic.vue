@@ -1,6 +1,11 @@
 <template>
   <div class="q-pa-md q-gutter-md">
-    <q-btn color="primary" push @click="setRandomSize" label="Set Random Size" />
+    <q-btn
+      color="primary"
+      push
+      @click="setRandomSize"
+      label="Set Random Size"
+    />
 
     <div :style="style" class="container bg-amber rounded-borders glossy">
       <!--
@@ -18,33 +23,24 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    const style = ref({ width: '200px', height: '200px' })
-    const report = ref(null)
+const style = ref({ width: '200px', height: '200px' })
+const report = ref(null)
 
-    return {
-      style,
-      report,
+function onResize(size) {
+  report.value = size
+  // {
+  //   width: 20 // width of container (in px)
+  //   height: 50 // height of container (in px)
+  // }
+}
 
-      onResize (size) {
-        report.value = size
-        // {
-        //   width: 20 // width of container (in px)
-        //   height: 50 // height of container (in px)
-        // }
-      },
-
-      setRandomSize () {
-        style.value = {
-          width: Math.floor(100 + Math.random() * 200) + 'px',
-          height: Math.floor(100 + Math.random() * 200) + 'px'
-        }
-      }
-    }
+function setRandomSize() {
+  style.value = {
+    width: Math.floor(100 + Math.random() * 200) + 'px',
+    height: Math.floor(100 + Math.random() * 200) + 'px'
   }
 }
 </script>

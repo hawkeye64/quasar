@@ -59,7 +59,7 @@
         <q-tabs
           v-model="tab"
           dense
-          class="bg-grey-3"
+          :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-3'"
           align="justify"
           narrow-indicator
         >
@@ -72,14 +72,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      tab: ref('mails')
-    }
-  }
-}
+const tab = ref('mails')
 </script>

@@ -1,16 +1,16 @@
-import { h, ref, computed, watch, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, h, ref, watch } from 'vue'
 
-import { useFormAttrs } from '../../composables/private/use-form.js'
+import { useFormAttrs } from '../../composables/use-form/private.use-form.js'
 
 import useSlider, {
-  useSliderProps,
+  keyCodes,
   useSliderEmits,
-  keyCodes
+  useSliderProps
 } from './use-slider.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { between } from '../../utils/format.js'
-import { stopAndPrevent } from '../../utils/event.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { between } from '../../utils/format/format.js'
+import { stopAndPrevent } from '../../utils/event/event.js'
 
 const getNodeData = () => ({})
 
@@ -26,16 +26,20 @@ export default createComponent({
       validator: v => typeof v === 'number' || v === null
     },
 
-    labelValue: [ String, Number ]
+    labelValue: [String, Number]
   },
 
   emits: useSliderEmits,
 
-  setup (props, { emit }) {
-    const { proxy: { $q } } = getCurrentInstance()
+  setup(props, { emit }) {
+    const {
+      proxy: { $q }
+    } = getCurrentInstance()
 
     const { state, methods } = useSlider({
-      updateValue, updatePosition, getDragging,
+      updateValue,
+      updatePosition,
+      getDragging,
       formAttrs: useFormAttrs(props)
     })
 
@@ -43,29 +47,37 @@ export default createComponent({
     const curRatio = ref(0)
     const model = ref(0)
 
-    function normalizeModel () {
-      model.value = props.modelValue === null
-        ? state.innerMin.value
-        : between(props.modelValue, state.innerMin.value, state.innerMax.value)
+    function normalizeModel() {
+      model.value =
+        props.modelValue === null
+          ? state.innerMin.value
+          : between(
+              props.modelValue,
+              state.innerMin.value,
+              state.innerMax.value
+            )
     }
 
     watch(
-      () => `${ props.modelValue }|${ state.innerMin.value }|${ state.innerMax.value }`,
-      normalizeModel
+      () =>
+        `${props.modelValue}|${state.innerMin.value}|${state.innerMax.value}`,
+      normalizeModel,
+      { immediate: true }
     )
 
-    normalizeModel()
-
     const modelRatio = computed(() => methods.convertModelToRatio(model.value))
-    const ratio = computed(() => (state.active.value === true ? curRatio.value : modelRatio.value))
+    const ratio = computed(() =>
+      state.active.value ? curRatio.value : modelRatio.value
+    )
 
     const selectionBarStyle = computed(() => {
       const acc = {
-        [ state.positionProp.value ]: `${ 100 * state.innerMinRatio.value }%`,
-        [ state.sizeProp.value ]: `${ 100 * (ratio.value - state.innerMinRatio.value) }%`
+        [state.positionProp.value]: `${100 * state.innerMinRatio.value}%`,
+        [state.sizeProp.value]:
+          `${100 * (ratio.value - state.innerMinRatio.value)}%`
       }
       if (props.selectionImg !== void 0) {
-        acc.backgroundImage = `url(${ props.selectionImg }) !important`
+        acc.backgroundImage = `url(${props.selectionImg}) !important`
       }
       return acc
     })
@@ -74,22 +86,18 @@ export default createComponent({
       focusValue: true,
       getNodeData,
       ratio,
-      label: computed(() => (
-        props.labelValue !== void 0
-          ? props.labelValue
-          : model.value
-      )),
+      label: computed(() =>
+        props.labelValue !== void 0 ? props.labelValue : model.value
+      ),
       thumbColor: computed(() => props.thumbColor || props.color),
       labelColor: computed(() => props.labelColor),
       labelTextColor: computed(() => props.labelTextColor)
     })
 
     const trackContainerEvents = computed(() => {
-      if (state.editable.value !== true) {
-        return {}
-      }
+      if (!state.editable.value) return {}
 
-      return $q.platform.is.mobile === true
+      return $q.platform.is.mobile
         ? { onClick: methods.onMobileClick }
         : {
             onMousedown: methods.onActivate,
@@ -100,44 +108,48 @@ export default createComponent({
           }
     })
 
-    function updateValue (change) {
+    function updateValue(change) {
       if (model.value !== props.modelValue) {
         emit('update:modelValue', model.value)
       }
-      change === true && emit('change', model.value)
+
+      if (change) emit('change', model.value)
     }
 
-    function getDragging () {
+    function getDragging() {
       return rootRef.value.getBoundingClientRect()
     }
 
-    function updatePosition (event, dragging = state.dragging.value) {
-      const ratio = methods.getDraggingRatio(event, dragging)
+    function updatePosition(event, dragging = state.dragging.value) {
+      const localRatio = methods.getDraggingRatio(event, dragging)
 
-      model.value = methods.convertRatioToModel(ratio)
+      model.value = methods.convertRatioToModel(localRatio)
 
-      curRatio.value = props.snap !== true || props.step === 0
-        ? ratio
-        : methods.convertModelToRatio(model.value)
+      curRatio.value =
+        !props.snap || props.step === 0
+          ? localRatio
+          : methods.convertModelToRatio(model.value)
     }
 
-    function onFocus () {
+    function onFocus() {
       state.focus.value = true
     }
 
-    function onKeydown (evt) {
-      if (!keyCodes.includes(evt.keyCode)) {
-        return
-      }
+    function onKeydown(evt) {
+      if (!keyCodes.includes(evt.keyCode)) return
 
       stopAndPrevent(evt)
 
-      const
-        stepVal = ([ 34, 33 ].includes(evt.keyCode) ? 10 : 1) * state.step.value,
-        offset = ([ 34, 37, 40 ].includes(evt.keyCode) ? -1 : 1) * (state.isReversed.value === true ? -1 : 1) * stepVal
+      const stepVal =
+          ([34, 33].includes(evt.keyCode) ? 10 : 1) * state.keyStep.value,
+        offset =
+          ([34, 37, 40].includes(evt.keyCode) ? -1 : 1) *
+          (state.isReversed.value ? -1 : 1) *
+          (props.vertical ? -1 : 1) *
+          stepVal
 
       model.value = between(
-        parseFloat((model.value + offset).toFixed(state.decimals.value)),
+        state.roundValueFn.value(model.value + offset),
         state.innerMin.value,
         state.innerMax.value
       )
@@ -150,15 +162,23 @@ export default createComponent({
         selectionBarStyle,
         state.tabindex,
         trackContainerEvents,
-        node => { node.push(getThumb()) }
+        node => {
+          node.push(getThumb())
+        }
       )
 
-      return h('div', {
-        ref: rootRef,
-        class: state.classes.value + (props.modelValue === null ? ' q-slider--no-value' : ''),
-        ...state.attributes.value,
-        'aria-valuenow': props.modelValue
-      }, content)
+      return h(
+        'div',
+        {
+          ref: rootRef,
+          class:
+            state.classes.value +
+            (props.modelValue === null ? ' q-slider--no-value' : ''),
+          ...state.attributes.value,
+          'aria-valuenow': props.modelValue
+        },
+        content
+      )
     }
   }
 })

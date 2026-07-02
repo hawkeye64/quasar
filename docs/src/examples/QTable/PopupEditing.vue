@@ -1,6 +1,8 @@
 <template>
   <div class="q-pa-md">
     <q-table
+      flat
+      bordered
       title="Treats"
       :rows="rows"
       :columns="columns"
@@ -12,13 +14,29 @@
           <q-td key="name" :props="props">
             {{ props.row.name }}
             <q-popup-edit v-model="props.row.name" v-slot="scope">
-              <q-input v-model="scope.value" dense autofocus counter />
+              <q-input
+                v-model="scope.value"
+                dense
+                autofocus
+                counter
+                @keyup.enter="scope.set"
+              />
             </q-popup-edit>
           </q-td>
           <q-td key="calories" :props="props">
             {{ props.row.calories }}
-            <q-popup-edit v-model="props.row.calories" title="Update calories" buttons v-slot="scope">
-              <q-input type="number" v-model="scope.value" dense autofocus />
+            <q-popup-edit
+              v-model="props.row.calories"
+              title="Update calories"
+              buttons
+              v-slot="scope"
+            >
+              <q-input
+                type="number"
+                v-model.number="scope.value"
+                dense
+                autofocus
+              />
             </q-popup-edit>
           </q-td>
           <q-td key="fat" :props="props">
@@ -29,8 +47,20 @@
           </q-td>
           <q-td key="carbs" :props="props">
             {{ props.row.carbs }}
-            <q-popup-edit v-model="props.row.carbs" title="Update carbs" buttons persistent v-slot="scope">
-              <q-input type="number" v-model="scope.value" dense autofocus hint="Use buttons to close" />
+            <q-popup-edit
+              v-model="props.row.carbs"
+              title="Update carbs"
+              buttons
+              persistent
+              v-slot="scope"
+            >
+              <q-input
+                type="number"
+                v-model.number="scope.value"
+                dense
+                autofocus
+                hint="Use buttons to close"
+              />
             </q-popup-edit>
           </q-td>
           <q-td key="protein" :props="props">{{ props.row.protein }}</q-td>
@@ -43,10 +73,11 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
 const columns = [
+  // #region
   {
     name: 'name',
     required: true,
@@ -56,22 +87,48 @@ const columns = [
     format: val => `${val}`,
     sortable: true
   },
-  { name: 'calories', align: 'center', label: 'Calories', field: 'calories', sortable: true },
-  { name: 'fat', label: 'Fat (g)', field: 'fat', sortable: true, style: 'width: 10px' },
+  {
+    name: 'calories',
+    align: 'center',
+    label: 'Calories',
+    field: 'calories',
+    sortable: true
+  },
+  {
+    name: 'fat',
+    label: 'Fat (g)',
+    field: 'fat',
+    sortable: true,
+    style: 'width: 10px'
+  },
   { name: 'carbs', label: 'Carbs (g)', field: 'carbs' },
   { name: 'protein', label: 'Protein (g)', field: 'protein' },
   { name: 'sodium', label: 'Sodium (mg)', field: 'sodium' },
-  { name: 'calcium', label: 'Calcium (%)', field: 'calcium', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) },
-  { name: 'iron', label: 'Iron (%)', field: 'iron', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) }
+  {
+    name: 'calcium',
+    label: 'Calcium (%)',
+    field: 'calcium',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  },
+  {
+    name: 'iron',
+    label: 'Iron (%)',
+    field: 'iron',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  }
+  // #endregion
 ]
 
-const rows = [
+const rows = ref([
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24,
-    protein: 4.0,
+    protein: 4,
     sodium: 87,
     calcium: '14%',
     iron: '1%'
@@ -79,7 +136,7 @@ const rows = [
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37,
     protein: 4.3,
     sodium: 129,
@@ -89,9 +146,9 @@ const rows = [
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23,
-    protein: 6.0,
+    protein: 6,
     sodium: 337,
     calcium: '6%',
     iron: '7%'
@@ -109,7 +166,7 @@ const rows = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49,
     protein: 3.9,
     sodium: 327,
@@ -119,9 +176,9 @@ const rows = [
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94,
-    protein: 0.0,
+    protein: 0,
     sodium: 50,
     calcium: '0%',
     iron: '0%'
@@ -149,7 +206,7 @@ const rows = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51,
     protein: 4.9,
     sodium: 326,
@@ -159,21 +216,13 @@ const rows = [
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65,
     protein: 7,
     sodium: 54,
     calcium: '12%',
     iron: '6%'
   }
-]
-
-export default {
-  setup () {
-    return {
-      columns,
-      rows: ref(rows)
-    }
-  }
-}
+  // #endregion
+])
 </script>

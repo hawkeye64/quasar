@@ -1,5 +1,9 @@
 {
-  "mixins": [ "composables/private/use-field", "components/input/use-mask", "composables/private/use-form" ],
+  "mixins": [
+    "composables/private.use-field/use-field",
+    "components/input/use-mask",
+    "composables/use-form/private.use-form"
+  ],
 
   "meta": {
     "docsUrl": "https://v2.quasar.dev/vue-components/input"
@@ -8,41 +12,48 @@
   "props": {
     "model-value": {
       "extends": "model-value",
-      "type": [ "String", "Number", "null", "undefined" ],
+      "type": ["String", "Number", "FileList", "null", "undefined"],
       "desc": "Model of the component; Either use this property (along with a listener for 'update:modelValue' event) OR use v-model directive",
-      "examples": [ "v-model=\"myText\"" ]
+      "examples": ["# v-model=\"myText\""]
     },
 
     "shadow-text": {
       "type": "String",
       "desc": "Text to be displayed as shadow at the end of the text in the control; Does NOT applies to type=file",
-      "examples": [ "rest of the fill value" ],
+      "examples": ["'rest of the fill value'"],
       "category": "content"
     },
 
     "type": {
       "type": "String",
       "desc": "Input type",
-      "default": "text",
+      "default": "'text'",
       "values": [
-        "text", "password", "textarea", "email", "search",
-        "tel", "file", "number", "url", "time", "date"
+        "'text'",
+        "'password'",
+        "'textarea'",
+        "'email'",
+        "'search'",
+        "'tel'",
+        "'file'",
+        "'number'",
+        "'url'",
+        "'time'",
+        "'date'",
+        "'datetime-local'"
       ],
-      "examples": [ "password" ],
       "category": "general"
     },
 
     "debounce": {
-      "type": [ "String", "Number" ],
+      "type": ["String", "Number"],
       "desc": "Debounce amount (in milliseconds) when updating model",
-      "examples": [ "0", "530" ],
       "category": "model"
     },
 
     "maxlength": {
-      "type": [ "String", "Number" ],
+      "type": ["String", "Number"],
       "desc": "Specify a max length of model",
-      "examples": [ "12" ],
       "category": "model"
     },
 
@@ -53,55 +64,43 @@
     },
 
     "input-class": {
-      "type": [ "String", "Array", "Object" ],
+      "type": ["String", "Array", "Object"],
       "tsType": "VueClassProp",
       "desc": "Class definitions to be attributed to the underlying input tag",
-      "examples": [
-        "my-special-class",
-        ":input-class=\"{ 'my-special-class': <condition> }\""
-      ],
+      "examples": ["'my-special-class'", "{ 'my-special-class': true }"],
       "category": "style"
     },
 
     "input-style": {
-      "type": [ "String", "Array", "Object" ],
+      "type": ["String", "Array", "Object"],
       "tsType": "VueStyleProp",
       "desc": "Style definitions to be attributed to the underlying input tag",
       "examples": [
-        "background-color: #ff0000",
-        ":input-style=\"{ backgroundColor: '#ff0000' }\""
+        "'background-color: #ff0000'",
+        "{ backgroundColor: '#ff0000' }"
       ],
       "category": "style"
+    },
+
+    "name": {
+      "desc": "Used to specify the name of the control; Useful if dealing with forms; If not specified, it takes the value of 'for' prop, if it exists"
     }
   },
 
   "events": {
     "update:model-value": {
-      "extends": "update:model-value",
       "params": {
         "value": {
-          "type": [ "String", "Number", "null" ]
+          "type": ["String", "Number", "null"]
         }
       }
     },
 
-    "focus": {
-      "desc": "Emitted when component gets focused",
-      "params": {
-        "evt": {
-          "extends": "evt"
-        }
-      }
-    },
-
-    "blur": {
-      "desc": "Emitted when component loses focus",
-      "params": {
-        "evt": {
-          "extends": "evt"
-        }
-      }
-    }
+    "click": { "internal": true },
+    "paste": { "internal": true },
+    "animationend": { "internal": true },
+    "change": { "internal": true },
+    "keydown": { "internal": true }
   },
 
   "methods": {
@@ -114,16 +113,28 @@
     },
 
     "select": {
-      "desc": "Select input text"
+      "desc": "Select input text",
+      "params": null,
+      "returns": null
     },
 
     "getNativeElement": {
-      "desc": "Get the native input/textarea DOM Element",
+      "desc": "DEPRECATED; Access 'nativeEl' directly instead; Get the native input/textarea DOM Element",
+      "params": null,
       "returns": {
-        "type": "Object",
-        "desc": "The underlying native input/textarea DOM Element",
-        "__exemption": [ "examples" ]
+        "type": "Element",
+        "tsType": "QInputNativeElement",
+        "desc": "The underlying native input/textarea DOM Element"
       }
+    }
+  },
+
+  "computedProps": {
+    "nativeEl": {
+      "type": "Element",
+      "tsType": "QInputNativeElement",
+      "desc": "The native input/textarea DOM Element",
+      "addedIn": "v2.10.1"
     }
   }
 }

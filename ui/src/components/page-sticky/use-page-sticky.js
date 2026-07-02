@@ -1,17 +1,26 @@
-import { h, computed, inject, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, h, inject } from 'vue'
 
-import { hSlot } from '../../utils/private/render.js'
-import { layoutKey } from '../../utils/private/symbols.js'
+import { hSlot } from '../../utils/private.render/render.js'
+import {
+  emptyRenderFn,
+  layoutKey
+} from '../../utils/private.symbols/symbols.js'
 
 export const usePageStickyProps = {
   position: {
     type: String,
     default: 'bottom-right',
-    validator: v => [
-      'top-right', 'top-left',
-      'bottom-right', 'bottom-left',
-      'top', 'right', 'bottom', 'left'
-    ].includes(v)
+    validator: v =>
+      [
+        'top-right',
+        'top-left',
+        'bottom-right',
+        'bottom-left',
+        'top',
+        'right',
+        'bottom',
+        'left'
+      ].includes(v)
   },
   offset: {
     type: Array,
@@ -20,22 +29,26 @@ export const usePageStickyProps = {
   expand: Boolean
 }
 
-export default function () {
-  const { props, proxy } = getCurrentInstance()
-  const { $q } = proxy
+export default function usePageSticky() {
+  const {
+    props,
+    proxy: { $q }
+  } = getCurrentInstance()
 
-  const $layout = inject(layoutKey, () => {
+  const $layout = inject(layoutKey, emptyRenderFn)
+  if ($layout === emptyRenderFn) {
     console.error('QPageSticky needs to be child of QLayout')
-  })
+    return emptyRenderFn
+  }
 
   const attach = computed(() => {
     const pos = props.position
 
     return {
-      top: pos.indexOf('top') > -1,
-      right: pos.indexOf('right') > -1,
-      bottom: pos.indexOf('bottom') > -1,
-      left: pos.indexOf('left') > -1,
+      top: pos.includes('top'),
+      right: pos.includes('right'),
+      bottom: pos.includes('bottom'),
+      left: pos.includes('left'),
       vertical: pos === 'top' || pos === 'bottom',
       horizontal: pos === 'left' || pos === 'right'
     }
@@ -47,66 +60,65 @@ export default function () {
   const left = computed(() => $layout.left.offset)
 
   const style = computed(() => {
-    let posX = 0, posY = 0
+    let posX = 0,
+      posY = 0
 
     const side = attach.value
-    const dir = $q.lang.rtl === true ? -1 : 1
+    const dir = $q.lang.rtl ? -1 : 1
 
-    if (side.top === true && top.value !== 0) {
-      posY = `${ top.value }px`
-    }
-    else if (side.bottom === true && bottom.value !== 0) {
-      posY = `${ -bottom.value }px`
-    }
-
-    if (side.left === true && left.value !== 0) {
-      posX = `${ dir * left.value }px`
-    }
-    else if (side.right === true && right.value !== 0) {
-      posX = `${ -dir * right.value }px`
+    if (side.top && top.value !== 0) {
+      posY = `${top.value}px`
+    } else if (side.bottom && bottom.value !== 0) {
+      posY = `${-bottom.value}px`
     }
 
-    const css = { transform: `translate(${ posX }, ${ posY })` }
+    if (side.left && left.value !== 0) {
+      posX = `${dir * left.value}px`
+    } else if (side.right && right.value !== 0) {
+      posX = `${-dir * right.value}px`
+    }
+
+    const css = { transform: `translate(${posX}, ${posY})` }
 
     if (props.offset) {
-      css.margin = `${ props.offset[ 1 ] }px ${ props.offset[ 0 ] }px`
+      css.margin = `${props.offset[1]}px ${props.offset[0]}px`
     }
 
-    if (side.vertical === true) {
+    if (side.vertical) {
       if (left.value !== 0) {
-        css[ $q.lang.rtl === true ? 'right' : 'left' ] = `${ left.value }px`
+        css[$q.lang.rtl ? 'right' : 'left'] = `${left.value}px`
       }
       if (right.value !== 0) {
-        css[ $q.lang.rtl === true ? 'left' : 'right' ] = `${ right.value }px`
+        css[$q.lang.rtl ? 'left' : 'right'] = `${right.value}px`
       }
-    }
-    else if (side.horizontal === true) {
+    } else if (side.horizontal) {
       if (top.value !== 0) {
-        css.top = `${ top.value }px`
+        css.top = `${top.value}px`
       }
       if (bottom.value !== 0) {
-        css.bottom = `${ bottom.value }px`
+        css.bottom = `${bottom.value}px`
       }
     }
 
     return css
   })
 
-  const classes = computed(() =>
-    `q-page-sticky row flex-center fixed-${ props.position }`
-    + ` q-page-sticky--${ props.expand === true ? 'expand' : 'shrink' }`
+  const classes = computed(
+    () =>
+      `q-page-sticky row flex-center fixed-${props.position}` +
+      ` q-page-sticky--${props.expand ? 'expand' : 'shrink'}`
   )
 
-  function getStickyContent (slots) {
+  function getStickyContent(slots) {
     const content = hSlot(slots.default)
 
-    return h('div', {
-      class: classes.value,
-      style: style.value
-    },
-    props.expand === true
-      ? content
-      : [ h('div', content) ]
+    return h(
+      'div',
+      {
+        class: classes.value,
+        style: style.value
+      },
+      props.expand ? content : [h('div', content)]
     )
   }
 

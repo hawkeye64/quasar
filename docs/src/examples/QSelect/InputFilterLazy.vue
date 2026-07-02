@@ -17,9 +17,7 @@
       >
         <template v-slot:no-option>
           <q-item>
-            <q-item-section class="text-grey">
-              No results
-            </q-item-section>
+            <q-item-section class="text-grey"> No results </q-item-section>
           </q-item>
         </template>
       </q-select>
@@ -39,9 +37,7 @@
       >
         <template v-slot:no-option>
           <q-item>
-            <q-item-section class="text-grey">
-              No results
-            </q-item-section>
+            <q-item-section class="text-grey"> No results </q-item-section>
           </q-item>
         </template>
       </q-select>
@@ -49,41 +45,32 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-const stringOptions = [
-  'Google', 'Facebook', 'Twitter', 'Apple', 'Oracle'
-]
+const stringOptions = ['Google', 'Facebook', 'Twitter', 'Apple', 'Oracle']
 
-export default {
-  setup () {
-    const options = ref(stringOptions)
+const model = ref(null)
+const options = ref(stringOptions)
 
-    return {
-      model: ref(null),
-      options,
+function filterFn(val, update, abort) {
+  // call abort() at any time if you can't retrieve data somehow
 
-      filterFn (val, update, abort) {
-        // call abort() at any time if you can't retrieve data somehow
-
-        setTimeout(() => {
-          update(() => {
-            if (val === '') {
-              options.value = stringOptions
-            }
-            else {
-              const needle = val.toLowerCase()
-              options.value = stringOptions.filter(v => v.toLowerCase().indexOf(needle) > -1)
-            }
-          })
-        }, 1500)
-      },
-
-      abortFilterFn () {
-        // console.log('delayed filter aborted')
+  setTimeout(() => {
+    update(() => {
+      if (val === '') {
+        options.value = stringOptions
+      } else {
+        const needle = val.toLowerCase()
+        options.value = stringOptions.filter(v =>
+          v.toLowerCase().includes(needle)
+        )
       }
-    }
-  }
+    })
+  }, 1500)
+}
+
+function abortFilterFn() {
+  console.log('delayed filter aborted')
 }
 </script>

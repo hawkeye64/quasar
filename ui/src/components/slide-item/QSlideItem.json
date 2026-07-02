@@ -143,13 +143,12 @@
               "type": "String",
               "required": true,
               "desc": "Side to which sliding is taking effect",
-              "values": [ "left", "right", "top", "bottom" ]
+              "values": ["'left'", "'right'", "'top'", "'bottom'"]
             },
             "ratio": {
               "type": "Number",
               "required": true,
-              "desc": "Ratio of how much of the required slide was performed (0..1)",
-              "examples": [ 0, 0.5, 1 ]
+              "desc": "Ratio of how much of the required slide was performed (0 <= x <= 1)"
             },
             "isReset": {
               "type": "Boolean",
@@ -172,7 +171,7 @@
               "type": "String",
               "required": true,
               "desc": "Side to which sliding has taken effect",
-              "values": [ "left", "right", "top", "bottom" ]
+              "values": ["'left'", "'right'", "'top'", "'bottom'"]
             },
             "reset": {
               "type": "Function",
@@ -189,7 +188,9 @@
 
   "methods": {
     "reset": {
-      "desc": "Reset to initial state (not swiped to any side)"
+      "desc": "Reset to initial state (not swiped to any side)",
+      "params": null,
+      "returns": null
     }
   }
 }

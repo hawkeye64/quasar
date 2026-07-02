@@ -15,9 +15,7 @@
       >
         <template v-slot:no-option>
           <q-item>
-            <q-item-section class="text-grey">
-              No results
-            </q-item-section>
+            <q-item-section class="text-grey"> No results </q-item-section>
           </q-item>
         </template>
       </q-select>
@@ -25,32 +23,23 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-const stringOptions = [
-  'Google', 'Facebook', 'Twitter', 'Apple', 'Oracle'
-]
+const stringOptions = ['Google', 'Facebook', 'Twitter', 'Apple', 'Oracle']
 
-export default {
-  setup () {
-    const options = ref(stringOptions)
-    return {
-      model: ref(null),
-      options,
+const model = ref(null)
+const options = ref(stringOptions)
 
-      filterFn (val, update, abort) {
-        if (val.length < 2) {
-          abort()
-          return
-        }
-
-        update(() => {
-          const needle = val.toLowerCase()
-          options.value = stringOptions.filter(v => v.toLowerCase().indexOf(needle) > -1)
-        })
-      }
-    }
+function filterFn(val, update, abort) {
+  if (val.length < 2) {
+    abort()
+    return
   }
+
+  update(() => {
+    const needle = val.toLowerCase()
+    options.value = stringOptions.filter(v => v.toLowerCase().includes(needle))
+  })
 }
 </script>

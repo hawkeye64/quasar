@@ -10,7 +10,10 @@
     <div class="example-area q-pa-lg scroll">
       <div class="example-filler" />
 
-      <div v-intersection="options" class="example-observed flex flex-center rounded-borders">
+      <div
+        v-intersection="options"
+        class="example-observed flex flex-center rounded-borders"
+      >
         Observed Element
       </div>
 
@@ -19,37 +22,29 @@
   </div>
 </template>
 
-<script>
-import { ref, computed } from 'vue'
+<script setup>
+import { computed, ref } from 'vue'
 
 const thresholds = []
+const percent = ref(0)
 
-for (let i = 0; i <= 1.0; i += 0.01) {
+for (let i = 0; i <= 1; i += 0.01) {
   thresholds.push(i)
 }
 
-export default {
-  setup () {
-    const percent = ref(0)
+const visibleClass = computed(
+  () => `bg-${percent.value > 0 ? 'positive' : 'negative'}`
+)
 
-    return {
-      percent,
-      visibleClass: computed(
-        () => `bg-${percent.value > 0 ? 'positive' : 'negative'}`
-      ),
-
-      options: {
-        handler (entry) {
-          const val = (entry.intersectionRatio * 100).toFixed(0)
-          if (percent.value !== val) {
-            percent.value = val
-          }
-        },
-        cfg: {
-          threshold: thresholds
-        }
-      }
+const options = {
+  handler(entry) {
+    const val = (entry.intersectionRatio * 100).toFixed(0)
+    if (percent.value !== val) {
+      percent.value = val
     }
+  },
+  cfg: {
+    threshold: thresholds
   }
 }
 </script>
@@ -66,7 +61,7 @@ export default {
   height: 150px
   font-size: 20px
   color: #ccc
-  background: #282a37
+  background: #424242
   padding: 10px
 
 .example-area

@@ -1,6 +1,7 @@
 <template>
   <div class="q-ma-md">
     <q-scroll-area
+      :horizontal-offset="[0, 3]"
       :thumb-style="thumbStyle"
       :bar-style="barStyle"
       style="height: 200px"
@@ -11,26 +12,20 @@
         :items="heavyList"
         :virtual-scroll-item-size="32"
         separator
+        v-slot="{ item, index }"
       >
-        <template v-slot="{ item, index }">
-          <q-item
-            :key="index"
-            dense
-          >
-            <q-item-section>
-              <q-item-label>
-                #{{ index }} - {{ item.label }}
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </template>
+        <q-item :key="index" dense>
+          <q-item-section>
+            <q-item-label> #{{ index }} - {{ item.label }} </q-item-label>
+          </q-item-section>
+        </q-item>
       </q-virtual-scroll>
     </q-scroll-area>
   </div>
 </template>
 
-<script>
-const maxSize = 10000
+<script setup>
+const maxSize = 10_000
 const heavyList = []
 
 for (let i = 0; i < maxSize; i++) {
@@ -39,31 +34,17 @@ for (let i = 0; i < maxSize; i++) {
   })
 }
 
-export default {
-  setup () {
-    return {
-      heavyList,
+const thumbStyle = {
+  borderRadius: '8px',
+  backgroundColor: '#027be3',
+  width: '8px',
+  opacity: 0.75
+}
 
-      thumbStyle: {
-        right: '5px',
-        borderRadius: '8px',
-        backgroundColor: '#027be3',
-        width: '8px',
-        opacity: 0.75
-      },
-
-      barStyle: {
-        right: '2px',
-        borderRadius: '14px',
-        backgroundColor: '#027be3',
-        width: '14px',
-        opacity: 0.2,
-        marginTop: '-3px',
-        marginBottom: '-3px',
-        paddingTop: '3px',
-        paddingBottom: '3px'
-      }
-    }
-  }
+const barStyle = {
+  borderRadius: '14px',
+  backgroundColor: '#027be3',
+  width: '14px',
+  opacity: 0.2
 }
 </script>

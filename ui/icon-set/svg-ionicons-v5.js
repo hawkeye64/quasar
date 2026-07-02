@@ -1,4 +1,3 @@
-
 import {
   ionCheckmark,
   ionAlert,
@@ -43,8 +42,8 @@ import {
   ionChevronForwardCircle
 } from '@quasar/extras/ionicons-v5'
 
-// there are some icons that are needed but not available
-// so we import them from MDI as svgs
+/* There are some icons that are needed but not available
+   so we import them from MDI as svg */
 
 import {
   mdiFormatBold,
@@ -79,7 +78,7 @@ import {
   mdiNumeric6Box,
   mdiNumeric7Box,
   mdiFormatFont
-} from '@quasar/extras/mdi-v6'
+} from '@quasar/extras/mdi-v7'
 
 export default {
   name: 'svg-ionicons-v5',
@@ -125,7 +124,8 @@ export default {
     now: ionTime,
     today: ionCalendar
   },
-  editor: { // requires Material icons for some as Ionicons simply does not have everything needed
+  editor: {
+    // requires Material icons for some as Ionicons simply does not have everything needed
     hyperlink: ionLink,
     toggleFullscreen: ionExpand,
     quote: ionChatboxEllipses,

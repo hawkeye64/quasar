@@ -17,7 +17,7 @@ body:
         To enter your issue, fill out the form correctly and according to the instructions. Try to be as clear as possible and provide as many details as possible, to help our team better understand the issue and to resolve it faster.
         Issues with an unclear description or lacking information will have a lower priority. They may even get closed without taking action.
 
-        Lastly, read the [Reporting an Issue | Contribution Guide](https://quasar.dev/contribution-guide/contribution-guide#reporting-an-issue) section of our docs for a more detailed explanation.
+        Lastly, read the [Reporting an Issue | Contribution Guide](https://quasar.dev/how-to-contribute/contribution-guide#reporting-an-issue) section of our docs for a more detailed explanation.
 
         Thanks for your understanding. We truly appreciate your effort to fill out this form!
   - type: textarea
@@ -38,9 +38,15 @@ body:
     attributes:
       label: Reproduction URL
       description: |
-        Fork a [Codepen](https://codepen.quasar.dev) or a [jsFiddle](https://jsfiddle.quasar.dev) or a [Codesandbox](https://codesandbox.quasar.dev) and hit save then copy-paste the URL here.
+        A [reproduction](https://stackoverflow.com/help/minimal-reproducible-example) URL is **REQUIRED**, even if you think the error is obvious.
+        Fork one of the following, hit save then copy-paste the URL here:
+          - [Codepen](https://codepen.quasar.dev)
+          - [jsFiddle](https://jsfiddle.quasar.dev)
+          - [StackBlitz - app-vite](https://stackblitz-vite.quasar.dev)
+          - [StackBlitz - app-webpack](https://stackblitz-webpack.quasar.dev)
+          - [Codesandbox](https://codesandbox.quasar.dev)
         _You can provide a GitHub repo only as a last resort. Keep in mind that it will be prioritized less as it makes the reproduction process slower._
-      placeholder: https://codepen.io/rstoenescu/pen/xxEvBLR
+      placeholder: https://codepen.io/rstoenescu/pen/xxEvBLR - DO NOT use this example value or a random URL
     validations:
       required: true
   - type: textarea
@@ -61,7 +67,8 @@ body:
       label: Flavour
       description: Choose the Quasar flavour you are using. _The names between parentheses indicate the package names if applicable._
       options:
-        - Quasar CLI (@quasar/cli | @quasar/app)
+        - Quasar CLI with Vite (@quasar/cli | @quasar/app-vite)
+        - Quasar CLI with Webpack (@quasar/cli | @quasar/app-webpack)
         - UMD
         - Vite Plugin (@quasar/vite-plugin)
         - Vue CLI Plugin (vue-cli-plugin-quasar)
@@ -74,14 +81,16 @@ body:
       description: Mark the areas in which you see the problem on. _The names between parentheses indicate the package names if applicable._
       multiple: true
       options:
-        - Quasar CLI Commands/Configuration (@quasar/cli | @quasar/app)
+        - Quasar CLI Commands/Configuration (@quasar/cli | @quasar/app-webpack | @quasar/app-vite)
 
         - Components (quasar)
         - Directives (quasar)
         - Plugins (quasar)
         - Composables (quasar)
         - Style & Identity (quasar)
+        - Accessibility [a11y] (quasar)
 
+        - Project Creation (create-quasar)
         - Quasar Extras (@quasar/extras)
         - TypeScript Support
         - App Extension API
@@ -117,9 +126,9 @@ body:
     attributes:
       label: Quasar info output
       description: |
-        Please run [`quasar info` command](https://quasar.dev/quasar-cli/commands-list#info), then copy and paste the output.
+        Please run [`quasar info` command](https://quasar.dev/quasar-cli-vite/commands-list#info), then copy and paste the output.
         _This will be automatically formatted into code, so no need for backticks._
-      render: shell
+      render: Shell
     # TODO: Validate the format by using GitHub Actions, Probot, etc.
     # TODO: Make this required if the flavour is Quasar CLI, by using GitHub Actions, Probot, etc.
     # Consider adding separate controls to select important versions such as quasar, @quasar/app, vite, etc. to also respect the other flavours
@@ -131,7 +140,7 @@ body:
       description: |
         Please copy and paste any relevant log output.
         _This will be automatically formatted into code, so no need for backticks._
-      render: shell
+      render: Shell
   - type: textarea
     id: additional-context
     attributes:

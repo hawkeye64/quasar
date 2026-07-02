@@ -14,30 +14,47 @@ export default {
     create: 'Create',
     search: 'Search',
     filter: 'Filter',
-    refresh: 'Refresh'
+    refresh: 'Refresh',
+    expand: label => (label ? `Expand "${label}"` : 'Expand'),
+    collapse: label => (label ? `Collapse "${label}"` : 'Collapse')
   },
   date: {
     days: 'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split('_'),
     daysShort: 'Sun_Mon_Tue_Wed_Thu_Fri_Sat'.split('_'),
-    months: 'January_February_March_April_May_June_July_August_September_October_November_December'.split('_'),
+    months:
+      'January_February_March_April_May_June_July_August_September_October_November_December'.split(
+        '_'
+      ),
     monthsShort: 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'days'
+    pluralDay: 'days',
+    prevMonth: 'Previous month',
+    nextMonth: 'Next month',
+    prevYear: 'Previous year',
+    nextYear: 'Next year',
+    today: 'Today',
+    prevRangeYears: range => `Previous ${range} years`,
+    nextRangeYears: range => `Next ${range} years`
   },
   table: {
     noData: 'No data available',
     noResults: 'No matching records found',
     loading: 'Loading...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows === 1
         ? '1 record selected.'
-        : (rows === 0 ? 'No' : rows) + ' records selected.'
-    ),
+        : (rows === 0 ? 'No' : rows) + ' records selected.',
     recordsPerPage: 'Records per page:',
     allRows: 'All',
-    pagination: (start, end, total) => start + '-' + end + ' of ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' of ' + total,
     columns: 'Columns'
+  },
+  pagination: {
+    first: 'First page',
+    prev: 'Previous page',
+    next: 'Next page',
+    last: 'Last page'
   },
   editor: {
     url: 'URL',

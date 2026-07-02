@@ -2,6 +2,7 @@
 title: Infinite Scroll
 desc: The QInfiniteScroll Vue component allows you to load new content as the user scrolls the page.
 keys: QInfiniteScroll
+examples: QInfiniteScroll
 related:
   - /vue-components/spinners
   - /vue-components/pull-to-refresh
@@ -11,9 +12,7 @@ related:
 
 The QInfiniteScroll component allows you to load new content as the user scrolls the page.
 
-## QInfiniteScroll API
-
-<doc-api file="QInfiniteScroll" />
+<DocApi file="QInfiniteScroll" />
 
 ## Usage
 
@@ -27,11 +26,11 @@ In your `@load` function, don't forget to call the passed in `done()` function w
 
 Scroll to the bottom to see QInfiniteScroll in action.
 
-<doc-example title="Basic" file="QInfiniteScroll/Basic" scrollable />
+<DocExample title="Basic" file="Basic" scrollable />
 
-<doc-example title="Custom Scroll Target Container" file="QInfiniteScroll/Container" />
+<DocExample title="Custom Scroll Target Container" file="Container" />
 
-<doc-example title="Reverse (Messenger style)" file="QInfiniteScroll/Reverse" scrollable />
+<DocExample title="Reverse (Messenger style)" file="Reverse" scrollable />
 
 ### Tips
 
@@ -39,9 +38,9 @@ Scroll to the bottom to see QInfiniteScroll in action.
 Please read [here](/vue-components/scroll-observer#determining-scrolling-container) about how Quasar determines the container to attach scrolling events to.
 :::
 
-* Works best when placed as direct child of the Vue component rendering your Page
-* If you change the parent of this component, don't forget to call `updateScrollTarget()` on the QInfiniteScroll Vue reference.
-* If you need to specify the scroll target inner element (because the auto detected one is not the desired one) pass a CSS selector (as string) or the DOM element in the `scroll-target` prop
+- Works best when placed as direct child of the Vue component rendering your Page
+- If you change the parent of this component, don't forget to call `updateScrollTarget()` on the QInfiniteScroll Vue reference.
+- If you need to specify the scroll target inner element (because the auto detected one is not the desired one) pass a CSS selector (as string) or the DOM element in the `scroll-target` prop
 
 ::: warning
 If you pass a custom scroll target container with `scroll-target` prop you must make sure that the element exists and that it can be overflowed (it must have a maximum height and an overflow that allows scrolling).
@@ -49,4 +48,4 @@ If you pass a custom scroll target container with `scroll-target` prop you must 
 If the scroll target container cannot be overflowed you'll get a forever loading situation.
 :::
 
-<doc-example title="Usage in QMenu" file="QInfiniteScroll/Menu" />
+<DocExample title="Usage in QMenu" file="Menu" />

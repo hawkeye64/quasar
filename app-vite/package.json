@@ -1,0 +1,186 @@
+{
+  "name": "@quasar/app-vite",
+  "version": "3.0.0-rc.5",
+  "description": "Quasar Framework App CLI with Vite",
+  "keywords": [
+    "cli",
+    "cordova",
+    "electron",
+    "pwa",
+    "quasar",
+    "spa",
+    "vite",
+    "vue",
+    "vuejs",
+    "web"
+  ],
+  "homepage": "https://quasar.dev",
+  "bugs": "https://github.com/quasarframework/quasar/issues",
+  "license": "MIT",
+  "author": {
+    "name": "Razvan Stoenescu",
+    "email": "razvan.stoenescu@gmail.com",
+    "url": "https://github.com/quasarframework"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quasarframework/quasar"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://donate.quasar.dev"
+  },
+  "bin": {
+    "quasar": "./bin/quasar.js"
+  },
+  "files": [
+    "exports",
+    "assets",
+    "bin",
+    "lib",
+    "templates",
+    "types"
+  ],
+  "type": "module",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "node": "./exports/wrappers.js",
+      "import": "./exports/wrappers.js"
+    },
+    "./client": {
+      "types": "./exports/client/client.d.ts"
+    },
+    "./package.json": "./package.json",
+    "./bin/quasar": {
+      "node": "./bin/quasar.js"
+    },
+    "./bex/background": {
+      "types": "./types/bex/entrypoints/background.d.ts",
+      "import": "./exports/bex/background.js"
+    },
+    "./bex/content": {
+      "types": "./types/bex/entrypoints/content.d.ts",
+      "import": "./exports/bex/content.js"
+    },
+    "./bex/private/bex-bridge": {
+      "types": "./types/bex/bex-bridge.d.ts",
+      "import": "./exports/bex/private/bex-bridge.js"
+    },
+    "./electron/main": {
+      "types": "./exports/electron/main-runtime.d.ts",
+      "import": "./exports/electron/main-runtime.js"
+    },
+    "./electron/preload": {
+      "types": "./exports/electron/preload-runtime.d.ts",
+      "import": "./exports/electron/preload-runtime.js"
+    },
+    "./eslint": {
+      "require": "./exports/eslint/eslint.cjs",
+      "node": "./exports/eslint/eslint.js",
+      "import": "./exports/eslint/eslint.js"
+    },
+    "./testing": {
+      "types": "./exports/testing/testing.d.ts",
+      "import": "./exports/testing/testing.js"
+    },
+    "./capacitor": {
+      "types": "./exports/capacitor/capacitor.d.ts",
+      "require": "./exports/capacitor/capacitor.cjs",
+      "node": "./exports/capacitor/capacitor.js",
+      "import": "./exports/capacitor/capacitor.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "pnpm --filter app-vite-playground-js dev",
+    "dev:ts": "pnpm --filter app-vite-playground-ts dev",
+    "build": "pnpm --filter app-vite-playground-js build",
+    "build:ts": "pnpm --filter app-vite-playground-ts build"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.6.0",
+    "@quasar/art": "workspace:^",
+    "@quasar/render-ssr-error": "workspace:^",
+    "@quasar/ssl-certificate": "workspace:^",
+    "@quasar/vite-plugin": "workspace:^",
+    "@types/chrome": "^0.2.0",
+    "@types/cordova": "^11.0.3",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "chokidar": "^5.0.0",
+    "ci-info": "^4.4.0",
+    "confbox": "^0.2.4",
+    "cross-spawn": "^7.0.6",
+    "dot-prop": "10.1.0",
+    "dotenv-expand": "^13.0.0",
+    "elementtree": "0.1.7",
+    "fflate": "^0.8.2",
+    "fs-extra": "^11.3.6",
+    "html-minifier-terser": "^7.2.0",
+    "jiti": "^2.7.0",
+    "kolorist": "^1.8.0",
+    "mlly": "^1.8.2",
+    "open": "^11.0.0",
+    "rolldown": "^1.1.3",
+    "sass-embedded": "^1.100.0",
+    "semver": "^7.8.5",
+    "serialize-javascript": "^7.0.7",
+    "serve-static": "^2.2.1",
+    "tinyglobby": "^0.2.17",
+    "ts-essentials": "^10.2.0",
+    "vite": "^8.1.2",
+    "webpack-merge": "^6.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
+    "@quasar/extras": "workspace:*",
+    "pinia": "^3.0.4",
+    "quasar": "workspace:^",
+    "vue": "^3.5.39",
+    "vue-router": "^5.1.0"
+  },
+  "peerDependencies": {
+    "@capacitor/cli": ">= 5",
+    "@electron/packager": ">= 19",
+    "builder-util": ">= 26",
+    "electron-builder": ">= 22",
+    "pinia": "^2.0.0 || ^3.0.0",
+    "quasar": "^2.16.0",
+    "typescript": ">= 5",
+    "vue": "^3.2.29",
+    "vue-router": ">= 5",
+    "workbox-build": ">= 7"
+  },
+  "peerDependenciesMeta": {
+    "@capacitor/cli": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    },
+    "electron-builder": {
+      "optional": true
+    },
+    "@electron/packager": {
+      "optional": true
+    },
+    "builder-util": {
+      "optional": true
+    },
+    "pinia": {
+      "optional": true
+    },
+    "workbox-build": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": "^30 || ^28 || ^26 || ^24 || ^22.22.0"
+  },
+  "volta": {
+    "node": "lts"
+  }
+}

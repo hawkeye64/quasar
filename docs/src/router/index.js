@@ -1,6 +1,6 @@
 /* global gtag */
 
-import { createRouter, createMemoryHistory, createWebHistory } from 'vue-router'
+import { createMemoryHistory, createRouter, createWebHistory } from 'vue-router'
 
 import routes from './routes'
 
@@ -13,30 +13,25 @@ import routes from './routes'
  * with the Router instance.
  */
 
-export default function () {
-  const createHistory = process.env.SERVER
+export default function appRouter() {
+  const createHistory = import.meta.env.QUASAR_SERVER
     ? createMemoryHistory
     : createWebHistory
 
   const Router = createRouter({
-    scrollBehavior: (to, _, savedPosition) => (
-      to.hash.length > 1
-        ? false
-        : (savedPosition || { left: 0, top: 0 })
-    ),
+    scrollBehavior: (to, _, savedPosition) =>
+      to.hash.length > 1 ? false : savedPosition || { left: 0, top: 0 },
     routes,
-
-    // Leave this as is and make changes in quasar.conf.js instead!
-    // quasar.conf.js -> build -> vueRouterMode
-    // quasar.conf.js -> build -> publicPath
-    history: createHistory(process.env.MODE === 'ssr' ? void 0 : process.env.VUE_ROUTER_BASE)
+    history: createHistory(import.meta.env.QUASAR_VUE_ROUTER_BASE)
   })
 
-  process.env.CLIENT === true && Router.afterEach(to => {
-    gtag('config', 'UA-6317975-6', {
-      page_path: to.path
+  if (import.meta.env.QUASAR_CLIENT) {
+    Router.afterEach(to => {
+      gtag('config', 'G-WRH1VBGG35', {
+        page_path: to.path
+      })
     })
-  })
+  }
 
   return Router
 }

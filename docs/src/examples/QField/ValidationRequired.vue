@@ -9,39 +9,39 @@
       :rules="[val => !!val || 'Field is required']"
     >
       <template v-slot:control>
-        <q-date class="q-mt-sm full-width" style="width: 300px" minimal v-model="date" />
+        <q-date
+          class="q-mt-sm full-width"
+          style="width: 300px"
+          minimal
+          v-model="date"
+        />
       </template>
     </q-field>
 
     <div class="q-mt-sm">
       <div class="q-gutter-sm">
-        <q-btn label="Reset Validation" @click="resetValidation" color="primary"/>
-        <q-btn label="Reset Date" @click="resetDate" color="primary"/>
+        <q-btn
+          label="Reset Validation"
+          @click="resetValidation"
+          color="primary"
+        />
+        <q-btn label="Reset Date" @click="resetDate" color="primary" />
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+import { ref, useTemplateRef } from 'vue'
 
-export default {
-  setup () {
-    const date = ref('')
-    const fieldRef = ref(null)
+const date = ref('')
+const fieldRef = useTemplateRef('fieldRef')
 
-    return {
-      date,
-      fieldRef,
+function resetValidation() {
+  fieldRef.value.resetValidation()
+}
 
-      resetValidation () {
-        fieldRef.value.resetValidation()
-      },
-
-      resetDate () {
-        date.value = ''
-      }
-    }
-  }
+function resetDate() {
+  date.value = ''
 }
 </script>

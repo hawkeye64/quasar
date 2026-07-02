@@ -1,8 +1,16 @@
-import { ComponentOptions, ComponentPublicInstance, ComputedOptions, MethodOptions, VNodeProps, AllowedComponentProps, ComponentCustomProps } from 'vue';
+import {
+  AllowedComponentProps,
+  ComponentCustomProps,
+  ComponentOptions,
+  ComponentPublicInstance,
+  ComputedOptions,
+  MethodOptions,
+  VNodeProps
+} from "vue";
 
-export type StringDictionary<T extends string> = Required<
-  { [index in T]: string }
->;
+export type StringDictionary<T extends string> = Required<{
+  [index in T]: string;
+}>;
 
 // Needed to prevent TS to collapse `'value1' | 'value2' | string` to `string`, which breaks first parameter autocomplete
 // See: https://github.com/microsoft/TypeScript/issues/29729#issuecomment-832522611
@@ -15,19 +23,29 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends Array<infer U>
     ? Array<DeepPartial<U>>
     : T[P] extends ReadonlyArray<infer U>
-    ? ReadonlyArray<DeepPartial<U>>
-    : DeepPartial<T[P]>;
+      ? ReadonlyArray<DeepPartial<U>>
+      : DeepPartial<T[P]>;
 };
 
 // Create a fake constructor signature for a Vue component, needed to correctly extract/infer Component type in many situation,
 // especially into VTU to automatically infer Quasar components type when using `findComponent`
 // This type is compatible with the Vue private `ComponentPublicInstanceConstructor` type
 // https://github.com/vuejs/vue-next/blob/011dee8644bb52f5bdc6365c6e8404936d57e2cd/packages/runtime-core/src/componentPublicInstance.ts#L111
-export type ComponentConstructor<Component extends ComponentPublicInstance<Props, RawBindings, D, C, M> = ComponentPublicInstance<any>, Props = any, RawBindings = any, D = any, C extends ComputedOptions = ComputedOptions, M extends MethodOptions = MethodOptions > = { new(): Component } & ComponentOptions<Props, RawBindings, D, C, M>
+export type ComponentConstructor<
+  Component extends ComponentPublicInstance<Props, RawBindings, D, C, M> =
+    ComponentPublicInstance<any>,
+  Props = any,
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions
+> = { new (): Component } & ComponentOptions<Props, RawBindings, D, C, M>;
 
 // https://github.com/vuejs/vue-next/blob/d84d5ecdbdf709570122175d6565bb61fae877f2/packages/runtime-core/src/apiDefineComponent.ts#L29-L31
 // TODO: This can be imported from vue directly once this PR gets merged: https://github.com/vuejs/vue-next/pull/2403
-export type PublicProps = VNodeProps & AllowedComponentProps & ComponentCustomProps;
+export type PublicProps = VNodeProps &
+  AllowedComponentProps &
+  ComponentCustomProps;
 
 // Can't use `DefineComponent` because of the false prop inferring behavior, it doesn't pick up the required types when an interface is passed
 // This PR will probably solve the problem as it moves the prop inferring behavior to `defineComponent` function: https://github.com/vuejs/vue-next/pull/4465
@@ -36,7 +54,7 @@ export type PublicProps = VNodeProps & AllowedComponentProps & ComponentCustomPr
 // TODO: This can be replaced with `DefineComponent` once this PR gets merged: https://github.com/vuejs/vue-next/pull/4465
 export type GlobalComponentConstructor<Props = {}, Slots = {}> = {
   new (): {
-    $props: PublicProps & Props
-    $slots: Slots
-  }
-}
+    $props: PublicProps & Props;
+    $slots: Slots;
+  };
+};

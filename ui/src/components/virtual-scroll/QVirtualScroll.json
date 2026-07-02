@@ -1,5 +1,5 @@
 {
-  "mixins": [ "components/virtual-scroll/use-virtual-scroll" ],
+  "mixins": ["components/virtual-scroll/use-virtual-scroll"],
 
   "meta": {
     "docsUrl": "https://v2.quasar.dev/vue-components/virtual-scroll"
@@ -9,8 +9,8 @@
     "type": {
       "type": "String",
       "desc": "The type of content: list (default) or table",
-      "default": "list",
-      "values": [ "list", "table" ],
+      "default": "'list'",
+      "values": ["'list'", "'table'"],
       "category": "content"
     },
 
@@ -19,8 +19,8 @@
       "desc": "Available list items that will be passed to the scoped slot; For best performance freeze the list of items; Required if 'itemsFn' is not supplied",
       "default": "[]",
       "examples": [
-        ":items=\"[ 'BMW', 'Samsung Phone' ]\"",
-        ":items=\"[ { label: 'BMW', value: 'car' }, { label: 'Samsung Phone', value: 'phone' } ]\""
+        "['Tesla', 'iPhone']",
+        "[{ label: 'Tesla', value: 'car' }, { label: 'iPhone', value: 'phone' }]"
       ],
       "category": "content"
     },
@@ -28,11 +28,7 @@
     "items-size": {
       "type": "Number",
       "desc": "Number of available items in the list; Required and used only if 'itemsFn' is provided",
-      "default": "void 0",
-      "examples": [
-        ":items-size=\"100000\"",
-        ":items-size=\"500\""
-      ],
+      "examples": ["100000"],
       "category": "content"
     },
 
@@ -42,22 +38,19 @@
       "params": {
         "from": {
           "type": "Number",
-          "desc": "Index of the first item (0 based)",
-          "examples": [ 15 ]
+          "desc": "Index of the first item (0 based)"
         },
         "size": {
           "type": "Number",
-          "desc": "Number of items to return",
-          "examples": [ 38 ]
+          "desc": "Number of items to return"
         }
       },
       "returns": {
         "type": "Array",
-        "desc": "List of scope for items to be displayed",
-        "__exemption": [ "examples" ]
+        "desc": "List of scope for items to be displayed"
       },
       "examples": [
-        ":items-fn=\"(from, size) => { const items = []; for (let i = 0; i < size; i++) { items.push('Item ' + i) }; return items }\""
+        "(from, size) => { const items = []; for (let i = 0; i < size; i++) { items.push('Item ' + i) }; return items }"
       ],
       "category": "content"
     },
@@ -73,6 +66,7 @@
         "details": {
           "definition": {
             "ref": {
+              "type": "Component",
               "tsType": "QVirtualScroll",
               "desc": "Vue reference to the QVirtualScroll"
             }
@@ -82,7 +76,7 @@
     }
   },
 
-  "slots" : {
+  "slots": {
     "before": {
       "desc": "Template slot for the elements that should be rendered before the list; Suggestion: thead before a table"
     },
@@ -96,13 +90,11 @@
       "scope": {
         "index": {
           "type": "Number",
-          "desc": "Item index in the options list",
-          "examples": [ 0 ]
+          "desc": "Item index in the items list"
         },
         "item": {
           "type": "Any",
-          "desc": "Item data -- its value is taken from 'options' prop",
-          "__exemption": [ "examples" ]
+          "desc": "Item data -- its value is taken from 'items' prop"
         }
       }
     }

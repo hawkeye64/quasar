@@ -14,30 +14,47 @@ export default {
     create: 'Додај',
     search: 'Тражи',
     filter: 'Филтер',
-    refresh: 'Освежи'
+    refresh: 'Освежи',
+    expand: label => (label ? `Прошири "${label}"` : 'Проширити'),
+    collapse: label => (label ? `Скупи "${label}"` : 'Колапс')
   },
   date: {
     days: 'Недеља_Понедељак_Уторак_Среда_Четвртак_Петак_Субота'.split('_'),
     daysShort: 'Нед_Пон_Уто_Сре_Чет_Пет_Суб'.split('_'),
-    months: 'Јануар_Фебруар_Март_Април_Мај_Јун_Јул_Август_Септембар_Октобар_Новембар_Децембар'.split('_'),
+    months:
+      'Јануар_Фебруар_Март_Април_Мај_Јун_Јул_Август_Септембар_Октобар_Новембар_Децембар'.split(
+        '_'
+      ),
     monthsShort: 'Јан_Феб_Мар_Апр_Мај_Јун_Јул_Авг_Сеп_Окт_Нов_Дец'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'дана'
+    pluralDay: 'дана',
+    prevMonth: 'Претходни месец',
+    nextMonth: 'Следећег месеца',
+    prevYear: 'Претходне године',
+    nextYear: 'Следеће године',
+    today: 'данас',
+    prevRangeYears: range => `Претходне ${range} Година`,
+    nextRangeYears: range => `Следежи ${range} Година`
   },
   table: {
     noData: 'Нема података',
     noResults: 'Нема одговарајућих записа',
     loading: 'Учитавање...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows > 1
         ? rows + ' Изабраних редова.'
-        : (rows === 0 ? 'Нема' : '1') + ' изабраних редова.'
-    ),
+        : (rows === 0 ? 'Нема' : '1') + ' изабраних редова.',
     recordsPerPage: 'Редова по страници:',
     allRows: 'Све',
-    pagination: (start, end, total) => start + '-' + end + ' од ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' од ' + total,
     columns: 'Колоне'
+  },
+  pagination: {
+    first: 'Прва страница',
+    prev: 'Претходна страница',
+    next: 'Следећа страница',
+    last: 'Последња страна'
   },
   editor: {
     url: 'УРЛ',

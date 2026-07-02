@@ -2,13 +2,12 @@
 title: Input
 desc: The QInput Vue component is used to capture text input from the user.
 keys: QInput
+examples: QInput
 ---
 
 The QInput component is used to capture text input from the user. It uses `v-model`, similar to a regular input. It has support for errors and validation, and comes in a variety of styles, colors, and types.
 
-## QInput API
-
-<doc-api file="QInput" />
+<DocApi file="QInput" />
 
 ## Design
 
@@ -16,48 +15,53 @@ The QInput component is used to capture text input from the user. It uses `v-mod
 For your QInput you can use only one of the main designs (`filled`, `outlined`, `standout`, `borderless`). You cannot use multiple as they are self-exclusive.
 :::
 
-<doc-example title="Design Overview" file="QInput/DesignOverview" />
+<DocExample title="Design Overview" file="DesignOverview" />
 
 ### Coloring
 
-<doc-example title="Coloring" file="QInput/Coloring" />
+<DocExample title="Coloring" file="Coloring" />
 
 ### Standard
-<doc-example title="Standard" file="QInput/DesignStandard" />
+
+<DocExample title="Standard" file="DesignStandard" />
 
 ### Filled
-<doc-example title="Filled" file="QInput/DesignFilled" />
+
+<DocExample title="Filled" file="DesignFilled" />
 
 ### Outlined
-<doc-example title="Outlined" file="QInput/DesignOutlined" />
+
+<DocExample title="Outlined" file="DesignOutlined" />
 
 ### Standout
-<doc-example title="Standout" file="QInput/DesignStandout" />
+
+<DocExample title="Standout" file="DesignStandout" />
 
 One of the most appropriate use cases for Standout design is in a QToolbar:
 
-<doc-example title="Standout in QToolbar" file="QInput/StandoutToolbar" />
+<DocExample title="Standout in QToolbar" file="StandoutToolbar" />
 
 ### Borderless
+
 The `borderless` design allows you to seamlessly integrate your QInput into other components without QInput drawing a border around itself or changing its background color:
 
-<doc-example title="Borderless" file="QInput/Borderless" />
+<DocExample title="Borderless" file="Borderless" />
 
 ### Rounded design
 
 The `rounded` prop only works along with Filled, Outlined and Standout designs, as showcased in the example below:
 
-<doc-example title="Rounded" file="QInput/Rounded" />
+<DocExample title="Rounded" file="Rounded" />
 
 ### Square borders
 
 The `square` prop only makes sense along with Filled, Outlined and Standout designs, as showcased in the example below:
 
-<doc-example title="Square borders" file="QInput/SquareBorders" />
+<DocExample title="Square borders" file="SquareBorders" />
 
-### Dark background
+### Force dark mode
 
-<doc-example title="Dark" file="QInput/Dark" dark />
+<DocExample title="Force dark mode" file="Dark" />
 
 ## Basic features
 
@@ -67,8 +71,8 @@ All the attributes set on `QInput` that are not in the list of `props` in the **
 
 Please check these resources for more information about native attributes (for input check also the specific attributes for each type):
 
-* [input](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input)
-* [textarea](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea)
+- [input](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input)
+- [textarea](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea)
 
 ### Clearable
 
@@ -78,7 +82,7 @@ As a helper, you can use `clearable` prop so user can reset model to `null` thro
 Won't work with `v-model` managed input modifiers such as `.trim` because in that case Vue doesn't handle `null` values.
 :::
 
-<doc-example title="Clearable" file="QInput/Clearable" />
+<DocExample title="Clearable" file="Clearable" />
 
 ### Input types
 
@@ -88,7 +92,7 @@ The following QInputs make use of the `type` prop in order to render native equi
 Support and behavior is the subject entirely of the browser rendering the page and not Quasar's core code.
 :::
 
-<doc-example title="Input types" file="QInput/InputTypes" />
+<DocExample title="Input types" file="InputTypes" />
 
 ::: tip
 Some input types (like `date` or `time`) always render some controls, so you if you're using a `label` then you might want to set it along with `stack-label`, otherwise the label will overlap native browser controls.
@@ -98,31 +102,31 @@ Some input types (like `date` or `time`) always render some controls, so you if 
 
 You'll be using `v-model.number` (notice the `number` modifier) along with `type="number"` prop:
 
-<doc-example title="Input of number type" file="QInput/InputTypeNumber" />
+<DocExample title="Input of number type" file="InputTypeNumber" />
 
 #### Input of file type
 
 ::: tip ALTERNATIVES
-**Instead of using a QInput with `type="file"`, you might want to use [QFile](/vue-components/file-picker) picker instead or even [QUploader](/vue-components/uploader)**. However, should you wish to use QInput, please read the warning below.
+**Instead of using a QInput with `type="file"`, you might want to use [QFile](/vue-components/file) picker instead or even [QUploader](/vue-components/uploader)**. However, should you wish to use QInput, please read the warning below.
 :::
 
 ::: warning
 Do NOT use a `v-model` when QInput is of `type="file"`. Browser security policy does not allow a value to be set to such an input. As a result, you can only read it (attach an `@update:model-value` event), but not write it.
 :::
 
-<doc-example title="Input of file type" file="QInput/InputTypeFile" />
+<DocExample title="Input of file type" file="InputTypeFile" />
 
 ### Textarea
 
-<doc-example title="Textarea" file="QInput/Textarea" />
+<DocExample title="Textarea" file="Textarea" />
 
 When you need QInput to grow along with its content, then use the `autogrow` prop like in the example below:
 
-<doc-example title="Autogrow" file="QInput/Autogrow" />
+<DocExample title="Autogrow" file="Autogrow" />
 
 ### Prefix and suffix
 
-<doc-example title="Prefix and suffix" file="QInput/PrefixSuffix" />
+<DocExample title="Prefix and suffix" file="PrefixSuffix" />
 
 ### Custom Label
 
@@ -134,11 +138,11 @@ Do not forget to set the `label-slot` property.
 If you want to interact with the content of the label (QTooltip) add the `all-pointer-events` class on the element in the slot.
 :::
 
-<doc-example title="Custom label" file="QInput/CustomLabel" />
+<DocExample title="Custom label" file="CustomLabel" />
 
 ### Shadow text
 
-<doc-example title="Shadow text" file="QInput/ShadowText" />
+<DocExample title="Shadow text" file="ShadowText" />
 
 ### Slots with QBtn type "submit"
 
@@ -150,11 +154,11 @@ When placing a QBtn with type "submit" in one of the "before", "after", "prepend
 
 The role of debouncing is for times when you watch the model and do expensive operations on it. So you want to first let user type out before triggering the model update, rather than updating the model on each keystroke.
 
-<doc-example title="Debounce model" file="QInput/Debouncing" />
+<DocExample title="Debounce model" file="Debouncing" />
 
 ### Loading state
 
-<doc-example title="Loading state" file="QInput/LoadingState" />
+<DocExample title="Loading state" file="LoadingState" />
 
 ## Mask
 
@@ -164,31 +168,39 @@ You can force/help the user to input a specific format with help from `mask` pro
 Mask is only available if the `type` is one of 'text' (default), 'search', 'url', 'tel', or 'password'.
 :::
 
-Below are mask tokens:
+Below are the default mask tokens. To add your own, see the next section.
 
-| Token | Description |
-| --- | --- |
-| `#` | Numeric |
-| `S` | Letter, a to z, case insensitive |
-| `N` | Alphanumeric, case insensitive for letters |
-| `A` | Letter, transformed to uppercase |
-| `a` | Letter, transformed to lowercase |
-| `X` | Alphanumeric, transformed to uppercase for letters |
-| `x` | Alphanumeric, transformed to lowercase for letters |
+| Token | Description                                        |
+| ----- | -------------------------------------------------- |
+| `#`   | Numeric                                            |
+| `S`   | Letter, a to z, case insensitive                   |
+| `N`   | Alphanumeric, case insensitive for letters         |
+| `A`   | Letter, transformed to uppercase                   |
+| `a`   | Letter, transformed to lowercase                   |
+| `X`   | Alphanumeric, transformed to uppercase for letters |
+| `x`   | Alphanumeric, transformed to lowercase for letters |
 
 There are **helpers** for QInput `mask` prop: [full list](https://github.com/quasarframework/quasar/blob/dev/ui/src/components/input/use-mask.js#L6). You can use these for convenience (examples: "phone", "card") or write the string specifying your custom needs.
 
-<doc-example title="Basic" file="QInput/MaskBasic" />
+<DocExample title="Basic" file="MaskBasic" />
 
-<doc-example title="Filling the mask" file="QInput/MaskFill" />
+<DocExample title="Filling the mask" file="MaskFill" />
 
 The `unmasked-value` is useful if for example you want to force the user type a certain format, but you want the model to contain the raw value:
 
-<doc-example title="Unmasked model" file="QInput/MaskUnmaskedModel" />
+<DocExample title="Unmasked model" file="MaskUnmaskedModel" />
 
 The `reverse-fill-mask` is useful if you want to force the user to fill the mask from the end and allow non-fixed length of input:
 
-<doc-example title="Filling the mask in reverse" file="QInput/MaskFillReverse" />
+<DocExample title="Filling the mask in reverse" file="MaskFillReverse" />
+
+### Custom mask tokens <q-badge label="v2.18.4+" />
+
+You can also define custom mask tokens on top of the default ones or even override some/all of the [default ones](https://github.com/quasarframework/quasar/blob/dev/ui/src/components/input/use-mask.js#L15).
+
+The custom mask tokens must have the same syntax as the [default ones](https://github.com/quasarframework/quasar/blob/dev/ui/src/components/input/use-mask.js#L15). Please note that the `transform` property is optional.
+
+<DocExample title="Custom tokens" file="MaskCustomTokens" />
 
 ### Using third party mask processors
 
@@ -219,12 +231,19 @@ You can use v-money directive:
   hint="Mask: $ #,###.00 #"
 >
   <template v-slot:control="{ id, floatingLabel, modelValue, emitValue }">
-    <input :id="id" class="q-field__input text-right" :value="modelValue" @change="e => emitValue(e.target.value)" v-money="moneyFormatForDirective" v-show="floatingLabel">
+    <input
+      :id="id"
+      class="q-field__input text-right"
+      :value="modelValue"
+      @change="e => emitValue(e.target.value)"
+      v-money="moneyFormatForDirective"
+      v-show="floatingLabel"
+    />
   </template>
 </q-field>
 ```
 
-```javascript
+```js
 moneyFormatForDirective: {
   decimal: '.',
   thousands: ',',
@@ -245,12 +264,19 @@ Or you can use money component:
   hint="Mask: $ #,###.00 #"
 >
   <template v-slot:control="{ id, floatingLabel, modelValue, emitValue }">
-    <money :id="id" class="q-field__input text-right" :model-value="modelValue" @update:model-value="emitValue" v-bind="moneyFormatForComponent" v-show="floatingLabel" />
+    <money
+      :id="id"
+      class="q-field__input text-right"
+      :model-value="modelValue"
+      @update:model-value="emitValue"
+      v-bind="moneyFormatForComponent"
+      v-show="floatingLabel"
+    />
   </template>
 </q-field>
 ```
 
-```javascript
+```js
 moneyFormatForComponent: {
   decimal: '.',
   thousands: ',',
@@ -275,51 +301,54 @@ This is so you can write convenient rules of shape like:
 
 ```js
 value => condition || errorMessage
- ```
+```
+
 For example:
- ```js
+
+```js
 value => value.includes('Hello') || 'Field must contain word Hello'
 ```
 
 You can reset the validation by calling `resetValidation()` method on the QInput.
 
-There are **helpers** for QInput `rules` prop: [full list](https://github.com/quasarframework/quasar/blob/dev/ui/src/utils/patterns.js). You can use these for convenience (examples: "date", "time", "hexColor", "rgbOrRgbaColor", "anyColor") or write the string specifying your custom needs.
+There are **helpers** for QInput `rules` prop: [full list](https://github.com/quasarframework/quasar/blob/dev/ui/src/utils/patterns/patterns.js). You can use these for convenience (examples: "date", "time", "hexColor", "rgbOrRgbaColor", "anyColor") or write the string specifying your custom needs.
 
-<doc-example title="Basic" file="QInput/ValidationRequired" />
+<DocExample title="Basic" file="ValidationRequired" />
 
-<doc-example title="Maximum length" file="QInput/ValidationMaxLength" />
+<DocExample title="Maximum length" file="ValidationMaxLength" />
 
 If you set `lazy-rules`, validation starts after first blur. If `lazy-rules` is set to `ondemand` String, then validation will be triggered only when component's validate() method is manually called or when the wrapper QForm submits itself.
 
-<doc-example title="Lazy rules" file="QInput/ValidationLazy" />
+<DocExample title="Lazy rules" file="ValidationLazy" />
 
-<doc-example title="Form validation" file="QInput/ValidationForm" />
+<DocExample title="Form validation" file="ValidationForm" />
 
 #### Async rules
+
 Rules can be async too, by using async/await or by directly returning a Promise.
 
 ::: tip
 Consider coupling async rules with `debounce` prop to avoid calling the async rules immediately on each keystroke, which might be detrimental to performance.
 :::
 
-<doc-example title="Async rules" file="QInput/ValidationAsync" />
+<DocExample title="Async rules" file="ValidationAsync" />
 
 ### External validation
 
 You can also use external validation and only pass `error` and `error-message` (enable `bottom-slots` to display this error message).
 
 ::: tip
-Depending on your needs, you might connect [Vuelidate](https://vuelidate.netlify.com/) (our recommended approach) or some other validation library to QInput.
+Depending on your needs, you might connect [Regle](https://reglejs.dev/) (our recommended approach) or some other validation library to QInput.
 :::
 
-<doc-example title="External" file="QInput/ValidationExternal" />
+<DocExample title="External" file="ValidationExternal" />
 
 You can also customize the slot for error message:
 
-<doc-example title="Slot for error message" file="QInput/ValidationSlots" />
+<DocExample title="Slot for error message" file="ValidationSlots" />
 
 ## Native form submit
 
 When dealing with a native form which has an `action` and a `method` (eg. when using Quasar with ASP.NET controllers), you need to specify the `name` property on QInput, otherwise formData will not contain it (if it should):
 
-<doc-example title="Native form" file="QInput/NativeForm" />
+<DocExample title="Native form" file="NativeForm" />

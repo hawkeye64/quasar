@@ -27,6 +27,7 @@
           <td class="text-right">4</td>
           <td class="text-right">87</td>
         </tr>
+        <!-- #region -->
         <tr>
           <td class="text-left">Ice cream sandwich</td>
           <td class="text-right">237</td>
@@ -59,25 +60,20 @@
           <td class="text-right">3.9</td>
           <td class="text-right">327</td>
         </tr>
+        <!-- #endregion -->
       </tbody>
     </q-markup-table>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      separator: ref('vertical'),
-      separatorOptions: [
-        { label: 'Horizontal', value: 'horizontal' },
-        { label: 'Vertical', value: 'vertical' },
-        { label: 'Cell', value: 'cell' },
-        { label: 'None', value: 'none' }
-      ]
-    }
-  }
-}
+const separator = ref('vertical')
+const separatorOptions = [
+  { label: 'Horizontal', value: 'horizontal' },
+  { label: 'Vertical', value: 'vertical' },
+  { label: 'Cell', value: 'cell' },
+  { label: 'None', value: 'none' }
+]
 </script>

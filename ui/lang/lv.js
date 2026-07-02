@@ -14,30 +14,49 @@ export default {
     create: 'Izveidot',
     search: 'Meklēt',
     filter: 'Filtēt',
-    refresh: 'Atjaunot'
+    refresh: 'Atjaunot',
+    expand: label => (label ? `Paplašināt "${label}"` : 'Izvērst'),
+    collapse: label => (label ? `Sakļaut "${label}"` : 'Sakļaut')
   },
   date: {
-    days: 'Svētdiena_Pirmdiena_Otrdiena_Trešdiena_Ceturtdiena_Piektdiena_Sestdiena'.split('_'),
+    days: 'Svētdiena_Pirmdiena_Otrdiena_Trešdiena_Ceturtdiena_Piektdiena_Sestdiena'.split(
+      '_'
+    ),
     daysShort: 'Sv_Pi_Ot_Tr_Ce_Pi_Se'.split('_'),
-    months: 'Janvāris_Februāris_Marts_Aprīlis_Maijs_Jūnijs_Jūlijs_Augusts_Septembris_Okrobris_Novembris_Decembris'.split('_'),
+    months:
+      'Janvāris_Februāris_Marts_Aprīlis_Maijs_Jūnijs_Jūlijs_Augusts_Septembris_Okrobris_Novembris_Decembris'.split(
+        '_'
+      ),
     monthsShort: 'Jan_Feb_Mar_Apr_Mai_Jūn_Jūl_Aug_Sep_Okt_Nov_Dec'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'dienas'
+    pluralDay: 'dienas',
+    prevMonth: 'Iepriekšējais mēnesis',
+    nextMonth: 'Nākamajā mēnesī',
+    prevYear: 'Iepriekšējais gads',
+    nextYear: 'Nākamgad',
+    today: 'Šodien',
+    prevRangeYears: range => `Iepriekšējie ${range} gadi`,
+    nextRangeYears: range => `Nākamais ${range} gadi`
   },
   table: {
     noData: 'Nav datu',
     noResults: 'Ieraksti nav atrasti',
     loading: 'Atjaunojas...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows === 1
         ? '1 izvēlēta rinda.'
-        : (rows === 0 ? 'Nav' : rows) + ' izvēlētas rindas.'
-    ),
+        : (rows === 0 ? 'Nav' : rows) + ' izvēlētas rindas.',
     recordsPerPage: 'Rindas lapā:',
     allRows: 'Visas',
-    pagination: (start, end, total) => start + '-' + end + ' no ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' no ' + total,
     columns: 'Kolonnas'
+  },
+  pagination: {
+    first: 'Pirmā lapa',
+    prev: 'Iepriekšējā lapa',
+    next: 'Nākamā lapa',
+    last: 'Pēdējā lapa'
   },
   editor: {
     url: 'URL',

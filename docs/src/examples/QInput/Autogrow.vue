@@ -1,21 +1,11 @@
 <template>
   <div class="q-pa-md" style="max-width: 300px">
-    <q-input
-      v-model="text"
-      filled
-      autogrow
-    />
+    <q-input v-model="text" filled autogrow />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      text: ref('')
-    }
-  }
-}
+const text = ref('')
 </script>

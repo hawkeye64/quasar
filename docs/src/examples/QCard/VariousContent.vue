@@ -1,7 +1,7 @@
 <template>
   <div class="q-pa-md row items-start q-gutter-md">
-    <q-card class="my-card">
-      <img src="https://cdn.quasar.dev/img/parallax2.jpg">
+    <q-card class="my-card" flat bordered>
+      <img src="https://cdn.quasar.dev/img/parallax2.jpg" />
 
       <q-list>
         <q-item clickable>
@@ -15,6 +15,7 @@
           </q-item-section>
         </q-item>
 
+        <!-- #region -->
         <q-item clickable>
           <q-item-section avatar>
             <q-icon color="red" name="local_gas_station" />
@@ -36,11 +37,12 @@
             <q-item-label caption>Watch a movie.</q-item-label>
           </q-item-section>
         </q-item>
+        <!-- #endregion -->
       </q-list>
     </q-card>
 
-    <q-card class="my-card">
-      <img src="https://cdn.quasar.dev/img/mountains.jpg">
+    <q-card class="my-card" flat bordered>
+      <img src="https://cdn.quasar.dev/img/mountains.jpg" />
 
       <q-card-actions align="right">
         <q-btn flat round color="red" icon="favorite" />
@@ -49,7 +51,7 @@
       </q-card-actions>
     </q-card>
 
-    <q-card class="my-card">
+    <q-card class="my-card" flat bordered>
       <q-card-section>
         <div class="text-h6 q-mb-xs">Our Changing Planet</div>
         <div class="row no-wrap items-center">
@@ -58,10 +60,10 @@
         </div>
       </q-card-section>
 
-      <img src="https://cdn.quasar.dev/img/mountains.jpg">
+      <img src="https://cdn.quasar.dev/img/mountains.jpg" />
     </q-card>
 
-    <q-card class="my-card">
+    <q-card class="my-card" flat bordered>
       <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg" />
 
       <q-card-section>
@@ -70,14 +72,14 @@
           color="primary"
           icon="place"
           class="absolute"
-          style="top: 0; right: 12px; transform: translateY(-50%);"
+          style="top: 0; right: 12px; transform: translateY(-50%)"
         />
 
         <div class="row no-wrap items-center">
-          <div class="col text-h6 ellipsis">
-            Cafe Basilico
-          </div>
-          <div class="col-auto text-grey text-caption q-pt-md row no-wrap items-center">
+          <div class="col text-h6 ellipsis"> Cafe Basilico </div>
+          <div
+            class="col-auto text-grey text-caption q-pt-md row no-wrap items-center"
+          >
             <q-icon name="place" />
             250 ft
           </div>
@@ -87,9 +89,7 @@
       </q-card-section>
 
       <q-card-section class="q-pt-none">
-        <div class="text-subtitle1">
-          $・Italian, Cafe
-        </div>
+        <div class="text-subtitle1"> $・Italian, Cafe </div>
         <div class="text-caption text-grey">
           Small plates, salads & sandwiches in an intimate setting.
         </div>
@@ -99,24 +99,16 @@
 
       <q-card-actions>
         <q-btn flat round icon="event" />
-        <q-btn flat color="primary">
-          Reserve
-        </q-btn>
+        <q-btn flat color="primary"> Reserve </q-btn>
       </q-card-actions>
     </q-card>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      stars: ref(4)
-    }
-  }
-}
+const stars = ref(4)
 </script>
 
 <style lang="sass" scoped>

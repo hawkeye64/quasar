@@ -1,9 +1,10 @@
 .DS_Store
 .Thumbs.db
-*.sublime*
-.idea/
-yarn.lock
+npm-debug.log
 debug.log
-package-lock.json
-
-ui/.vscode/
+dist/
+node_modules/
+.quasar/
+quasar.config.*.temporary.compiled*
+src-capacitor/
+src-cordova/

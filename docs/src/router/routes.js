@@ -1,105 +1,96 @@
-import DocLayout from 'layouts/DocLayout.vue'
-import getListingComponent from 'components/getListingComponent.js'
-import menu from 'assets/menu.js'
-import layoutGallery from 'assets/layout-gallery.js'
+import mdPageList from '@/pages/listing.js'
 
-const docsPages = [
-  {
-    path: '',
-    component: () => import('pages/Landing.vue')
-  }
-]
+import layoutGallery from '@/assets/layout-gallery.js'
+import vueGalleryPageList from '@/layouts/gallery/listing.js'
 
-function parseMenuNode (node, __path) {
-  const prefix = __path + (node.path !== void 0 ? '/' + node.path : '')
+import DocLayout from '@/layouts/doc-layout/DocLayout.vue'
 
-  if (node.children !== void 0) {
-    prefix !== '/start' && docsPages.push({
-      path: prefix,
-      component: getListingComponent(
-        node.name,
-        node.children.map(node => {
-          const to = node.external === true
-            ? node.path
-            : (
-                prefix + (
-                  node.path !== void 0
-                    ? '/' + node.path
-                    : (node.listPath !== void 0 ? '/' + node.listPath : '')
-                )
-              )
-
-          if (node.external !== true && node.listPath !== void 0) {
-            docsPages.push({
-              path: to,
-              component: getListingComponent(
-                node.name,
-                node.children.map(node => ({
-                  title: node.name,
-                  to: prefix + (node.path !== void 0 ? '/' + node.path : ''),
-                  page: true
-                }))
-              )
-            })
-          }
-
-          return {
-            title: node.name,
-            to,
-            page: node.children === void 0
-          }
-        })
-      )
-    })
-
-    node.children.forEach(node => parseMenuNode(node, prefix))
-  }
-  else if (node.external !== true) {
-    docsPages.push({
-      path: prefix,
-      component: () => import('pages/' + prefix.substring(1) + '.md')
-    })
+const routeMap = {
+  // './docs/docs.md': { path: 'docs' },
+  // './integrations/integrations.md': { path: 'integrations' },
+  './components/components.md': {
+    path: 'components',
+    meta: { fullwidth: true, dark: true }
   }
 }
 
-menu.forEach(node => {
-  parseMenuNode(node, '')
-})
-
-const redirects = [
-  { from: '/quasar-cli/supporting-ie', to: '/quasar-cli/browser-compatibility' },
-  { from: '/quasar-cli/modern-build', to: '/quasar-cli/browser-compatibility' }
-]
-
 const routes = [
-  ...redirects.map(entry => ({
-    path: entry.from,
-    redirect: entry.to
-  })),
-
+  // legacy redirects
   {
-    path: '/start',
-    redirect: '/start/pick-quasar-flavour'
+    path: '/quasar-cli-vite/handling-process-env',
+    redirect: '/quasar-cli-vite/handling-import-meta-env'
   },
+  {
+    path: '/quasar-cli-vite/developing-electron-apps/electron-packages',
+    redirect:
+      '/quasar-cli-vite/developing-electron-apps/installing-electron-dependencies'
+  },
+  {
+    path: '/quasar-cli-vite/linter',
+    redirect: '/quasar-cli-vite/lint-and-format-code'
+  },
+  {
+    path: '/quasar-cli-vite/convert-to-quasar-cli-with-vite',
+    redirect: '/quasar-cli-vite/convert-app-webpack-to-app-vite'
+  },
+  {
+    path: '/quasar-cli-vite/routing',
+    redirect: '/quasar-cli-vite/page-routing-with-vue-router'
+  },
+
+  // shortcuts
+  { path: '/start', redirect: '/start/quick-start' },
+  { path: '/vue-components', redirect: '/components' },
+  { path: '/vue-directives', redirect: '/components' },
+  { path: '/quasar-plugins', redirect: '/components' },
+  { path: '/plugins', redirect: '/components' },
+  { path: '/quasar-utils', redirect: '/components' },
+  { path: '/utils', redirect: '/components' },
+
+  // docs
   {
     path: '/',
     component: DocLayout,
-    children: docsPages
+    children: [
+      {
+        path: '',
+        component: () => import('../pages/landing/PageLanding.vue'),
+        meta: { fullscreen: true, dark: true }
+      },
+      ...Object.keys(mdPageList).map(key => {
+        const acc = { component: mdPageList[key] }
+
+        const route = routeMap[key]
+        if (route !== void 0) Object.assign(acc, route)
+
+        if (acc.path === void 0) {
+          const parts = key.slice(1, -3).split('/')
+          const len = parts.length
+          const path =
+            parts[len - 2] === parts[len - 1] ? parts.slice(0, len - 1) : parts
+
+          acc.path = path.join('/')
+        }
+
+        return acc
+      })
+    ]
   },
 
   // externals
   {
     path: '/layout-builder',
-    component: () => import('layouts/LayoutBuilder.vue')
+    component: () => import('../layouts/builder/LayoutBuilder.vue')
   },
 
+  // gallery
   ...layoutGallery.map(layout => ({
     path: layout.demoLink,
-    component: () => import('layouts/gallery/' + layout.path + '.vue'),
+    component: vueGalleryPageList[`./${layout.path}.vue`],
     children: [
       {
         path: '',
-        component: () => import('components/page-parts/layout/LayoutGalleryPage.vue'),
+        component: () => import('../layouts/gallery/LayoutGalleryPage.vue'),
         meta: {
           title: layout.name,
           screenshot: layout.screenshot,
@@ -113,10 +104,13 @@ const routes = [
   {
     path: '/:catchAll(.*)*',
     component: DocLayout,
-    children: [{
-      path: '',
-      component: () => import('pages/Error404.vue')
-    }]
+    children: [
+      {
+        path: '',
+        component: () => import('../pages/Page404.vue'),
+        meta: { fullscreen: true }
+      }
+    ]
   }
 ]
 

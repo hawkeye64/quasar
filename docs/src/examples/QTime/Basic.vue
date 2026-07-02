@@ -3,23 +3,14 @@
     <div class="q-gutter-md">
       <q-time v-model="time" />
 
-      <q-time
-        v-model="timeWithSeconds"
-        with-seconds
-      />
+      <q-time v-model="timeWithSeconds" with-seconds />
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      time: ref('10:56'),
-      timeWithSeconds: ref('09:24:10')
-    }
-  }
-}
+const time = ref('10:56')
+const timeWithSeconds = ref('09:24:10')
 </script>

@@ -1,0 +1,55 @@
+/**
+ * Capacitor CLI's `loadExtConfigJS` uses `require()` without unwrapping `.default`,
+ * so the CJS form is the only one cap CLI can consume today. The ESM sibling
+ * (capacitor.js) ships for forward-compat: package.json's `import`/`require`
+ * conditions will auto-prefer it once cap CLI fixes that.
+ */
+
+function applyDefaults(base) {
+  // Quasar-internal coupling: Vite always builds to src-capacitor/www. Filled in
+  // even when there's no runtime env (unlike server.url below), so standalone
+  // `cap` invocations get the right value. User-set webDir always wins just in case.
+  if (base.webDir === void 0) {
+    base.webDir = 'www'
+  }
+
+  // If this does not exist, then this is loaded outside Quasar CLI, e.g. a direct `cap` call, skip
+  const target = process.env.QUASAR_TARGET
+  if (!target) {
+    return base
+  }
+
+  const isDev = process.env.QUASAR_DEV === 'true'
+  const devUrl = process.env.QUASAR_APP_URL
+
+  if (isDev && devUrl) {
+    const server = { ...base.server }
+
+    if (server.url === void 0) {
+      server.url = devUrl
+    }
+
+    if (target === 'android' && server.cleartext === void 0) {
+      server.cleartext = true
+    }
+
+    base.server = server
+  }
+
+  return base
+}
+
+function defineCapacitorConfig(input) {
+  if (typeof input === 'function') {
+    const result = input()
+    if (result && typeof result.then === 'function') {
+      return result.then(applyDefaults)
+    }
+
+    return applyDefaults(result)
+  }
+
+  return applyDefaults(structuredClone(input))
+}
+
+module.exports = { defineCapacitorConfig }

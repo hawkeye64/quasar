@@ -6,12 +6,7 @@
           <q-icon name="local_atm" />
         </q-item-section>
         <q-item-section>
-          <q-range
-            v-model="model"
-            :min="0"
-            :max="50"
-            label
-          />
+          <q-range v-model="model" :min="0" :max="50" label />
         </q-item-section>
       </q-item>
 
@@ -20,29 +15,18 @@
           <q-icon name="euro_symbol" />
         </q-item-section>
         <q-item-section>
-          <q-range
-            v-model="model"
-            :min="0"
-            :max="50"
-            label
-          />
+          <q-range v-model="model" :min="0" :max="50" label />
         </q-item-section>
       </q-item>
     </q-list>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      model: ref({
-        min: 10,
-        max: 35
-      })
-    }
-  }
-}
+const model = ref({
+  min: 10,
+  max: 35
+})
 </script>

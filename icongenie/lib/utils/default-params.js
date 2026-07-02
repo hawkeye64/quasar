@@ -1,4 +1,4 @@
-module.exports = {
+export const defaultParams = {
   quality: 5,
   splashscreenIconRatio: 40,
 

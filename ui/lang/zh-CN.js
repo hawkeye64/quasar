@@ -1,6 +1,6 @@
 export default {
   isoName: 'zh-CN',
-  nativeName: '中文(简体)',
+  nativeName: '中文（简体）',
   label: {
     clear: '清空',
     ok: '确定',
@@ -14,19 +14,37 @@ export default {
     create: '创建',
     search: '搜索',
     filter: '过滤',
-    refresh: '刷新'
+    refresh: '刷新',
+    expand: label => (label ? `展开"${label}"` : '扩张'),
+    collapse: label => (label ? `折叠"${label}"` : '坍塌')
   },
   date: {
     days: '星期日_星期一_星期二_星期三_星期四_星期五_星期六'.split('_'),
     daysShort: '周日_周一_周二_周三_周四_周五_周六'.split('_'),
-    months: '一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月'.split('_'),
-    monthsShort: '一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月'.split('_'),
-    headerTitle: date => new Intl.DateTimeFormat('zh-CN', {
-      weekday: 'short', month: 'short', day: 'numeric'
-    }).format(date),
+    months:
+      '一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月'.split(
+        '_'
+      ),
+    monthsShort:
+      '一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月'.split(
+        '_'
+      ),
+    headerTitle: date =>
+      new Intl.DateTimeFormat('zh-CN', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      }).format(date),
     firstDayOfWeek: 0, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: false,
-    pluralDay: '天'
+    pluralDay: '天',
+    prevMonth: '上个月',
+    nextMonth: '下个月',
+    prevYear: '上一年',
+    nextYear: '下一年',
+    today: '今天',
+    prevRangeYears: range => `以前${range}年`,
+    nextRangeYears: range => `接下来${range}年`
   },
   table: {
     noData: '没有可用数据',
@@ -35,8 +53,14 @@ export default {
     selectedRecords: rows => '已选择' + rows + '行',
     recordsPerPage: '每页的行数:',
     allRows: '全部',
-    pagination: (start, end, total) => start + '-' + end + ' / ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' / ' + total,
     columns: '列'
+  },
+  pagination: {
+    first: '第一页',
+    prev: '上一页',
+    next: '下一页',
+    last: '最后一页'
   },
   editor: {
     url: 'URL',

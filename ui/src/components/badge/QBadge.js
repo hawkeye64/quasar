@@ -1,9 +1,9 @@
-import { h, computed } from 'vue'
+import { computed, h } from 'vue'
 
-import { createComponent } from '../../utils/private/create.js'
-import { hSlot } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { hMergeSlot } from '../../utils/private.render/render.js'
 
-const alignValues = [ 'top', 'middle', 'bottom' ]
+const alignValues = ['top', 'middle', 'bottom']
 
 export default createComponent({
   name: 'QBadge',
@@ -18,7 +18,7 @@ export default createComponent({
     outline: Boolean,
     rounded: Boolean,
 
-    label: [ Number, String ],
+    label: [Number, String],
 
     align: {
       type: String,
@@ -26,35 +26,41 @@ export default createComponent({
     }
   },
 
-  setup (props, { slots }) {
-    const style = computed(() => {
-      return props.align !== void 0
-        ? { verticalAlign: props.align }
-        : null
-    })
+  setup(props, { slots }) {
+    const style = computed(() =>
+      props.align !== void 0 ? { verticalAlign: props.align } : null
+    )
 
     const classes = computed(() => {
-      const text = props.outline === true
+      const text = props.outline
         ? props.color || props.textColor
         : props.textColor
 
-      return 'q-badge flex inline items-center no-wrap'
-        + ` q-badge--${ props.multiLine === true ? 'multi' : 'single' }-line`
-        + (props.outline === true
+      return (
+        'q-badge flex inline items-center no-wrap' +
+        ` q-badge--${props.multiLine ? 'multi' : 'single'}-line` +
+        (props.outline
           ? ' q-badge--outline'
-          : (props.color !== void 0 ? ` bg-${ props.color }` : '')
-        )
-        + (text !== void 0 ? ` text-${ text }` : '')
-        + (props.floating === true ? ' q-badge--floating' : '')
-        + (props.rounded === true ? ' q-badge--rounded' : '')
-        + (props.transparent === true ? ' q-badge--transparent' : '')
+          : props.color !== void 0
+            ? ` bg-${props.color}`
+            : '') +
+        (text !== void 0 ? ` text-${text}` : '') +
+        (props.floating ? ' q-badge--floating' : '') +
+        (props.rounded ? ' q-badge--rounded' : '') +
+        (props.transparent ? ' q-badge--transparent' : '')
+      )
     })
 
-    return () => h('div', {
-      class: classes.value,
-      style: style.value,
-      role: 'alert',
-      'aria-label': props.label
-    }, props.label !== void 0 ? props.label : hSlot(slots.default))
+    return () =>
+      h(
+        'div',
+        {
+          class: classes.value,
+          style: style.value,
+          role: 'status',
+          'aria-label': props.label
+        },
+        hMergeSlot(slots.default, props.label !== void 0 ? [props.label] : [])
+      )
   }
 })

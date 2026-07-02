@@ -2,6 +2,7 @@
 title: Layout QPageScroller
 desc: How to use the QPageScroller component. Places components that will appear on screen after user scrolls the page.
 keys: QPageScroller
+examples: QPageScroller
 related:
   - /layout/layout
   - /layout/page
@@ -14,27 +15,29 @@ Try it out with a non-fixed footer for example. When user reaches bottom of scre
 
 Essentially QPageScroller is very similar to QPageSticky. Whereas a QPageSticky component is always visible, a QPageScroller component only appears after a `scroll-offset` (property) is reached. Once visible, the user can click on it to quickly get back to the top of the page via `duration` property.
 
-## QPageScroller API
-<doc-api file="QPageScroller" />
+<DocApi file="QPageScroller" />
 
 ## Usage
+
 ::: tip
 Since QPageScroller needs a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QPageScroller.
 :::
 
 ::: warning
-* In order for QPageScroller to work, it must be placed within a QLayout component.
-* QPageScroller must be the last child element within its parent, so it can display on top of other content
+
+- In order for QPageScroller to work, it must be placed within a QLayout component.
+- QPageScroller must be the last child element within its parent, so it can display on top of other content
+
 :::
 
 ### Basic
 
-<doc-example title="Basic" file="QPageScroller/Basic" />
+<DocExample title="Basic" file="Basic" />
 
 ### Expanded
 
-<doc-example title="Expanded" file="QPageScroller/Expanded" />
+<DocExample title="Expanded" file="Expanded" />
 
 ### Reverse
 
-<doc-example title="Reverse" file="QPageScroller/Reverse" />
+<DocExample title="Reverse" file="Reverse" />

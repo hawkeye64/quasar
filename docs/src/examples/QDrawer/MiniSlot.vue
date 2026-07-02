@@ -1,7 +1,15 @@
 <template>
   <div class="q-pa-md">
-    <q-layout view="hHh Lpr lff" container style="height: 300px" class="shadow-2 rounded-borders">
-      <q-header elevated class="bg-black">
+    <q-layout
+      view="hHh Lpr lff"
+      container
+      style="height: 300px"
+      class="shadow-2 rounded-borders"
+    >
+      <q-header
+        elevated
+        :class="$q.dark.isActive ? 'bg-secondary' : 'bg-black'"
+      >
         <q-toolbar>
           <q-btn flat @click="drawer = !drawer" round dense icon="menu" />
           <q-toolbar-title>Header</q-toolbar-title>
@@ -11,23 +19,23 @@
       <q-drawer
         v-model="drawer"
         show-if-above
-
         :mini="!drawer || miniState"
         @click.capture="drawerClick"
-
         :width="200"
         :breakpoint="500"
         bordered
-        class="bg-grey-3"
+        :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-3'"
       >
         <template v-slot:mini>
           <q-scroll-area class="fit mini-slot cursor-pointer">
             <div class="q-py-lg">
-              <div class="column items-center">
+              <div class="column items-start">
                 <q-icon name="inbox" color="blue" class="mini-icon" />
+                <!-- #region -->
                 <q-icon name="star" color="orange" class="mini-icon" />
                 <q-icon name="send" color="purple" class="mini-icon" />
                 <q-icon name="drafts" color="teal" class="mini-icon" />
+                <!-- #endregion -->
               </div>
             </div>
           </q-scroll-area>
@@ -36,28 +44,22 @@
         <q-scroll-area class="fit">
           <q-list padding>
             <q-item clickable v-ripple>
-              <q-item-section>
-                Inbox
-              </q-item-section>
+              <q-item-section> Inbox </q-item-section>
             </q-item>
 
+            <!-- #region -->
             <q-item active clickable v-ripple>
-              <q-item-section>
-                Star
-              </q-item-section>
+              <q-item-section> Star </q-item-section>
             </q-item>
 
             <q-item clickable v-ripple>
-              <q-item-section>
-                Send
-              </q-item-section>
+              <q-item-section> Send </q-item-section>
             </q-item>
 
             <q-item clickable v-ripple>
-              <q-item-section>
-                Drafts
-              </q-item-section>
+              <q-item-section> Drafts </q-item-section>
             </q-item>
+            <!-- #endregion -->
           </q-list>
         </q-scroll-area>
 
@@ -66,7 +68,10 @@
           so that user can switch back
           to mini-mode
         -->
-        <div class="q-mini-drawer-hide absolute" style="top: 15px; right: -17px">
+        <div
+          class="q-mini-drawer-hide absolute"
+          style="top: 15px; right: -17px"
+        >
           <q-btn
             dense
             round
@@ -81,7 +86,10 @@
       <q-page-container>
         <q-page class="q-px-lg q-py-md">
           <p v-for="n in 15" :key="n">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Fugit nihil praesentium molestias a adipisci, dolore vitae odit, quidem consequatur optio voluptates asperiores pariatur eos numquam rerum delectus commodi perferendis voluptate?
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Fugit nihil
+            praesentium molestias a adipisci, dolore vitae odit, quidem
+            consequatur optio voluptates asperiores pariatur eos numquam rerum
+            delectus commodi perferendis voluptate?
           </p>
         </q-page>
       </q-page-container>
@@ -89,30 +97,22 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    const miniState = ref(true)
+const drawer = ref(false)
+const miniState = ref(true)
 
-    return {
-      drawer: ref(false),
-      miniState,
+function drawerClick(e) {
+  // if in "mini" state and user
+  // click on drawer, we switch it to "normal" mode
+  if (miniState.value) {
+    miniState.value = false
 
-      drawerClick (e) {
-        // if in "mini" state and user
-        // click on drawer, we switch it to "normal" mode
-        if (miniState.value) {
-          miniState.value = false
-
-          // notice we have registered an event with capture flag;
-          // we need to stop further propagation as this click is
-          // intended for switching drawer to "normal" mode only
-          e.stopPropagation()
-        }
-      }
-    }
+    // notice we have registered an event with capture flag;
+    // we need to stop further propagation as this click is
+    // intended for switching drawer to "normal" mode only
+    e.stopPropagation()
   }
 }
 </script>
@@ -125,6 +125,7 @@ export default {
 
 .mini-icon
   font-size: 1.718em
+  padding: 2px 16px
 
   & + &
     margin-top: 18px

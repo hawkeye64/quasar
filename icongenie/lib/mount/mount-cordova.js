@@ -1,35 +1,36 @@
-const { readFileSync, writeFileSync, existsSync } = require('fs')
-const elementTree = require('elementtree')
-const { relative } = require('path')
-const { red, green } = require('chalk')
+// oxlint-disable new-cap
 
-const { resolveDir } = require('../utils/app-paths')
-const { log, warn } = require('../utils/logger')
-const spawnSync = require('../utils/spawn-sync')
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import elementTree from 'elementtree'
+import { relative } from 'node:path'
+import { green, red } from 'kolorist'
+
+import { resolveDir } from '../utils/app-paths.js'
+import { log, warn } from '../utils/logger.js'
+import { spawnSync } from '../utils/spawn-sync.js'
 
 const cordovaConfigXml = resolveDir('src-cordova/config.xml')
 const srcCordovaDir = resolveDir('src-cordova')
 
-const platformList = [ 'cordova-android', 'cordova-ios' ]
-const generatorList = [ 'png', 'splashscreen' ]
+const platformList = ['cordova-android', 'cordova-ios']
+const generatorList = ['png', 'splashscreen']
 
-function getNode (root, tag, selector) {
-  return (
-    root.find(`${tag}${selector}`) ||
-    elementTree.SubElement(root, tag)
-  )
+function getNode(root, tag, selector) {
+  return root.find(`${tag}${selector}`) || elementTree.SubElement(root, tag)
 }
 
-function hasNode (root, tag, selector) {
+function hasNode(root, tag, selector) {
   return root.find(`${tag}${selector}`)
 }
 
-function isCordovaFile (file) {
-  return platformList.includes(file.platform) &&
+export function isCordovaFile(file) {
+  return (
+    platformList.includes(file.platform) &&
     generatorList.includes(file.generator)
+  )
 }
 
-function getCordovaFiles (files) {
+function getCordovaFiles(files) {
   const cordovaFiles = []
 
   files.forEach(file => {
@@ -41,24 +42,34 @@ function getCordovaFiles (files) {
   return cordovaFiles
 }
 
-function updateConfigXml (cordovaFiles, hasSplashscreen) {
-  const doc = elementTree.parse(readFileSync(cordovaConfigXml, 'utf-8'))
+function updateConfigXml(cordovaFiles, hasSplashscreen) {
+  const doc = elementTree.parse(readFileSync(cordovaConfigXml, 'utf8'))
   const rootNode = doc.getroot()
 
-  if (hasSplashscreen && !rootNode.find('preference[@name="SplashMaintainAspectRatio"]')) {
+  if (
+    hasSplashscreen &&
+    // oxlint-disable-next-line unicorn/prefer-array-some
+    !rootNode.find('preference[@name="SplashMaintainAspectRatio"]')
+  ) {
     const prefNode = elementTree.SubElement(rootNode, 'preference')
     prefNode.set('name', 'SplashMaintainAspectRatio')
     prefNode.set('value', 'true')
   }
 
   const androidNode = getNode(rootNode, 'platform', '[@name="android"]')
+  if (androidNode.get('name') === void 0) {
+    androidNode.set('name', 'android')
+  }
+
   const iosNode = getNode(rootNode, 'platform', '[@name="ios"]')
+  if (iosNode.get('name') === void 0) {
+    iosNode.set('name', 'ios')
+  }
 
   cordovaFiles.forEach(file => {
     const isAndroid = file.platform === 'cordova-android'
     const node = isAndroid ? androidNode : iosNode
-    const src = relative(srcCordovaDir, file.absoluteName)
-      .replace(/\\/g, '/') // Windows support
+    const src = relative(srcCordovaDir, file.absoluteName).replaceAll('\\', '/') // Windows support
 
     if (file.generator === 'splashscreen') {
       // <splash src="res/screen/android/splash-land-hdpi.png" density="land-hdpi"/>
@@ -75,8 +86,7 @@ function updateConfigXml (cordovaFiles, hasSplashscreen) {
       if (isAndroid) {
         entry.set('density', file.density)
       }
-    }
-    else if (file.generator === 'png') {
+    } else if (file.generator === 'png') {
       // <icon src="res/android/ldpi.png" density="ldpi" />
       // <icon src="res/ios/icon-60@3x.png" width="180" height="180" />
 
@@ -92,23 +102,22 @@ function updateConfigXml (cordovaFiles, hasSplashscreen) {
 
       if (isAndroid) {
         entry.set('density', file.density)
-      }
-      else {
+      } else {
         entry.set('width', file.width)
         entry.set('height', file.height)
       }
     }
   })
 
-  writeFileSync(cordovaConfigXml, doc.write({ indent: 4 }), 'utf-8')
+  writeFileSync(cordovaConfigXml, doc.write({ indent: 4 }), 'utf8')
   log(`Updated src-cordova/config.xml`)
 }
 
-function hasDeepProp (target /* , param1, param2, ... */) {
+function hasDeepProp(target, ...args) {
   let obj = target
 
-  for (let i = 1; i < arguments.length; i++) {
-    const prop = arguments[i]
+  for (let i = 0; i < args.length; i++) {
+    const prop = args[i]
     obj = obj[prop]
 
     if (obj === void 0) {
@@ -119,46 +128,52 @@ function hasDeepProp (target /* , param1, param2, ... */) {
   return true
 }
 
-function installSplashscreenPlugin () {
+async function installSplashscreenPlugin() {
   const pkgPath = resolveDir('src-cordova/package.json')
 
-  if (!existsSync(pkgPath)) {
-    // malformed /src-cordova...
-    return
-  }
+  // malformed /src-cordova...
+  if (!existsSync(pkgPath)) return
 
-  const pkg = require(pkgPath)
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
 
   if (
+    // it's already installed, so nothing to do
     hasDeepProp(pkg, 'dependencies', 'cordova-plugin-splashscreen') ||
     hasDeepProp(pkg, 'cordova', 'plugins', 'cordova-plugin-splashscreen')
   ) {
-    // it's already installed, so nothing to do
     return
   }
 
-  log(`Installing cordova-plugin-splashscreen...`)
+  const hasInstalled = await spawnSync(
+    'cordova',
+    ['plugin', 'add', 'cordova-plugin-splashscreen'],
+    {
+      cwd: srcCordovaDir
+    }
+  )
 
-  spawnSync('cordova', [ 'plugin', 'add', 'cordova-plugin-splashscreen' ], {
-    cwd: srcCordovaDir
-  }, () => {
+  if (!hasInstalled) {
     warn()
-    warn('Failed to install cordova-plugin-splashscreen. Please do it manually.')
-    console.log(' -> /src-cordova: $ cordova plugin add cordova-plugin-splashscreen\n')
-  })
-
-  console.log()
+    warn(
+      'Failed to install cordova-plugin-splashscreen. Please do it manually.'
+    )
+    console.log(
+      ' -> /src-cordova: $ cordova plugin add cordova-plugin-splashscreen\n'
+    )
+  }
 }
 
-module.exports.mountCordova = function mountCordova (files) {
+export async function mountCordova(files) {
   if (existsSync(cordovaConfigXml)) {
     const cordovaFiles = getCordovaFiles(files)
 
-    if (cordovaFiles.length > 0) {
-      const hasSplashscreen = cordovaFiles.some(file => file.generator === 'splashscreen')
+    if (cordovaFiles.length !== 0) {
+      const hasSplashscreen = cordovaFiles.some(
+        file => file.generator === 'splashscreen'
+      )
 
       if (hasSplashscreen) {
-        installSplashscreenPlugin()
+        await installSplashscreenPlugin()
       }
 
       updateConfigXml(cordovaFiles, hasSplashscreen)
@@ -166,14 +181,13 @@ module.exports.mountCordova = function mountCordova (files) {
   }
 }
 
-module.exports.isCordovaFile = isCordovaFile
-
-module.exports.verifyCordova = function verifyCordova (file) {
+export function verifyCordova(file) {
   if (isCordovaFile(file) && existsSync(cordovaConfigXml)) {
-    const doc = elementTree.parse(readFileSync(cordovaConfigXml, 'utf-8'))
+    const doc = elementTree.parse(readFileSync(cordovaConfigXml, 'utf8'))
     const isAndroid = file.platform === 'cordova-android'
 
-    const node = doc.getroot()
+    const node = doc
+      .getroot()
       .find(`platform[@name="${isAndroid ? 'android' : 'ios'}"]`)
 
     // verify that the platform is installed
@@ -191,8 +205,7 @@ module.exports.verifyCordova = function verifyCordova (file) {
       if (!hasNode(node, 'splash', selector)) {
         return red('ERROR: no entry for it in src-cordova/config.xml')
       }
-    }
-    else {
+    } else {
       const selector = isAndroid
         ? `[@density="${file.density}"]`
         : `[@width="${file.width}"][@height="${file.height}"]`

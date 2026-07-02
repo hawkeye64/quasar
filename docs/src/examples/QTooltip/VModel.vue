@@ -1,12 +1,12 @@
 <template>
   <div class="q-pa-md">
     <div class="q-gutter-sm">
-      <q-btn color="primary" @click="showing = true" label="Show"/>
-      <q-btn color="primary" @click="showing = false" label="Hide"/>
+      <q-btn color="primary" @click="showing = true" label="Show" />
+      <q-btn color="primary" @click="showing = false" label="Hide" />
     </div>
 
     <div
-      style="width: 200px; height: 70px;"
+      style="width: 200px; height: 70px"
       class="bg-purple text-white rounded-borders row flex-center q-mt-md"
     >
       Hover here or click buttons
@@ -15,14 +15,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      showing: ref(false)
-    }
-  }
-}
+const showing = ref(false)
 </script>

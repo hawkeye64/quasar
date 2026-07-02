@@ -1,15 +1,15 @@
-const { resolve } = require('path')
+import { resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 
-const { warn } = require('./logger')
-const { appDir } = require('./app-paths')
+import { warn } from './logger.js'
+import { appDir } from './app-paths.js'
 
-module.exports = function getProfileContent (profileFile) {
+export function getProfileContent(profileFile) {
   const file = resolve(appDir, profileFile)
 
   try {
-    return require(file)
-  }
-  catch (err) {
+    return JSON.parse(readFileSync(file, 'utf8'))
+  } catch (err) {
     warn(`Specified profile file has a syntax error`)
     console.error(err)
     process.exit(1)

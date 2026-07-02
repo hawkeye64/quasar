@@ -14,7 +14,10 @@
         </q-card-section>
 
         <q-card-section>
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis perferendis totam, ea at omnis vel numquam exercitationem aut, natus minima, porro labore.
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum
+          repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis
+          perferendis totam, ea at omnis vel numquam exercitationem aut, natus
+          minima, porro labore.
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -35,16 +38,27 @@
         </q-bar>
 
         <q-card-section>
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis perferendis totam, ea at omnis vel numquam exercitationem aut, natus minima, porro labore.
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum
+          repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis
+          perferendis totam, ea at omnis vel numquam exercitationem aut, natus
+          minima, porro labore.
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis perferendis totam, ea at omnis vel numquam exercitationem aut, natus minima, porro labore.
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum
+          repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis
+          perferendis totam, ea at omnis vel numquam exercitationem aut, natus
+          minima, porro labore.
         </q-card-section>
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="bar2" persistent transition-show="flip-down" transition-hide="flip-up">
+    <q-dialog
+      v-model="bar2"
+      persistent
+      transition-show="flip-down"
+      transition-hide="flip-up"
+    >
       <q-card class="bg-primary text-white">
         <q-bar>
           <q-icon name="network_wifi" />
@@ -64,7 +78,10 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis perferendis totam, ea at omnis vel numquam exercitationem aut, natus minima, porro labore.
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum
+          repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis
+          perferendis totam, ea at omnis vel numquam exercitationem aut, natus
+          minima, porro labore.
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -73,33 +90,33 @@
       <q-card>
         <q-toolbar>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg">
+            <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
           </q-avatar>
 
-          <q-toolbar-title><span class="text-weight-bold">Quasar</span> Framework</q-toolbar-title>
+          <q-toolbar-title
+            ><span class="text-weight-bold">Quasar</span>
+            Framework</q-toolbar-title
+          >
 
           <q-btn flat round dense icon="close" v-close-popup />
         </q-toolbar>
 
         <q-card-section>
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis perferendis totam, ea at omnis vel numquam exercitationem aut, natus minima, porro labore.
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Rerum
+          repellendus sit voluptate voluptas eveniet porro. Rerum blanditiis
+          perferendis totam, ea at omnis vel numquam exercitationem aut, natus
+          minima, porro labore.
         </q-card-section>
       </q-card>
     </q-dialog>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      icon: ref(false),
-      bar: ref(false),
-      bar2: ref(false),
-      toolbar: ref(false)
-    }
-  }
-}
+const icon = ref(false)
+const bar = ref(false)
+const bar2 = ref(false)
+const toolbar = ref(false)
 </script>

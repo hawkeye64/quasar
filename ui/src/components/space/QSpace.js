@@ -1,13 +1,12 @@
 import { h } from 'vue'
 
-import { createComponent } from '../../utils/private/create.js'
-
-const space = h('div', { class: 'q-space' })
+import { createComponent } from '../../utils/private.create/create.js'
 
 export default createComponent({
   name: 'QSpace',
 
-  setup () {
+  setup() {
+    const space = h('div', { class: 'q-space' })
     return () => space
   }
 })

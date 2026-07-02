@@ -1,13 +1,20 @@
-import { h, ref, computed, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, h, ref, toRaw } from 'vue'
 
-import useDark, { useDarkProps } from '../../composables/private/use-dark.js'
-import useSize, { useSizeProps } from '../../composables/private/use-size.js'
-import useRefocusTarget from '../../composables/private/use-refocus-target.js'
-import { useFormInject, useFormProps } from '../../composables/private/use-form.js'
+import useDark, {
+  useDarkProps
+} from '../../composables/private.use-dark/use-dark.js'
+import useSize, {
+  useSizeProps
+} from '../../composables/private.use-size/use-size.js'
+import useRefocusTarget from '../../composables/private.use-refocus-target/use-refocus-target.js'
+import {
+  useFormInject,
+  useFormProps
+} from '../../composables/use-form/private.use-form.js'
 
-import optionSizes from '../../utils/private/option-sizes.js'
-import { stopAndPrevent } from '../../utils/event.js'
-import { hSlot, hMergeSlot } from '../../utils/private/render.js'
+import optionSizes from '../../utils/private.option-sizes/option-sizes.js'
+import { stopAndPrevent } from '../../utils/event/event.js'
+import { hMergeSlot, hSlot } from '../../utils/private.render/render.js'
 
 export const useCheckboxProps = {
   ...useDarkProps,
@@ -42,12 +49,18 @@ export const useCheckboxProps = {
   dense: Boolean,
 
   disable: Boolean,
-  tabindex: [ String, Number ]
+  tabindex: [String, Number]
 }
 
-export const useCheckboxEmits = [ 'update:modelValue' ]
+export const useCheckboxEmits = ['update:modelValue']
 
-export default function (type, getInner) {
+function onKeydown(e) {
+  if (e.keyCode === 13 || e.keyCode === 32) {
+    stopAndPrevent(e)
+  }
+}
+
+export default function useCheckbox(type, getInner) {
   const { props, slots, emit, proxy } = getCurrentInstance()
   const { $q } = proxy
 
@@ -57,66 +70,64 @@ export default function (type, getInner) {
   const { refocusTargetEl, refocusTarget } = useRefocusTarget(props, rootRef)
   const sizeStyle = useSize(props, optionSizes)
 
-  const modelIsArray = computed(() =>
-    props.val !== void 0 && Array.isArray(props.modelValue)
+  const modelIsArray = computed(
+    () => props.val !== void 0 && Array.isArray(props.modelValue)
   )
 
-  const index = computed(() => (
-    modelIsArray.value === true
-      ? props.modelValue.indexOf(props.val)
+  const index = computed(() => {
+    const val = toRaw(props.val)
+    return modelIsArray.value
+      ? props.modelValue.findIndex(opt => toRaw(opt) === val)
       : -1
-  ))
+  })
 
-  const isTrue = computed(() => (
-    modelIsArray.value === true
-      ? index.value > -1
-      : props.modelValue === props.trueValue
-  ))
-
-  const isFalse = computed(() => (
-    modelIsArray.value === true
-      ? index.value === -1
-      : props.modelValue === props.falseValue
-  ))
-
-  const isIndeterminate = computed(() =>
-    isTrue.value === false && isFalse.value === false
+  const isTrue = computed(() =>
+    modelIsArray.value
+      ? index.value !== -1
+      : toRaw(props.modelValue) === toRaw(props.trueValue)
   )
 
-  const tabindex = computed(() => (
-    props.disable === true ? -1 : props.tabindex || 0
-  ))
+  const isFalse = computed(() =>
+    modelIsArray.value
+      ? index.value === -1
+      : toRaw(props.modelValue) === toRaw(props.falseValue)
+  )
 
-  const classes = computed(() =>
-    `q-${ type } cursor-pointer no-outline row inline no-wrap items-center`
-    + (props.disable === true ? ' disabled' : '')
-    + (isDark.value === true ? ` q-${ type }--dark` : '')
-    + (props.dense === true ? ` q-${ type }--dense` : '')
-    + (props.leftLabel === true ? ' reverse' : '')
+  const isIndeterminate = computed(() => !isTrue.value && !isFalse.value)
+  const tabindex = computed(() => (props.disable ? -1 : props.tabindex || 0))
+  const classes = computed(
+    () =>
+      `q-${type} cursor-pointer no-outline row inline no-wrap items-center` +
+      (props.disable ? ' disabled' : '') +
+      (isDark.value ? ` q-${type}--dark` : '') +
+      (props.dense ? ` q-${type}--dense` : '') +
+      (props.leftLabel ? ' reverse' : '')
   )
 
   const innerClass = computed(() => {
-    const state = isTrue.value === true ? 'truthy' : (isFalse.value === true ? 'falsy' : 'indet')
-    const color = props.color !== void 0 && (
-      props.keepColor === true
-      || (type === 'toggle' ? isTrue.value === true : isFalse.value !== true)
-    )
-      ? ` text-${ props.color }`
-      : ''
+    const state = isTrue.value ? 'truthy' : isFalse.value ? 'falsy' : 'indet'
 
-    return `q-${ type }__inner relative-position non-selectable q-${ type }__inner--${ state }${ color }`
+    const color =
+      props.color !== void 0 &&
+      (props.keepColor || (type === 'toggle' ? isTrue.value : !isFalse.value))
+        ? ` text-${props.color}`
+        : ''
+
+    return `q-${type}__inner relative-position non-selectable q-${type}__inner--${state}${color}`
   })
 
   const formAttrs = computed(() => {
     const prop = { type: 'checkbox' }
 
-    props.name !== void 0 && Object.assign(prop, {
-      '^checked': isTrue.value === true ? 'checked' : void 0,
-      name: props.name,
-      value: modelIsArray.value === true
-        ? props.val
-        : props.trueValue
-    })
+    if (props.name !== void 0) {
+      Object.assign(prop, {
+        // see https://vuejs.org/guide/extras/render-function.html#creating-vnodes (.prop)
+        '.checked': isTrue.value,
+        '^checked': isTrue.value ? 'checked' : void 0,
+        name: props.name,
+        value: modelIsArray.value ? props.val : props.trueValue
+      })
+    }
 
     return prop
   })
@@ -126,68 +137,60 @@ export default function (type, getInner) {
   const attributes = computed(() => {
     const attrs = {
       tabindex: tabindex.value,
-      role: 'checkbox',
+      role: type === 'toggle' ? 'switch' : 'checkbox',
       'aria-label': props.label,
-      'aria-checked': isIndeterminate.value === true
+      'aria-checked': isIndeterminate.value
         ? 'mixed'
-        : (isTrue.value === true ? 'true' : 'false')
+        : isTrue.value
+          ? 'true'
+          : 'false'
     }
 
-    if (props.disable === true) {
-      attrs[ 'aria-disabled' ] = 'true'
+    if (props.disable) {
+      attrs['aria-disabled'] = 'true'
     }
 
     return attrs
   })
 
-  function onClick (e) {
+  function onClick(e) {
     if (e !== void 0) {
       stopAndPrevent(e)
       refocusTarget(e)
     }
 
-    if (props.disable !== true) {
+    if (!props.disable) {
       emit('update:modelValue', getNextValue(), e)
     }
   }
 
-  function getNextValue () {
-    if (modelIsArray.value === true) {
-      if (isTrue.value === true) {
-        const val = props.modelValue.slice()
+  function getNextValue() {
+    if (modelIsArray.value) {
+      if (isTrue.value) {
+        const val = [...props.modelValue]
         val.splice(index.value, 1)
         return val
       }
 
-      return props.modelValue.concat([ props.val ])
+      return [...props.modelValue, props.val]
     }
 
-    if (isTrue.value === true) {
-      if (props.toggleOrder !== 'ft' || props.toggleIndeterminate === false) {
+    if (isTrue.value) {
+      if (props.toggleOrder !== 'ft' || !props.toggleIndeterminate) {
         return props.falseValue
       }
-    }
-    else if (isFalse.value === true) {
-      if (props.toggleOrder === 'ft' || props.toggleIndeterminate === false) {
+    } else if (isFalse.value) {
+      if (props.toggleOrder === 'ft' || !props.toggleIndeterminate) {
         return props.trueValue
       }
-    }
-    else {
-      return props.toggleOrder !== 'ft'
-        ? props.trueValue
-        : props.falseValue
+    } else {
+      return props.toggleOrder !== 'ft' ? props.trueValue : props.falseValue
     }
 
     return props.indeterminateValue
   }
 
-  function onKeydown (e) {
-    if (e.keyCode === 13 || e.keyCode === 32) {
-      stopAndPrevent(e)
-    }
-  }
-
-  function onKeyup (e) {
+  function onKeyup(e) {
     if (e.keyCode === 13 || e.keyCode === 32) {
       onClick(e)
     }
@@ -201,40 +204,58 @@ export default function (type, getInner) {
   return () => {
     const inner = getInnerContent()
 
-    props.disable !== true && injectFormInput(
-      inner,
-      'unshift',
-      ` q-${ type }__native absolute q-ma-none q-pa-none`
-    )
+    if (!props.disable) {
+      injectFormInput(
+        inner,
+        'unshift',
+        ` q-${type}__native absolute q-ma-none q-pa-none`
+      )
+    }
 
     const child = [
-      h('div', {
-        class: innerClass.value,
-        style: sizeStyle.value
-      }, inner)
+      h(
+        'div',
+        {
+          class: innerClass.value,
+          style: sizeStyle.value,
+          'aria-hidden': 'true'
+        },
+        inner
+      )
     ]
 
     if (refocusTargetEl.value !== null) {
       child.push(refocusTargetEl.value)
     }
 
-    const label = props.label !== void 0
-      ? hMergeSlot(slots.default, [ props.label ])
-      : hSlot(slots.default)
+    const label =
+      props.label !== void 0
+        ? hMergeSlot(slots.default, [props.label])
+        : hSlot(slots.default)
 
-    label !== void 0 && child.push(
-      h('div', {
-        class: `q-${ type }__label q-anchor--skip`
-      }, label)
+    if (label !== void 0) {
+      child.push(
+        h(
+          'div',
+          {
+            class: `q-${type}__label q-anchor--skip`
+          },
+          label
+        )
+      )
+    }
+
+    return h(
+      'div',
+      {
+        ref: rootRef,
+        class: classes.value,
+        ...attributes.value,
+        onClick,
+        onKeydown,
+        onKeyup
+      },
+      child
     )
-
-    return h('div', {
-      ref: rootRef,
-      class: classes.value,
-      ...attributes.value,
-      onClick,
-      onKeydown,
-      onKeyup
-    }, child)
   }
 }

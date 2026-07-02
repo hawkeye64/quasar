@@ -4,32 +4,85 @@
 //  parameters and return value when using Quasar with TypeScript
 // We need these in `ui` folder to make `quasar/wrapper` import work,
 //  but they are useful only for Quasar CLI projects
-// They are typed via module augmentation by `@quasar/app`
+// They are typed via module augmentation by `@quasar/app-vite` / `@quasar/app-webpack`
 
-module.exports.boot = function (callback) {
+/*******************************************************
+ * Warning!
+ * All these are deprecated starting with
+ *    @quasar/app-vite v2
+ *    @quasar/app-webpack v4
+ *
+ * Use the new wrappers from #q-app instead
+ *******************************************************/
+
+export function boot(callback) {
   return callback
 }
 
-module.exports.ssrMiddleware = function (callback) {
+export function configure(callback) {
   return callback
 }
 
-module.exports.ssrProductionExport = function (callback) {
+export function preFetch(callback) {
   return callback
 }
 
-module.exports.configure = function (callback) {
+export function route(callback) {
   return callback
 }
 
-module.exports.preFetch = function (callback) {
+export function store(callback) {
   return callback
 }
 
-module.exports.route = function (callback) {
+export function ssrMiddleware(callback) {
   return callback
 }
 
-module.exports.store = function (callback) {
+/**
+ * Below only for @quasar/app-webpack v3
+ */
+
+export function ssrProductionExport(callback) {
+  return callback
+}
+
+/**
+ * Below only for @quasar/app-vite v1
+ */
+
+export function ssrCreate(callback) {
+  return callback
+}
+
+export function ssrListen(callback) {
+  return callback
+}
+
+export function ssrClose(callback) {
+  return callback
+}
+
+export function ssrServeStaticContent(callback) {
+  return callback
+}
+
+export function ssrRenderPreloadTag(callback) {
+  return callback
+}
+
+/**
+ * Below only for legacy @quasar/app-vite v1 & @quasar/app-webpack v3
+ */
+
+export function bexBackground(callback) {
+  return callback
+}
+
+export function bexContent(callback) {
+  return callback
+}
+
+export function bexDom(callback) {
   return callback
 }

@@ -9,8 +9,8 @@
         color="white"
         text-color="black"
         :options="[
-          {label: 'Option 1', value: 'one'},
-          {label: 'Option 2', value: 'two'}
+          { label: 'Option 1', value: 'one' },
+          { label: 'Option 2', value: 'two' }
         ]"
       />
 
@@ -25,25 +25,19 @@
         color="white"
         text-color="primary"
         :options="[
-          {label: 'Option 1', value: 'one'},
-          {label: 'Option 2', value: 'two'}
+          { label: 'Option 1', value: 'one' },
+          { label: 'Option 2', value: 'two' }
         ]"
       />
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      model: ref('one'),
-      secondModel: ref('one')
-    }
-  }
-}
+const model = ref('one')
+const secondModel = ref('one')
 </script>
 
 <style lang="sass" scoped>

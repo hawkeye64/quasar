@@ -7,27 +7,27 @@
       :virtual-scroll-sticky-size-start="48"
       :virtual-scroll-sticky-size-end="32"
       :items="heavyList"
+      v-slot="{ item: row, index }"
     >
-      <template v-slot="{ item: row, index }">
-        <tr :key="index">
-          <td>#{{ index }}</td>
-          <td v-for="col in columns" :key="index + '-' + col">
-            {{ row[col] }}
-          </td>
-        </tr>
-      </template>
+      <tr :key="index">
+        <td>#{{ index }}</td>
+        <td v-for="col in columns" :key="index + '-' + col">
+          {{ row[col] }}
+        </td>
+      </tr>
     </q-virtual-scroll>
   </div>
 </template>
 
-<script>
+<script setup>
 const rows = [
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24,
-    protein: 4.0,
+    protein: 4,
     sodium: 87,
     calcium: '14%',
     iron: '1%'
@@ -35,7 +35,7 @@ const rows = [
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37,
     protein: 4.3,
     sodium: 129,
@@ -45,9 +45,9 @@ const rows = [
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23,
-    protein: 6.0,
+    protein: 6,
     sodium: 337,
     calcium: '6%',
     iron: '7%'
@@ -65,7 +65,7 @@ const rows = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49,
     protein: 3.9,
     sodium: 327,
@@ -75,9 +75,9 @@ const rows = [
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94,
-    protein: 0.0,
+    protein: 0,
     sodium: 50,
     calcium: '0%',
     iron: '0%'
@@ -105,7 +105,7 @@ const rows = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51,
     protein: 4.9,
     sodium: 326,
@@ -115,16 +115,18 @@ const rows = [
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65,
     protein: 7,
     sodium: 54,
     calcium: '12%',
     iron: '6%'
   }
+  // #endregion
 ]
 
 const columns = [
+  // #region
   'name',
   'calories',
   'fat',
@@ -133,6 +135,7 @@ const columns = [
   'sodium',
   'calcium',
   'iron'
+  // #endregion
 ]
 
 const heavyList = []
@@ -141,14 +144,5 @@ const heavyList = []
 // create a huge list
 for (let i = 0; i <= 1000; i++) {
   Array.prototype.push.apply(heavyList, rows)
-}
-
-export default {
-  setup () {
-    return {
-      heavyList,
-      columns
-    }
-  }
 }
 </script>

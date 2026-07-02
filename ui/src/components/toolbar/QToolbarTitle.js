@@ -1,7 +1,7 @@
-import { h, computed } from 'vue'
+import { computed, h } from 'vue'
 
-import { createComponent } from '../../utils/private/create.js'
-import { hSlot } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { hSlot } from '../../utils/private.render/render.js'
 
 export default createComponent({
   name: 'QToolbarTitle',
@@ -10,10 +10,9 @@ export default createComponent({
     shrink: Boolean
   },
 
-  setup (props, { slots }) {
-    const classes = computed(() =>
-      'q-toolbar__title ellipsis'
-      + (props.shrink === true ? ' col-shrink' : '')
+  setup(props, { slots }) {
+    const classes = computed(
+      () => 'q-toolbar__title ellipsis' + (props.shrink ? ' col-shrink' : '')
     )
 
     return () => h('div', { class: classes.value }, hSlot(slots.default))

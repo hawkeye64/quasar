@@ -7,24 +7,26 @@
       </q-chip>
       <q-chip>
         <q-avatar>
-          <img src="https://cdn.quasar.dev/img/boy-avatar.png">
+          <img src="https://cdn.quasar.dev/img/boy-avatar.png" />
         </q-avatar>
         John
       </q-chip>
     </div>
 
     <div class="q-gutter-x-sm">
-      <q-btn round>
+      <q-btn round color="white">
         <q-avatar size="28px">
           <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
         </q-avatar>
       </q-btn>
-      <q-btn round>
+      <!-- #region -->
+      <q-btn round color="white">
         <q-avatar size="32px">
           <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
         </q-avatar>
       </q-btn>
-      <q-btn round>
+      <!-- #endregion -->
+      <q-btn round color="white">
         <q-avatar size="40px">
           <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
         </q-avatar>
@@ -42,9 +44,7 @@
         <q-item-label>Mary</q-item-label>
         <q-item-label caption>2 new messages</q-item-label>
       </q-item-section>
-      <q-item-section side>
-        3 min ago
-      </q-item-section>
+      <q-item-section side> 3 min ago </q-item-section>
     </q-item>
 
     <q-banner rounded class="bg-primary text-white">

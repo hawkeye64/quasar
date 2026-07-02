@@ -8,10 +8,12 @@ These are taken care of by Icon Genie through its [generate](/icongenie/command-
 
 Here are the links to each mode's list:
 
-* [App Icons for SPA mode](/quasar-cli/developing-spa/app-icons-spa)
-* [App Icons for PWA mode](/quasar-cli/developing-pwa/app-icons-pwa)
-* [App Icons for SSR mode](/quasar-cli/developing-ssr/app-icons-ssr)
-* [App Icons for Cordova mode](/quasar-cli/developing-cordova-apps/app-icons-cordova)
-* [App Icons for Capacitor mode](/quasar-cli/developing-capacitor-apps/app-icons-capacitor)
-* [App Icons for Electron mode](/quasar-cli/developing-electron-apps/app-icons-electron)
-* [App Icons for BEX mode](/quasar-cli/developing-browser-extensions/app-icons-browser-extension)
+| Quasar Mode                  | Link                                                                                   |
+| ---------------------------- | -------------------------------------------------------------------------------------- |
+| App icons for SPA mode       | [SPA mode](/quasar-cli-vite/developing-spa/app-icons-spa)                              |
+| App icons for PWA mode       | [PWA mode](/quasar-cli-vite/developing-pwa/app-icons-pwa)                              |
+| App icons for SSR mode       | [SSR mode](/quasar-cli-vite/developing-ssr/app-icons-ssr)                              |
+| App icons for Capacitor mode | [Capacitor mode](/quasar-cli-vite/developing-capacitor-apps/app-icons-capacitor)       |
+| App icons for Cordova mode   | [Cordova mode](/quasar-cli-vite/developing-cordova-apps/app-icons-cordova)             |
+| App icons for Electron mode  | [Electron mode](/quasar-cli-vite/developing-electron-apps/app-icons-electron)          |
+| App icons for BEX mode       | [BEX mode](/quasar-cli-vite/developing-browser-extensions/app-icons-browser-extension) |

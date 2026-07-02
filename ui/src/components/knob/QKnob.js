@@ -1,18 +1,21 @@
-import { h, ref, computed, watch, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, h, ref, watch } from 'vue'
 
 import QCircularProgress from '../circular-progress/QCircularProgress.js'
-import TouchPan from '../../directives/TouchPan.js'
+import TouchPan from '../../directives/touch-pan/TouchPan.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { position, stopAndPrevent } from '../../utils/event.js'
-import { between, normalizeToInterval } from '../../utils/format.js'
-import { hDir } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { position, stopAndPrevent } from '../../utils/event/event.js'
+import { between, normalizeToInterval } from '../../utils/format/format.js'
+import { hDir } from '../../utils/private.render/render.js'
 
-import { useFormProps, useFormAttrs } from '../../composables/private/use-form.js'
-import { useCircularCommonProps } from '../circular-progress/use-circular-progress.js'
+import {
+  useFormAttrs,
+  useFormProps
+} from '../../composables/use-form/private.use-form.js'
+import { useCircularCommonProps } from '../circular-progress/circular-progress.js'
 
 // PGDOWN, LEFT, DOWN, PGUP, RIGHT, UP
-const keyCodes = [ 34, 37, 40, 33, 39, 38 ]
+const keyCodes = [34, 37, 40, 33, 39, 38]
 const commonPropsName = Object.keys(useCircularCommonProps)
 
 export default createComponent({
@@ -37,7 +40,7 @@ export default createComponent({
     },
 
     tabindex: {
-      type: [ Number, String ],
+      type: [Number, String],
       default: 0
     },
 
@@ -45,109 +48,113 @@ export default createComponent({
     readonly: Boolean
   },
 
-  emits: [ 'update:modelValue', 'change', 'drag-value' ],
+  emits: ['update:modelValue', 'change', 'dragValue'],
 
-  setup (props, { slots, emit }) {
+  setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
     const { $q } = proxy
 
     const model = ref(props.modelValue)
     const dragging = ref(false)
 
-    const innerMin = computed(() => (
-      isNaN(props.innerMin) === true || props.innerMin < props.min
+    const innerMin = computed(() =>
+      !Number.isFinite(props.innerMin) || props.innerMin < props.min
         ? props.min
         : props.innerMin
-    ))
-    const innerMax = computed(() => (
-      isNaN(props.innerMax) === true || props.innerMax > props.max
+    )
+    const innerMax = computed(() =>
+      !Number.isFinite(props.innerMax) || props.innerMax > props.max
         ? props.max
         : props.innerMax
-    ))
+    )
 
     let centerPosition
 
-    function normalizeModel () {
-      model.value = props.modelValue === null
-        ? innerMin.value
-        : between(props.modelValue, innerMin.value, innerMax.value)
+    function normalizeModel() {
+      model.value =
+        props.modelValue === null
+          ? innerMin.value
+          : between(props.modelValue, innerMin.value, innerMax.value)
 
       updateValue(true)
     }
 
     watch(
-      () => `${ props.modelValue }|${ innerMin.value }|${ innerMax.value }`,
+      () => `${props.modelValue}|${innerMin.value}|${innerMax.value}`,
       normalizeModel
     )
 
     normalizeModel()
 
-    const editable = computed(() => props.disable === false && props.readonly === false)
+    const editable = computed(() => !props.disable && !props.readonly)
 
-    const classes = computed(() =>
-      'q-knob non-selectable' + (
-        editable.value === true
+    const classes = computed(
+      () =>
+        'q-knob non-selectable' +
+        (editable.value
           ? ' q-knob--editable'
-          : (props.disable === true ? ' disabled' : '')
-      )
+          : props.disable
+            ? ' disabled'
+            : '')
     )
 
-    const decimals = computed(() => (String(props.step).trim('0').split('.')[ 1 ] || '').length)
+    const decimals = computed(
+      () => (String(props.step).trim().split('.')[1] || '').length
+    )
     const step = computed(() => (props.step === 0 ? 1 : props.step))
-    const instantFeedback = computed(() => props.instantFeedback === true || dragging.value === true)
+    const instantFeedback = computed(
+      () => props.instantFeedback || dragging.value
+    )
 
-    const onEvents = $q.platform.is.mobile === true
-      ? computed(() => (editable.value === true ? { onClick } : {}))
-      : computed(() => (
-        editable.value === true
-          ? {
-              onMousedown,
-              onClick,
-              onKeydown,
-              onKeyup
-            }
-          : {}
-      ))
+    const onEvents = $q.platform.is.mobile
+      ? computed(() => (editable.value ? { onClick } : {}))
+      : computed(() =>
+          editable.value
+            ? {
+                onMousedown,
+                onClick,
+                onKeydown,
+                onKeyup
+              }
+            : {}
+        )
 
-    const attrs = computed(() => (
-      editable.value === true
+    const attrs = computed(() =>
+      editable.value
         ? { tabindex: props.tabindex }
-        : { [ `aria-${ props.disable === true ? 'disabled' : 'readonly' }` ]: 'true' }
-    ))
+        : {
+            [`aria-${props.disable ? 'disabled' : 'readonly'}`]: 'true'
+          }
+    )
 
     const circularProps = computed(() => {
       const agg = {}
       commonPropsName.forEach(name => {
-        agg[ name ] = props[ name ]
+        agg[name] = props[name]
       })
       return agg
     })
 
-    function pan (event) {
+    function pan(event) {
       if (event.isFinal) {
         updatePosition(event.evt, true)
         dragging.value = false
+        return
       }
-      else if (event.isFirst) {
+
+      if (event.isFirst) {
         updateCenterPosition()
         dragging.value = true
-        updatePosition(event.evt)
       }
-      else {
-        updatePosition(event.evt)
-      }
+
+      updatePosition(event.evt, false)
     }
 
-    const directives = computed(() => {
-      return [ [
-        TouchPan,
-        pan,
-        void 0,
-        { prevent: true, stop: true, mouse: true }
-      ] ]
-    })
+    const directives = computed(() => [
+      [TouchPan, pan, void 0, { prevent: true, stop: true, mouse: true }]
+    ])
 
-    function updateCenterPosition () {
+    function updateCenterPosition() {
       const { top, left, width, height } = proxy.$el.getBoundingClientRect()
       centerPosition = {
         top: top + height / 2,
@@ -155,76 +162,72 @@ export default createComponent({
       }
     }
 
-    function onMousedown (evt) {
+    function onMousedown(evt) {
       updateCenterPosition()
-      updatePosition(evt)
+      updatePosition(evt, false)
     }
 
-    function onClick (evt) {
+    function onClick(evt) {
       updateCenterPosition()
       updatePosition(evt, true)
     }
 
-    function onKeydown (evt) {
-      if (!keyCodes.includes(evt.keyCode)) {
-        return
-      }
+    function onKeydown(evt) {
+      if (!keyCodes.includes(evt.keyCode)) return
 
       stopAndPrevent(evt)
 
-      const
-        stepVal = ([ 34, 33 ].includes(evt.keyCode) ? 10 : 1) * step.value,
-        offset = [ 34, 37, 40 ].includes(evt.keyCode) ? -stepVal : stepVal
+      const stepVal = ([34, 33].includes(evt.keyCode) ? 10 : 1) * step.value,
+        offset = [34, 37, 40].includes(evt.keyCode) ? -stepVal : stepVal
 
       model.value = between(
-        parseFloat((model.value + offset).toFixed(decimals.value)),
+        Number.parseFloat((model.value + offset).toFixed(decimals.value)),
         innerMin.value,
         innerMax.value
       )
 
-      updateValue()
+      updateValue(false)
     }
 
-    function updatePosition (evt, change) {
-      const
-        pos = position(evt),
+    function updatePosition(evt, change) {
+      const pos = position(evt),
         height = Math.abs(pos.top - centerPosition.top),
-        distance = Math.sqrt(
-          height ** 2
-          + Math.abs(pos.left - centerPosition.left) ** 2
-        )
+        distance = Math.hypot(height, pos.left - centerPosition.left)
 
       let angle = Math.asin(height / distance) * (180 / Math.PI)
 
       if (pos.top < centerPosition.top) {
         angle = centerPosition.left < pos.left ? 90 - angle : 270 + angle
-      }
-      else {
+      } else {
         angle = centerPosition.left < pos.left ? angle + 90 : 270 - angle
       }
 
-      if (props.angle) {
+      if ($q.lang.rtl) {
+        angle = normalizeToInterval(-angle - props.angle, 0, 360)
+      } else if (props.angle) {
         angle = normalizeToInterval(angle - props.angle, 0, 360)
       }
 
-      if ($q.lang.rtl === true) {
-        angle = 360 - angle
-      }
+      if (props.reverse) angle = 360 - angle
 
       let newModel = props.min + (angle / 360) * (props.max - props.min)
 
       if (step.value !== 0) {
         const modulo = newModel % step.value
 
-        newModel = newModel - modulo
-          + (Math.abs(modulo) >= step.value / 2 ? (modulo < 0 ? -1 : 1) * step.value : 0)
+        newModel =
+          newModel -
+          modulo +
+          (Math.abs(modulo) >= step.value / 2
+            ? (modulo < 0 ? -1 : 1) * step.value
+            : 0)
 
-        newModel = parseFloat(newModel.toFixed(decimals.value))
+        newModel = Number.parseFloat(newModel.toFixed(decimals.value))
       }
 
       newModel = between(newModel, innerMin.value, innerMax.value)
 
-      emit('drag-value', newModel)
+      emit('dragValue', newModel)
 
       if (model.value !== newModel) {
         model.value = newModel
@@ -233,20 +236,23 @@ export default createComponent({
       updateValue(change)
     }
 
-    function onKeyup (evt) {
+    function onKeyup(evt) {
       if (keyCodes.includes(evt.keyCode)) {
         updateValue(true)
       }
     }
 
-    function updateValue (change) {
-      props.modelValue !== model.value && emit('update:modelValue', model.value)
-      change === true && emit('change', model.value)
+    function updateValue(change) {
+      if (props.modelValue !== model.value) {
+        emit('update:modelValue', model.value)
+      }
+
+      if (change) emit('change', model.value)
     }
 
     const formAttrs = useFormAttrs(props)
 
-    function getNameInput () {
+    function getNameInput() {
       return h('input', formAttrs.value)
     }
 
@@ -268,7 +274,7 @@ export default createComponent({
         default: slots.default
       }
 
-      if (editable.value === true && props.name !== void 0) {
+      if (editable.value && props.name !== void 0) {
         child.internal = getNameInput
       }
 

@@ -8,24 +8,22 @@
       v-model="hex"
       default-view="palette"
       :palette="[
-        '#019A9D', '#D9B801', '#E8045A', '#B2028A',
-        '#2A0449', '#019A9D'
+        '#019A9D',
+        '#D9B801',
+        '#E8045A',
+        '#B2028A',
+        '#2A0449',
+        '#019A9D'
       ]"
       class="my-picker"
     />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      hex: ref('#FF00FF')
-    }
-  }
-}
+const hex = ref('#FF00FF')
 </script>
 
 <style lang="sass" scoped>

@@ -5,10 +5,15 @@
       <q-toggle label="Hide no data" v-model="hideNoData" />
       <q-toggle label="Hide bottom layer" v-model="hideBottom" />
       <q-toggle label="Hide pagination" v-model="hidePagination" />
-      <q-toggle label="Hide selected rows banner" v-model="hideSelectedBanner" />
+      <q-toggle
+        label="Hide selected rows banner"
+        v-model="hideSelectedBanner"
+      />
     </div>
 
     <q-table
+      flat
+      bordered
       title="Treats"
       :rows="records"
       :columns="columns"
@@ -23,8 +28,8 @@
   </div>
 </template>
 
-<script>
-import { ref, computed } from 'vue'
+<script setup>
+import { computed, ref } from 'vue'
 
 const columns = [
   {
@@ -36,28 +41,35 @@ const columns = [
     format: val => `${val}`,
     sortable: true
   },
-  { name: 'calories', align: 'center', label: 'Calories', field: 'calories', sortable: true },
+  {
+    name: 'calories',
+    align: 'center',
+    label: 'Calories',
+    field: 'calories',
+    sortable: true
+  },
   { name: 'fat', label: 'Fat (g)', field: 'fat', sortable: true },
   { name: 'carbs', label: 'Carbs (g)', field: 'carbs' }
 ]
 
 const rows = [
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24
   },
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37
   },
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23
   },
   {
@@ -69,13 +81,13 @@ const rows = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49
   },
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94
   },
   {
@@ -93,34 +105,23 @@ const rows = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51
   },
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65
   }
+  // #endregion
 ]
 
-export default {
-  setup () {
-    const hasData = ref(true)
-
-    return {
-      hasData,
-      hideBottom: ref(false),
-      hideSelectedBanner: ref(false),
-      hideNoData: ref(false),
-      hidePagination: ref(false),
-
-      selected: ref([rows[ 1 ]]),
-
-      columns,
-
-      records: computed(() => hasData.value === true ? rows : [])
-    }
-  }
-}
+const hasData = ref(true)
+const hideBottom = ref(false)
+const hideSelectedBanner = ref(false)
+const hideNoData = ref(false)
+const hidePagination = ref(false)
+const selected = ref([rows[1]])
+const records = computed(() => (hasData.value ? rows : []))
 </script>

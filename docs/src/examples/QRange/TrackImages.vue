@@ -44,23 +44,17 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
 // supports URL too!
-// or relative path (if on Quasar CLI / Vite / Vue CLI)
-// or ~assets/some-image.png (if on Quasar CLI)
-const img = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAH0lEQVQoU2NkYGAwZkAFZ5G5jPRRgOYEVDeB3EBjBQBOZwTVugIGyAAAAABJRU5ErkJggg=='
+// or relative path (if on Quasar CLI / Vite Plugin)
+// or ~@/assets/some-image.png (if on Quasar CLI)
+const img =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAH0lEQVQoU2NkYGAwZkAFZ5G5jPRRgOYEVDeB3EBjBQBOZwTVugIGyAAAAABJRU5ErkJggg=='
 
-export default {
-  setup () {
-    return {
-      model: ref({
-        min: 3,
-        max: 7
-      }),
-      img
-    }
-  }
-}
+const model = ref({
+  min: 3,
+  max: 7
+})
 </script>

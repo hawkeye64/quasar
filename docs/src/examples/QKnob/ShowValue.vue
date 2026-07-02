@@ -59,20 +59,17 @@
       track-color="grey-3"
     >
       <q-avatar size="60px">
-        <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg">
+        <img
+          draggable="false"
+          src="https://cdn.quasar.dev/logo-v2/svg/logo.svg"
+        />
       </q-avatar>
     </q-knob>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      value: ref(81)
-    }
-  }
-}
+const value = ref(81)
 </script>

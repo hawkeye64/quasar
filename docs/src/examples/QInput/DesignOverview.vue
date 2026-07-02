@@ -9,7 +9,11 @@
 
       <q-input standout v-model="text" label="Standout" />
 
-      <q-input standout="bg-teal text-white" v-model="text" label="Custom standout" />
+      <q-input
+        standout="bg-teal text-white"
+        v-model="text"
+        label="Custom standout"
+      />
 
       <q-input borderless v-model="text" label="Borderless" />
 
@@ -28,14 +32,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      text: ref('')
-    }
-  }
-}
+const text = ref('')
 </script>

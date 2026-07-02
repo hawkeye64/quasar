@@ -8,66 +8,56 @@
           v-for="n in 30"
           :key="n"
           :data-id="n"
-          class="q-my-md q-pa-sm bg-grey-3"
+          class="q-my-md q-pa-sm bg-grey-9 text-white"
           v-intersection="onIntersection"
         >
-          <q-item-section class="text-center" style="background: #eee">
-            Item #{{ n }}
-          </q-item-section>
+          <q-item-section class="text-center"> Item #{{ n }} </q-item-section>
         </q-item>
       </q-list>
 
       <div class="example-filler" />
     </div>
 
-    <div class="example-state bg-primary text-white overflow-hidden rounded-borders text-center absolute-top-left q-ma-md q-pa-sm">
+    <div
+      class="example-state bg-primary text-white overflow-hidden rounded-borders text-center absolute-top-left q-ma-md q-pa-sm"
+    >
       <transition-group v-if="inView.length > 0" name="in-view" tag="ul">
         <li v-for="i in inView" :key="i" class="in-view-item">
-          {{i}}
+          {{ i }}
         </li>
       </transition-group>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    const inView = ref([])
+function sortAtoi(a, b) {
+  return Number(a) - Number(b)
+}
 
-    function onIntersection (entry) {
-      if (entry.isIntersecting === true) {
-        add(entry.target.dataset.id)
-      }
-      else {
-        remove(entry.target.dataset.id)
-      }
-    }
+const inView = ref([])
 
-    function add (i) {
-      remove(i)
-      inView.value.push(i)
-      inView.value.sort(sortAtoi)
-    }
+function onIntersection(entry) {
+  if (entry.isIntersecting) {
+    add(entry.target.dataset.id)
+  } else {
+    remove(entry.target.dataset.id)
+  }
+}
 
-    function remove (i) {
-      let index
-      while ((index = inView.value.indexOf(i)) > -1) {
-        inView.value.splice(index, 1)
-        inView.value.sort(sortAtoi)
-      }
-    }
+function add(i) {
+  remove(i)
+  inView.value.push(i)
+  inView.value.sort(sortAtoi)
+}
 
-    function sortAtoi (a, b) {
-      return Number(a) - Number(b)
-    }
-
-    return {
-      inView,
-      onIntersection
-    }
+function remove(i) {
+  let index
+  while ((index = inView.value.indexOf(i)) > -1) {
+    inView.value.splice(index, 1)
+    inView.value.sort(sortAtoi)
   }
 }
 </script>

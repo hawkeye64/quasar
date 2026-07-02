@@ -1,18 +1,20 @@
 import { Notify } from 'quasar'
 
-export function copyToClipboard (text) {
+export { slugify } from '../../build/utils.js'
+
+export function copyToClipboard(text) {
   const textArea = document.createElement('textarea')
   textArea.className = 'fixed-top'
   textArea.value = text
-  document.body.appendChild(textArea)
+  document.body.append(textArea)
   textArea.focus()
   textArea.select()
 
   document.execCommand('copy')
-  document.body.removeChild(textArea)
+  textArea.remove()
 }
 
-export function copyHeading (id) {
+export function copyHeading(id) {
   const text = window.location.origin + window.location.pathname + '#' + id
   const el = document.getElementById(id)
 
@@ -22,8 +24,7 @@ export function copyHeading (id) {
 
   if ('replaceState' in history) {
     history.replaceState(history.state, '', `${location.pathname}#${id}`)
-  }
-  else {
+  } else {
     window.location.hash = '#' + id
   }
 
@@ -41,18 +42,4 @@ export function copyHeading (id) {
     actions: [{ icon: 'cancel', color: 'white', dense: true, round: true }],
     timeout: 2000
   })
-}
-
-// eslint-disable-next-line
-const specialRE = /[\s·/_\\,:;\.\(\)\[\]]+/g
-const andRE = /&/g
-const nonWordRE = /[^\w-]+/g
-const multipleDashRE = /--+/g
-
-export function slugify (str) {
-  return String(str).toLowerCase()
-    .replace(specialRE, '-')
-    .replace(andRE, '-and-')
-    .replace(nonWordRE, '')
-    .replace(multipleDashRE, '-')
 }

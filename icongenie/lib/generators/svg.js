@@ -1,10 +1,10 @@
-const svgo = require('svgo')
-const { writeFile } = require('fs')
-const { posterize } = require('potrace')
+import { optimize } from 'svgo'
+import { writeFile } from 'node:fs'
+import { posterize } from 'potrace'
 
-const getSquareIcon = require('../utils/get-square-icon')
+import { getSquareIcon } from '../utils/get-square-icon.js'
 
-module.exports = async function (file, opts, done) {
+export default async function svg(file, opts, done) {
   const img = getSquareIcon({
     file,
     icon: opts.icon,
@@ -20,10 +20,8 @@ module.exports = async function (file, opts, done) {
 
   const buffer = await img.toBuffer()
 
-  posterize(buffer, params, (_, svg) => {
-    const svgOutput = new svgo({})
-    svgOutput.optimize(svg).then(res => {
-      writeFile(file.absoluteName, res.data, done)
-    })
+  posterize(buffer, params, (_, svgToOptimize) => {
+    const res = optimize(svgToOptimize)
+    writeFile(file.absoluteName, res.data, done)
   })
 }

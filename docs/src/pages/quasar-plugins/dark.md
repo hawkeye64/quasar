@@ -11,12 +11,9 @@ related:
 For a better understanding of this Quasar plugin, please head to the Style & Identity [Dark Mode](/style/dark-mode) page.
 :::
 
-## Dark API
+<DocApi file="Dark" />
 
-<doc-api file="Dark" />
-
-## Installation
-This plugin is automatically installed. No need to do anything but directly use it.
+<DocInstall title="Configuration" config="dark" />
 
 ## Usage
 
@@ -51,7 +48,7 @@ On a **SSR build**, you may want to set this from your `/src/App.vue`:
 import { useQuasar } from 'quasar'
 
 export default {
-  setup () {
+  setup() {
     const $q = useQuasar()
 
     // calling here; equivalent to when component is created
@@ -81,42 +78,29 @@ Dark.set(true) // or false or "auto"
 Dark.toggle()
 ```
 
-### Through quasar.conf.js
-
-You can also use `/quasar.conf.js` to set the Dark mode status:
-
-```js
-framework: {
-  config: {
-    dark: 'auto' // or Boolean true/false
-  }
-}
-```
-
 ## Note about SSR
 
 When on a SSR build:
 
-* `import { Dark } from 'quasar'` method of using Dark mode will not error out but it will not work (won't do anything). But you can use the other two ways (see previous section). We recommend through quasar.conf.js.
-* It's preferred to avoid setting Dark mode to 'auto' for SSR builds. It's because the client dark mode preference cannot be inferred, so SSR will always render in light mode then when the client takes over, it will switch to Dark (if it will be the case). As a result, a quick flicker of the screen will occur.
+- Import `Dark` from 'quasar' method of using Dark mode will not error out but it will not work (won't do anything). But, you can use the [Inside of a Vue file](/quasar-plugins/dark#inside-of-a-vue-file) approach or the [Configuration](/quasar-plugins/dark#configuration) (recommended) approach.
+- It's preferred to avoid setting Dark mode to 'auto' for SSR builds. It's because the client dark mode preference cannot be inferred, so SSR will always render in light mode then when the client takes over, it will switch to Dark (if it will be the case). As a result, a quick flicker of the screen will occur.
 
 ## Watching for status change
 
-```vue
+```html
 <template>...</template>
 
-<script>
-import { useQuasar } from 'quasar'
-import { watch } from 'vue'
+<script setup>
+  import { useQuasar } from 'quasar'
+  import { watch } from 'vue'
 
-export default {
-  setup () {
-    const $q = useQuasar()
+  const $q = useQuasar()
 
-    watch(() => $q.dark.isActive, val => {
+  watch(
+    () => $q.dark.isActive,
+    val => {
       console.log(val ? 'On dark mode' : 'On light mode')
-    })
-  }
-}
+    }
+  )
 </script>
 ```

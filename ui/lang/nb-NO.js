@@ -14,31 +14,47 @@ export default {
     create: 'Lag',
     search: 'Søk',
     filter: 'Filter',
-    refresh: 'Oppdater'
+    refresh: 'Oppdater',
+    expand: label => (label ? `Utvid "${label}"` : 'Utvide'),
+    collapse: label => (label ? `Skjul "${label}"` : 'Kollapse')
   },
   date: {
     days: 'Søndag_Mandag_Tirsdag_Onsdag_Torsdag_Fredag_Lørdag'.split('_'),
     daysShort: 'Søn_Man_Tir_Ons_Tor_Fre_Lør'.split('_'),
-    months: 'Januar_Februar_Mars_April_Mai_Juni_Juli_August_September_Oktober_November_Desember'.split('_'),
+    months:
+      'Januar_Februar_Mars_April_Mai_Juni_Juli_August_September_Oktober_November_Desember'.split(
+        '_'
+      ),
     monthsShort: 'Jan_Feb_Mar_Apr_Mai_Jun_Jul_Aug_Sep_Okt_Nov_Des'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'dager'
+    pluralDay: 'dager',
+    prevMonth: 'Forrige måned',
+    nextMonth: 'Neste måned',
+    prevYear: 'Forrige år',
+    nextYear: 'Neste år',
+    today: 'I dag',
+    prevRangeYears: range => `Forrige ${range} år`,
+    nextRangeYears: range => `Neste ${range} år`
   },
   table: {
     noData: 'Ingen data tilgjengelig',
     noResults: 'Ingen treff i data funnet',
     loading: 'Laster...',
-    row: 'rad',
-    selectedRecords: rows => (
-      rows > 0
-        ? rows + ' row' + (rows === 1 ? '' : 's') + ' valgt.'
-        : 'Ingen valgte rader.'
-    ),
+    selectedRecords: rows =>
+      rows === 1
+        ? '1 rad valgt.'
+        : (rows === 0 ? 'Ingen' : rows) + ' rader valgt.',
     recordsPerPage: 'Rader pr side:',
     allRows: 'Alle',
-    pagination: (start, end, total) => start + '-' + end + ' av ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' av ' + total,
     columns: 'Kolonner'
+  },
+  pagination: {
+    first: 'Første side',
+    prev: 'Forrige side',
+    next: 'Neste side',
+    last: 'Siste side'
   },
   editor: {
     url: 'URL',
@@ -58,7 +74,7 @@ export default {
     right: 'Høyrestill',
     justify: 'Tilpasset bredde',
     print: 'Skriv ut',
-    outdent: 'Midre innrykk',
+    outdent: 'Mindre innrykk',
     indent: 'Større innrykk',
     removeFormat: 'Fjern formatering',
     formatting: 'Formatering',
@@ -81,7 +97,7 @@ export default {
     size4: 'Medium-stor',
     size5: 'Stor',
     size6: 'Veldig stor',
-    size7: 'Maximum',
+    size7: 'Maksimal',
     defaultFont: 'Normal font',
     viewSource: 'Se kilde'
   },

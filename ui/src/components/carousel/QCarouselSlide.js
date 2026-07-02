@@ -1,9 +1,9 @@
-import { h, computed } from 'vue'
+import { computed, h } from 'vue'
 
-import { createComponent } from '../../utils/private/create.js'
-import { usePanelChildProps } from '../../composables/private/use-panel.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { usePanelChildProps } from '../../composables/private.use-panel/use-panel.js'
 
-import { hSlot } from '../../utils/private/render.js'
+import { hSlot } from '../../utils/private.render/render.js'
 
 export default createComponent({
   name: 'QCarouselSlide',
@@ -13,16 +13,19 @@ export default createComponent({
     imgSrc: String
   },
 
-  setup (props, { slots }) {
-    const style = computed(() => (
-      props.imgSrc
-        ? { backgroundImage: `url("${ props.imgSrc }")` }
-        : {}
-    ))
+  setup(props, { slots }) {
+    const style = computed(() =>
+      props.imgSrc ? { backgroundImage: `url("${props.imgSrc}")` } : {}
+    )
 
-    return () => h('div', {
-      class: 'q-carousel__slide',
-      style: style.value
-    }, hSlot(slots.default))
+    return () =>
+      h(
+        'div',
+        {
+          class: 'q-carousel__slide',
+          style: style.value
+        },
+        hSlot(slots.default)
+      )
   }
 })

@@ -7,23 +7,11 @@
       class="text-weight-bold"
     />
 
-    <q-toggle
-      v-model="vertical"
-      label="Vertical"
-      color="purple"
-    />
+    <q-toggle v-model="vertical" label="Vertical" color="purple" />
 
-    <q-toggle
-      v-model="arrows"
-      label="Arrows"
-      color="purple"
-    />
+    <q-toggle v-model="arrows" label="Arrows" color="purple" />
 
-    <q-toggle
-      v-model="navigation"
-      label="Navigation"
-      color="purple"
-    />
+    <q-toggle v-model="navigation" label="Navigation" color="purple" />
 
     <div class="row items-center q-mb-md">
       <div>Navigation position:</div>
@@ -53,6 +41,7 @@
           {{ lorem }}
         </div>
       </q-carousel-slide>
+      <!-- #region -->
       <q-carousel-slide name="tv" class="column no-wrap flex-center">
         <q-icon name="live_tv" size="56px" />
         <div class="q-mt-md text-center">
@@ -71,41 +60,33 @@
           {{ lorem }}
         </div>
       </q-carousel-slide>
+      <!-- #endregion -->
     </q-carousel>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, watch } from 'vue'
 
-export default {
-  setup () {
-    const navPos = ref('bottom')
-    const vertical = ref(false)
+const navPos = ref('bottom')
+const vertical = ref(false)
 
-    watch(vertical, val => {
-      navPos.value = val === true
-        ? 'right'
-        : 'bottom'
-    })
+watch(vertical, val => {
+  navPos.value = val ? 'right' : 'bottom'
+})
 
-    return {
-      padding: ref(true),
-      vertical,
-      arrows: ref(true),
-      navigation: ref(true),
+const padding = ref(true)
+const arrows = ref(true)
+const navigation = ref(true)
 
-      navPos,
-      navigationPositions: [
-        { value: 'top', label: 'top' },
-        { value: 'right', label: 'right' },
-        { value: 'bottom', label: 'bottom (default)' },
-        { value: 'left', label: 'left' }
-      ],
+const navigationPositions = [
+  { value: 'top', label: 'top' },
+  { value: 'right', label: 'right' },
+  { value: 'bottom', label: 'bottom (default)' },
+  { value: 'left', label: 'left' }
+]
 
-      slide: ref('style'),
-      lorem: 'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Itaque voluptatem totam, architecto cupiditate officia rerum, error dignissimos praesentium libero ab nemo.'
-    }
-  }
-}
+const slide = ref('style')
+const lorem =
+  'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Itaque voluptatem totam, architecto cupiditate officia rerum, error dignissimos praesentium libero ab nemo.'
 </script>

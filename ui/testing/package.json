@@ -1,0 +1,30 @@
+{
+  "name": "quasar-ui-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:watch:ui": "vitest watch --ui",
+    "coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "clipboardy": "^5.3.1"
+  },
+  "devDependencies": {
+    "@quasar/extras": "workspace:*",
+    "@quasar/vite-plugin": "workspace:*",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vitest/ui": "^4.1.9",
+    "@vue/test-utils": "^2.4.10",
+    "acorn": "^8.17.0",
+    "fs-extra": "^11.3.6",
+    "jsdom": "29.1.1",
+    "prompts": "^2.4.2",
+    "tinyglobby": "^0.2.17",
+    "vite": "^8.1.2",
+    "vitest": "^4.1.9",
+    "vue": "^3.5.39",
+    "vue-router": "^5.1.0"
+  }
+}

@@ -1,7 +1,13 @@
-import quasar from './plugin'
-import transformAssetUrls from 'quasar/dist/transforms/loader-asset-urls.json'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
-export {
-  quasar,
-  transformAssetUrls
-}
+import { quasarPath } from './quasar-path.js'
+
+export { default as quasar } from './plugin.js'
+
+export const transformAssetUrls = JSON.parse(
+  readFileSync(
+    join(quasarPath, 'dist/transforms/loader-asset-urls.json'),
+    'utf8'
+  )
+)

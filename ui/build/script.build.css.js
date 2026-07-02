@@ -1,106 +1,122 @@
-const path = require('path')
-const sass = require('sass')
-const rtl = require('postcss-rtlcss')
-const postcss = require('postcss')
-const cssnano = require('cssnano')
-const autoprefixer = require('autoprefixer')
+import { compileAsync } from 'sass-embedded'
+import rtl from 'postcss-rtlcss'
+import postcss from 'postcss'
+import { transform } from 'lightningcss'
 
-const buildConf = require('./build.conf')
-const buildUtils = require('./build.utils')
-const prepareDiff = require('./prepare-diff')
+import {
+  BUILD_TARGETS,
+  banner,
+  readFile,
+  resolveToRoot,
+  writeFile
+} from './build.utils.js'
 
-const nano = postcss([
-  cssnano({
-    preset: [ 'default', {
-      mergeLonghand: false,
-      convertValues: false,
-      cssDeclarationSorter: false,
-      reduceTransforms: false
-    } ]
-  })
-])
+const postCssRtl = postcss([rtl({})])
+const sassUseRE = /@use\s+['"][^'"]+['"]/g
 
-function getConcatenatedContent (src, noBanner) {
-  return new Promise(resolve => {
-    let code = noBanner !== true
-      ? buildConf.banner
-      : ''
+function moveUseStatementsToTop(code) {
+  const useStatements = code.match(sassUseRE)
 
-    src.forEach(file => {
-      code += buildUtils.readFile(file) + '\n'
-    })
+  return useStatements === null
+    ? code
+    : [...new Set(useStatements)].join('\n') +
+        '\n' +
+        code.replace(sassUseRE, '')
+}
 
-    code = code
-      // remove imports
-      .replace(/@import\s+'[^']+'[\s\r\n]+/g, '')
-      // remove comments
-      .replace(/(\/\*[\w'-.,`\s\r\n*@]*\*\/)|(\/\/[^\r\n]*)/g, '')
-      // remove unnecessary newlines
-      .replace(/[\r\n]+/g, '\r\n')
-
-    resolve(code)
+function compileSass(src) {
+  return compileAsync(src, {
+    silenceDeprecations: ['import']
   })
 }
 
-function generateUMD (code, middleName, ext = '') {
-  return buildUtils.writeFile(`dist/quasar${ middleName }${ ext }.css`, code, true)
-    .then(code => nano.process(code, { from: void 0 }))
-    .then(code => buildUtils.writeFile(`dist/quasar${ middleName }${ ext }.prod.css`, code.css, true))
+function getConcatenatedContent(src) {
+  let code = ''
+
+  src.forEach(file => {
+    code += readFile(file) + '\n'
+  })
+
+  code = code
+    // remove imports
+    .replaceAll(/@import\s+'[^']+'[\s\r\n]+/g, '')
+    // remove comments
+    .replaceAll(/(\/\*[\w'-.,`\s\r\n*@]*\*\/)|(\/\/[^\r\n]*)/g, '')
+
+  code = moveUseStatementsToTop(code)
+    // remove unnecessary newlines
+    .replaceAll(/[\r\n]+/g, '\r\n')
+
+  return banner + code
 }
 
-function renderAsset (cssCode, middleName = '') {
-  return postcss([autoprefixer]).process(cssCode, { from: void 0 })
-    .then(code => {
-      code.warnings().forEach(warn => {
-        console.warn(warn.toString())
-      })
-      return code.css
+function generateUMD(code, middleName, ext = '') {
+  return writeFile(`dist/quasar${middleName}${ext}.css`, code, {
+    summary: true,
+    gzip: true
+  }).then(textCode => {
+    const { code: transformedCode } = transform({
+      code: Buffer.from(textCode),
+      minify: true,
+      targets: BUILD_TARGETS.LIGHTNING_CSS
     })
-    .then(code => Promise.all([
-      generateUMD(code, middleName),
-      postcss([rtl({})]).process(code, { from: void 0 })
-        .then(code => generateUMD(code.css, middleName, '.rtl'))
-    ]))
+
+    return writeFile(
+      `dist/quasar${middleName}${ext}.prod.css`,
+      transformedCode,
+      { summary: true, gzip: true }
+    )
+  })
 }
 
-function generateBase (source) {
-  const src = path.join(__dirname, '..', source)
-  const sassDistDest = path.join(__dirname, '../dist/quasar.sass')
-
-  const result = sass.renderSync({ file: src })
-
-  const cssCode = result.css.toString()
-  const depsList = result.stats.includedFiles
-
+function renderAsset(cssCode, middleName = '') {
   return Promise.all([
-    renderAsset(cssCode),
-
-    getConcatenatedContent(depsList)
-      .then(code => buildUtils.writeFile(sassDistDest, code))
+    generateUMD(cssCode, middleName),
+    postCssRtl
+      .process(cssCode, { from: void 0 })
+      .then(transformedCode =>
+        generateUMD(transformedCode.css, middleName, '.rtl')
+      )
   ])
 }
 
-function generateAddon (source) {
-  const src = path.join(__dirname, '..', source)
+async function generateBase(source) {
+  const src = resolveToRoot(source)
+  const sassDistDest = resolveToRoot('dist/quasar.sass')
 
-  const result = sass.renderSync({ file: src })
+  const result = await compileSass(src)
+
+  // remove @charset declaration -- breaks Vite usage
+  const cssCode = result.css.toString().replace('@charset "UTF-8";', '')
+  const depsList = result.loadedUrls
+  const concatenatedContent = getConcatenatedContent(depsList)
+
+  return Promise.all([
+    renderAsset(cssCode),
+    writeFile(sassDistDest, concatenatedContent)
+  ])
+}
+
+async function generateAddon(source) {
+  const src = resolveToRoot(source)
+
+  const result = await compileSass(src)
   const cssCode = result.css.toString()
 
   return renderAsset(cssCode, '.addon')
 }
 
-module.exports = function (withDiff) {
-  if (withDiff === true) {
+export async function buildCss(withDiff) {
+  if (withDiff) {
+    const { prepareDiff } = await import('./prepare-diff.js')
     prepareDiff('dist/quasar.sass')
   }
 
-  Promise
-    .all([
-      generateBase('src/css/index.sass'),
-      generateAddon('src/css/flex-addon.sass')
-    ])
-    .catch(e => {
-      console.error(e)
-      process.exit(1)
-    })
+  await Promise.all([
+    generateBase('src/css/index.sass'),
+    generateAddon('src/css/flex-addon.sass')
+  ]).catch(err => {
+    console.error(err)
+    process.exit(1)
+  })
 }

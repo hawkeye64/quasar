@@ -2,17 +2,39 @@
 title: How To Use Vue
 desc: Quick tutorial about Vue principles and how to use it with Quasar.
 ---
-Before you begin with Quasar, it is a good idea to get acquainted with ES6 and have a fairly good knowledge about how Vue 3 works. ([Quick overview of ES6](https://github.com/lukehoban/es6features) and [ES6 complete list of features](http://es6-features.org/#Constants) -- don't worry, you don't need to understand ALL of ES6). For devs experienced with reactive UIs, the [Vue 3 documentation](https://vuejs.org/) itself takes a half-day at most to read top-to-bottom and will help you understand how Quasar components can be used and configured.
+
+Before you begin with Quasar, it is a good idea to have a fairly good knowledge about how Vue 3 works. For devs experienced with reactive UIs, the [Vue 3 documentation](https://vuejs.org/) itself takes a half-day at most to read top-to-bottom and will help you understand how Quasar components can be used and configured.
 
 ::: tip
 If you are a total beginner to Vue and reactive UI libraries and want a good tutorial, we recommend you take a look at [Vue and Quasar video tutorials](/video-tutorials).
 :::
 
-After reading the Vue documentation, let's clear up some of the most frequently asked questions, like *"How can I use Quasar components, Vue properties, methods and events"*.
+After reading the Vue documentation, let's clear up some of the most frequently asked questions, like _"How can I use Quasar components, Vue properties, methods and events"_.
 
 ## Vue Single File Components (SFC)
 
 You'll be building your Quasar app using `*.vue` files which contain multiple sections: `template` (HTML), `script` (Javascript) and `style` (CSS/SASS/SCSS/Stylus/Less) all in the same file.
+
+Currently, it is recommended to use Composition API with `<script setup>`. Check out [Vue.js documentation](https://vuejs.org/api/sfc-script-setup.html) for more information.
+
+```html
+<template>
+  <!-- you define your Vue template here -->
+</template>
+
+<script setup>
+  // This is where your Javascript goes
+  // to define your Vue component, which
+  // can be a Layout, a Page or your own
+  // component used throughout the app.
+</script>
+
+<style>
+  /* This is where your CSS goes */
+</style>
+```
+
+But you can still use Composition API without `<script setup>` or Options API if you wish. The only difference is within the `<script>` tag.
 
 ```html
 <template>
@@ -20,22 +42,23 @@ You'll be building your Quasar app using `*.vue` files which contain multiple se
 </template>
 
 <script>
-// This is where your Javascript goes
-// to define your Vue component, which
-// can be a Layout, a Page or your own
-// component used throughout the app.
+  // This is where your Javascript goes
+  // to define your Vue component, which
+  // can be a Layout, a Page or your own
+  // component used throughout the app.
 
-export default {
-  //
-}
+  export default {
+    //
+  }
 </script>
 
 <style>
-/* This is where your CSS goes */
+  /* This is where your CSS goes */
 </style>
 ```
 
 ### CSS preprocessors
+
 For the `<style>` tag, you can also use whatever CSS preprocessor you want. [Sass/SCSS](https://sass-lang.com) (recommended) is available out of the box.
 
 You can specify you want your chosen preprocessor to handle the CSS code that you're writing:
@@ -43,21 +66,21 @@ You can specify you want your chosen preprocessor to handle the CSS code that yo
 ```html
 <!-- notice lang="sass" -->
 <style lang="sass">
-.some-div
-  font-size: 15px
+  .some-div
+    font-size: 15px
 </style>
 
 <!-- notice lang="scss" -->
 <style lang="scss">
-.some-div {
-  font-size: 15px;
-}
+  .some-div {
+    font-size: 15px;
+  }
 </style>
 ```
 
 ## Using Quasar Directives
 
-Quasar comes with a few custom [Vue Directives](https://vuejs.org/guide/custom-directive.html). These directives can be applied on almost any DOM element or Component.
+Quasar comes with a few custom [Vue Directives](https://vuejs.org/guide/reusability/custom-directives.html). These directives can be applied on almost any DOM element or Component.
 
 Example of a Quasar directive:
 
@@ -74,7 +97,8 @@ Example of a Quasar directive:
 ```
 
 ## Using Quasar Components
-Quasar components have names beginning with "Q" like "QBtn" or "QElementResizeObserver". In order to use them, you need to add a reference to them in `/quasar.conf.js`.
+
+Quasar components have names beginning with "Q" like "QBtn" or "QElementResizeObserver". In order to use them, you need to add a reference to them in the `/quasar.config` file.
 
 Let's take the following example with a QBtn and QIcon and then we'll see how to embed these components in our app:
 
@@ -88,15 +112,16 @@ Let's take the following example with a QBtn and QIcon and then we'll see how to
 > Notice how QBtn is used in the Vue HTML template as `<q-btn>`. If we'd import QElementResizeObserver, then we'd use it in template as `<q-element-resize-observer>`.
 
 ## Using Quasar Plugins
+
 Quasar Plugins are features that you can use both in your Vue files as well as outside of them, like Notify, BottomSheet, AppVisibility and so on.
 
 ::: warning
-**Before using them in your app**, you need to add a reference to them in `/quasar.conf.js` (as shown below).
+**Before using them in your app**, you need to add a reference to them in the `/quasar.config` file (as shown below).
 :::
 
 ```js
 framework: {
-  plugins: [ 'Notify', 'BottomSheet' ]
+  plugins: ['Notify', 'BottomSheet']
 }
 ```
 
@@ -119,22 +144,14 @@ Let's take Notify as an example and see how we can then use it. In a Vue file, y
   </div>
 </template>
 
-<script>
-import { useQuasar } from 'quasar'
+<script setup>
+  import { useQuasar } from 'quasar'
 
-export default {
-  setup () {
-    const $q = useQuasar()
+  const $q = useQuasar()
 
-    function showNotification () {
-      $q.notify('Some other message')
-    }
-
-    return {
-      showNotification
-    }
+  function showNotification() {
+    $q.notify('Some other message')
   }
-}
 </script>
 ```
 
@@ -145,7 +162,7 @@ An equivalent script section in Options API:
 ```js
 export default {
   methods: {
-    showNotification () {
+    showNotification() {
       this.$q.notify('Some other message')
     }
   }
@@ -190,17 +207,19 @@ Both forms are valid and can be used, except for UMD where you must explicitly c
 Some eslint-plugin-vue linting rules actually enforce using the self-closing syntax.
 
 ## Handling Vue Properties
+
 Let's take some examples with a bogus Quasar component (we will call it QBogus) that supports the properties below. We will discuss each of the types of Vue properties in the below sections.
 
-| Vue Property | Type | Description |
-| --- | --- | --- |
-| `infinite` | Boolean | Infinite slides scrolling |
-| `size` | String | Thickness of loading bar. |
-| `speed` | Number | How fast should loading bar update its value (in milliseconds). |
-| `columns` | Object | Object defining columns (see "Columns Definition" below). |
-| `offset` | Array | Array with two numbers. Offset on horizontal and vertical (in pixels). |
+| Vue Property | Type    | Description                                                            |
+| ------------ | ------- | ---------------------------------------------------------------------- |
+| `infinite`   | Boolean | Infinite slides scrolling                                              |
+| `size`       | String  | Thickness of loading bar.                                              |
+| `speed`      | Number  | How fast should loading bar update its value (in milliseconds).        |
+| `columns`    | Object  | Object defining columns (see "Columns Definition" below).              |
+| `offset`     | Array   | Array with two numbers. Offset on horizontal and vertical (in pixels). |
 
 ### Boolean Property
+
 A boolean property means it only accepts a strictly Boolean value. The values will not be cast to Boolean, so you must ensure you are using a true Boolean.
 
 ::: tip
@@ -214,17 +233,9 @@ If you are trying to control that property and change it dynamically at runtime,
   <q-bogus :infinite="myInfiniteVariable" />
 </template>
 
-<script>
-import { ref } from 'vue'
-
-export default {
-  setup () {
-    const myInfiniteVariable = ref(false)
-    return {
-      myInfiniteVariable
-    }
-  }
-}
+<script setup>
+  import { ref } from 'vue'
+  const myInfiniteVariable = ref(false)
 </script>
 ```
 
@@ -243,6 +254,7 @@ If, on the other hand, you know this Boolean value is not going to change, you c
 ```
 
 ### String Property
+
 As you can imagine, Strings are required as a value for this type of property.
 
 ```html
@@ -261,18 +273,11 @@ As you can imagine, Strings are required as a value for this type of property.
   <q-bogus :size="mySize" />
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+  import { ref } from 'vue'
 
-export default {
-  setup () {
-    // notice String as value
-    const mySize = ref('16px')
-    return {
-      mySize
-    }
-  }
-}
+  // notice String as value
+  const mySize = ref('16px')
 </script>
 ```
 
@@ -290,18 +295,11 @@ export default {
   <q-bogus :speed="myNumber" />
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+  import { ref } from 'vue'
 
-export default {
-  setup () {
-    // notice Number as value
-    const myNumber = ref(50)
-    return {
-      myNumber
-    }
-  }
-}
+  // notice Number as value
+  const myNumber = ref(50)
 </script>
 ```
 
@@ -311,31 +309,18 @@ export default {
 <template>
   <!-- Case 1. Direct assignment. -->
   <q-bogus :columns="{key: 'value', anotherKey: 'another value'}" />
-  <!-- or a more elegant way for Case 1: -->
-  <q-bogus
-    :columns="{
-      key: 'value',
-      anotherKey: 'another value'
-    }"
-  />
 
   <!-- Case 2. Assignment through a scope variable -->
   <q-bogus :columns="myColumns" />
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+  import { ref } from 'vue'
 
-export default {
-  setup () {
-    const myColumns = ref({
-      key: 'value',
-      anotherKey: 'another value'
-    })
-
-    return { myColumns }
-  }
-}
+  const myColumns = ref({
+    key: 'value',
+    anotherKey: 'another value'
+  })
 </script>
 ```
 
@@ -350,24 +335,19 @@ export default {
   <q-bogus :offset="myOffset" />
 </template>
 
-<script>
-export default {
-  setup () {
-    return {
-      myOffset: [10, 20]
-    }
-  }
-}
+<script setup>
+  const myOffset = [10, 20]
 </script>
 ```
 
 ## Handling Vue Methods
+
 You will notice throughout the documentation that some Quasar components have methods that can be called. Example:
 
-| Vue Method | Description |
-| --- | --- |
-| `next()` | Goes to next slide. |
-| `previous(doneFn)` | Goes to previous slide. |
+| Vue Method           | Description              |
+| -------------------- | ------------------------ |
+| `next()`             | Goes to next slide.      |
+| `previous(doneFn)`   | Goes to previous slide.  |
 | `toggleFullscreen()` | Toggles fullscreen mode. |
 
 In order for you to access these methods, you will need to set a Vue reference on the component first. Here's an example with Composition API:
@@ -381,26 +361,18 @@ In order for you to access these methods, you will need to set a Vue reference o
   <q-bogus ref="myRef" />
 </template>
 
-<script>
-import { ref, onMounted } from 'vue'
+<script setup>
+  import { useTemplateRef, onMounted } from 'vue'
 
-export default {
-  setup () {
-    const myRef = ref(null)
+  const myRef = useTemplateRef('myRef')
 
-    // after the component has mounted into DOM:
-    onMounted(() => {
-      // we call "next()" method of our component
-      myRef.value.next()
-    })
-    // calling before mount point might result in errors
-    // as Vue hasn't yet prepared the Vue reference
-
-    // we expose myRef to the scope so Vue
-    // can use it in the template as well
-    return { myRef }
-  }
-}
+  // after the component has mounted into DOM:
+  onMounted(() => {
+    // we call "next()" method of our component
+    myRef.value.next()
+  })
+  // calling before mount point might result in errors
+  // as Vue hasn't yet prepared the Vue reference
 </script>
 ```
 
@@ -416,28 +388,29 @@ And here is the same example, but with Options API:
 </template>
 
 <script>
-export default {
-  // we can now access `this.$refs.myRef`
-  // an example on the mounted() Vue component hook
-  mounted () {
-    // calling "next()" method:
-    this.$refs.myRef.next()
+  export default {
+    // we can now access `this.$refs.myRef`
+    // an example on the mounted() Vue component hook
+    mounted() {
+      // calling "next()" method:
+      this.$refs.myRef.next()
+    }
+    // calling before mount point might result in errors
+    // as Vue hasn't yet prepared the Vue reference
   }
-  // calling before mount point might result in errors
-  // as Vue hasn't yet prepared the Vue reference
-}
 </script>
 ```
 
 ## Handling Vue Events
+
 You will notice throughout the documentation that some Quasar components have a section called "Vue Events".
 
 Example of "Vue Events":
 
-| Event Name | Description |
-| --- | --- |
-| `@show` | Triggered right after the Modal is shown. |
-| `@hide` | Triggered right after the Modal is hidden. |
+| Event Name | Description                                |
+| ---------- | ------------------------------------------ |
+| `@show`    | Triggered right after the Modal is shown.  |
+| `@hide`    | Triggered right after the Modal is hidden. |
 
 In order for you to catch these events, when they are triggered, you will need to add listeners for them on the component itself in the HTML template. Here's an example:
 
@@ -446,24 +419,15 @@ In order for you to catch these events, when they are triggered, you will need t
   <q-bogus @show="doSomething" @hide="doSomethingElse" />
 </template>
 
-<script>
-export default {
-  setup () {
-    function doSomething () {
-      // this method has been called (in this case)
-      // because @show event was triggered by QBogus component
-    }
-
-    function doSomethingElse () {
-      // this method has been called (in this case)
-      // because @hide event was triggered by QBogus component
-    }
-
-    return {
-      doSomething,
-      doSomethingElse
-    }
+<script setup>
+  function doSomething() {
+    // this method has been called (in this case)
+    // because @show event was triggered by QBogus component
   }
-}
+
+  function doSomethingElse() {
+    // this method has been called (in this case)
+    // because @hide event was triggered by QBogus component
+  }
 </script>
 ```

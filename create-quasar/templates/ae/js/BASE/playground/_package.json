@@ -1,0 +1,29 @@
+{
+  "name": "playground",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A Quasar App Extension Playground",
+  <% if (scope.author) { %>
+  "author": "<%= scope.author %>",
+  <% } %>
+  "type": "module",
+  "scripts": {
+    "dev": "quasar dev",
+    "build": "quasar build",
+    "prepare": "quasar prepare --silent",
+    "invoke": "quasar ext invoke <%= scope.aeShortName %>",
+    "cycle": "quasar ext uninvoke <%= scope.aeShortName %> && quasar ext invoke <%= scope.aeShortName %>"
+  },
+  "dependencies": {
+    "@quasar/extras": "^2.0.0",
+    "quasar": "catalog:",
+    "vue": "catalog:",
+    "vue-router": "^5.0.6"
+  },
+  "devDependencies": {
+    "@quasar/app-vite": "catalog:",
+    "@types/node": "^22.19.11",
+    "<%= scope.aeFullName %>": "workspace:*"
+  },
+  "productName": "Quasar App Extension Playground"
+}

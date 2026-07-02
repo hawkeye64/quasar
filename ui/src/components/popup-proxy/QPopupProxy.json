@@ -1,5 +1,5 @@
 {
-  "mixins": [ "composables/private/use-anchor" ],
+  "mixins": ["composables/private.use-anchor/use-anchor"],
 
   "meta": {
     "docsUrl": "https://v2.quasar.dev/vue-components/popup-proxy"
@@ -10,14 +10,14 @@
       "extends": "model-value",
       "type": "Boolean",
       "desc": "Defines the state of the component (shown/hidden); Either use this property (along with a listener for 'update:modelValue' event) OR use v-model directive",
-      "required": false
+      "required": false,
+      "passthrough": true
     },
 
     "breakpoint": {
-      "type": [ "Number", "String" ],
+      "type": ["Number", "String"],
       "desc": "Breakpoint (in pixels) of window width/height (whichever is smaller) from where a Menu will get to be used instead of a Dialog",
-      "default": 450,
-      "examples": [ 992, ":breakpoint=\"1024\"" ],
+      "default": "450",
       "category": "behavior"
     }
   },
@@ -30,11 +30,13 @@
 
   "events": {
     "update:model-value": {
-      "extends": "update:model-value"
+      "extends": "update:model-value",
+      "passthrough": true
     },
 
     "before-show": {
-      "extends": "before-show"
+      "extends": "before-show",
+      "passthrough": true
     },
 
     "show": {
@@ -42,7 +44,8 @@
     },
 
     "before-hide": {
-      "extends": "before-hide"
+      "extends": "before-hide",
+      "passthrough": true
     },
 
     "hide": {
@@ -61,6 +64,25 @@
 
     "toggle": {
       "extends": "toggle"
+    }
+  },
+
+  "computedProps": {
+    "currentComponent": {
+      "type": "Object",
+      "desc": "Access current underlying component (QMenu or QDialog)",
+      "definition": {
+        "type": {
+          "type": "String",
+          "desc": "Component type",
+          "values": ["'dialog'", "'menu'"]
+        },
+        "ref": {
+          "type": "Component",
+          "tsType": "QPopupProxyInnerComponent",
+          "desc": "The actual component (QMenu or QDialog); Access it directly, without '.value'"
+        }
+      }
     }
   }
 }

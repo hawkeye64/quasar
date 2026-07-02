@@ -6,20 +6,18 @@
 
     <q-color
       :model-value="hex"
-      @change="val => { hex = val }"
+      @change="
+        val => {
+          hex = val
+        }
+      "
       style="max-width: 250px"
     />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      hex: ref('#112e1b')
-    }
-  }
-}
+const hex = ref('#112e1b')
 </script>

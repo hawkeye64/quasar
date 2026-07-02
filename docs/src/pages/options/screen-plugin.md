@@ -2,12 +2,13 @@
 title: Screen Plugin
 desc: Quasar plugin that helps in writing a dynamic and responsive UI through Javascript code.
 ---
+
 The Quasar Screen plugin allows you to have a dynamic and responsive UI when dealing with your Javascript code. When possible, it is recommended to use the [responsive CSS classes](/style/visibility#window-width-related) instead, for performance reasons.
 
-## Installation
-You don't need to do anything. The Screen plugin gets installed automatically.
+<DocApi file="Screen" />
 
 ## Usage
+
 Notice `$q.screen` below. This is just a simple usage example.
 
 ```html
@@ -28,12 +29,10 @@ import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 
 export default {
-  setup () {
+  setup() {
     const $q = useQuasar()
     const buttonColor = computed(() => {
-      return $q.screen.lt.md
-        ? 'primary'
-        : 'secondary'
+      return $q.screen.lt.md ? 'primary' : 'secondary'
     })
 
     return { buttonColor }
@@ -81,32 +80,30 @@ Or a sexy variant in Sass:
 
 ### How to enable body classes
 
-In order to enable the behavior above, edit your /quasar.conf.js file like below. Please note that this will increase a bit the time for First Meaningful Paint.
+In order to enable the behavior above, edit your /quasar.config file like below. Please note that this will increase a bit the time for First Meaningful Paint.
 
-```js
-// file: /quasar.conf.js
-
+```js /quasar.config file
 framework: {
   config: {
     screen: {
-      bodyClasses: true // <<< add this
+      bodyClasses: true // [!code highlight]
     }
   }
 }
 ```
 
 ## Configuration
+
 There are a few methods that can be used to tweak how Screen plugin works:
 
-| Method | Description | Example |
-| --- | --- | --- |
-| setSizes(Object) | Change window breakpoints; does NOT also changes CSS breakpoints. | setSizes({ lg: 1024, xl: 2000 }) |
-| setDebounce(Number) | Change the default 100ms debounce to some other value. | setDebounce(500) // 500ms |
+| Method              | Description                                                       | Example                          |
+| ------------------- | ----------------------------------------------------------------- | -------------------------------- |
+| setSizes(Object)    | Change window breakpoints; does NOT also changes CSS breakpoints. | setSizes({ lg: 1024, xl: 2000 }) |
+| setDebounce(Number) | Change the default 100ms debounce to some other value.            | setDebounce(500) // 500ms        |
 
 Examples:
 
-```js
-// inside a Vue component:
+```js Inside a Vue component
 import { useQuasar } from 'quasar'
 
 setup () {
@@ -114,11 +111,9 @@ setup () {
 
   $q.screen.setSizes({ sm: 300, md: 500, lg: 1000, xl: 2000 })
 }
+```
 
-// outside of a Vue component:
+```js Outside of a Vue component
 import { Screen } from 'quasar'
 Screen.setSizes({ sm: 300, md: 500, lg: 1000, xl: 2000 })
 ```
-
-## API
-<doc-api file="Screen" />

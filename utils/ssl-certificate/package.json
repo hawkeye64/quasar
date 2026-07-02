@@ -1,0 +1,34 @@
+{
+  "name": "@quasar/ssl-certificate",
+  "version": "2.0.0",
+  "description": "SSL Certificate for localhost - used by Quasar CLI(s)",
+  "homepage": "https://quasar.dev",
+  "bugs": "https://github.com/quasarframework/quasar/issues",
+  "license": "MIT",
+  "author": {
+    "name": "Razvan Stoenescu",
+    "email": "razvan.stoenescu@gmail.com",
+    "url": "https://github.com/quasarframework"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quasarframework/quasar"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://donate.quasar.dev"
+  },
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "fs-extra": "^11.3.6",
+    "selfsigned": "^5.5.0"
+  },
+  "engines": {
+    "node": ">= 16"
+  }
+}

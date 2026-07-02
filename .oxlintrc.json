@@ -1,0 +1,300 @@
+{
+  "ignorePatterns": [
+    "**/node_modules/",
+    "**/dist/",
+    "**/quasar.config.*.temporary.compiled*",
+    "**/.quasar/",
+
+    "app-vite/templates/",
+    "app-vite/types/client/",
+    "app-vite/types/globals.d.ts",
+
+    "create-quasar/templates/",
+    "!create-quasar/templates/**/create-quasar-script.js",
+
+    "extras/exports/",
+
+    "ui/icon-set/svg-*.js",
+    "ui/lang/index.json",
+    "ui/types/shim-icon-set.d.ts",
+    "ui/types/shim-lang.d.ts",
+    "ui/build/legacy-assets/",
+
+    "utils/render-ssr-error/compiled-assets/",
+    "**/*/typed-router.d.ts"
+  ],
+
+  "options": {
+    "typeAware": true,
+    "typeCheck": true,
+    "maxWarnings": 10
+  },
+
+  "plugins": ["vue", "import", "eslint", "promise", "unicorn"],
+
+  "categories": {
+    "style": "error",
+    "pedantic": "warn",
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "restriction": "error"
+  },
+
+  "rules": {
+    /** Style rule overrides */
+    "curly": ["error", "multi-line"],
+    "sort-imports": [
+      "error",
+      { "allowSeparatedGroups": true, "ignoreDeclarationSort": true }
+    ],
+    "no-magic-numbers": "off",
+    "no-ternary": "off",
+    "no-nested-ternary": "off",
+    "sort-keys": "off",
+    "capitalized-comments": "off",
+    "func-style": "off",
+    "no-continue": "off",
+    "init-declarations": "off",
+    "max-statements": "off",
+    "operator-assignment": "off",
+    "prefer-destructuring": "off",
+    "guard-for-in": "off",
+    "max-params": "off",
+    "no-multi-assign": "off",
+    "prefer-promise-reject-errors": "off",
+    "id-length": "off",
+    "prefer-template": "off",
+    "import/no-anonymous-default-export": [
+      "error",
+      {
+        "allowArray": true,
+        "allowArrowFunction": true,
+        "allowLiteral": true,
+        "allowObject": true
+      }
+    ],
+    "import/no-named-export": "off",
+    "import/group-exports": "off",
+    "import/exports-last": "off",
+    "import/no-nodejs-modules": "off",
+    "import/prefer-default-export": "off",
+    "import/consistent-type-specifier-style": "off",
+    "unicorn/catch-error-name": [
+      "error",
+      {
+        "name": "err"
+      }
+    ],
+    "eslint/arrow-body-style": ["error", "as-needed"],
+    "vue/define-props-destructuring": "off",
+    "vue/define-props-declaration": "off",
+    "promise/avoid-new": "off",
+    "promise/param-names": "off",
+    "promise/prefer-await-to-callbacks": "off",
+    "promise/prefer-await-to-then": "off",
+    "unicorn/no-nested-ternary": "off",
+    "unicorn/no-null": "off",
+    "unicorn/filename-case": "off",
+    "unicorn/prefer-global-this": "off",
+    "unicorn/number-literal-case": "off", // conflicts with oxfmt
+    "unicorn/import-style": "off",
+    "prefer-named-capture-group": "off",
+    "vue/require-prop-types": "off",
+    "vue/next-tick-style": ["error", "callback"],
+    "unicorn/max-nested-calls": "off",
+    "vue/require-default-prop": "off",
+
+    /** Performance rule overrides */
+    "no-await-in-loop": "off",
+    "prefer-set-has": "off",
+    "no-map-spread": "off",
+
+    /** Suspicious rule overrides */
+    "no-unassigned-import": ["error", { "allow": ["**/*.{sass,scss,css}"] }],
+    "no-array-sort": "off",
+    "no-array-reverse": "off",
+    "no-useless-concat": "off",
+    "require-post-message-target-origin": "off",
+    "no-this-in-exported-function": "off",
+    "promise/always-return": "off",
+    "promise/no-promise-in-callback": "off",
+    "no-underscore-dangle": "off",
+
+    /** Correctness rule overrides */
+    "no-unused-vars": [
+      "error",
+      {
+        "ignoreRestSiblings": true
+      }
+    ],
+    "promise/no-callback-in-promise": "off",
+
+    /** Restriction rule overrides */
+    "no-void": "off",
+    "no-plusplus": "off",
+    "no-param-reassign": "off",
+    "no-console": "off",
+    "complexity": "off",
+    "no-empty-function": "off",
+    "no-empty": "off",
+    "no-relative-parent-imports": "off",
+    "class-methods-use-this": "off",
+    "no-bitwise": "off",
+    "max-props": "off",
+    "default-case": "off",
+    "no-div-regex": "off",
+    "import/no-cycle": ["error", { "maxDepth": 3 }],
+    "import/no-default-export": "off",
+    "import/no-dynamic-require": "off",
+    "import/unambiguous": "off",
+    "promise/catch-or-return": "off",
+    "unicorn/no-process-exit": "off",
+    "unicorn/no-array-for-each": "off",
+    "unicorn/no-array-reduce": "off",
+    "unicorn/no-abusive-eslint-disable": "off",
+    "no-implicit-globals": "off",
+
+    /** Pedantic rule overrides */
+    "unicorn/explicit-length-check": [
+      "error",
+      {
+        "non-zero": "not-equal"
+      }
+    ],
+    "no-inline-comments": "off",
+    "max-lines": "off",
+    "no-negated-condition": "off",
+    "no-warning-comments": "off",
+    "max-depth": "off",
+    "max-lines-per-function": "off",
+    "max-classes-per-file": "off",
+    "sort-vars": "off",
+    "import/max-dependencies": "off",
+    "unicorn/no-array-callback-reference": "off",
+    "unicorn/prefer-query-selector": "off",
+    "require-unicode-regexp": "off",
+    "unicorn/no-negated-condition": "off",
+    "unicorn/prefer-number-coercion": "off",
+
+    /** Nursery rule overrides */
+    "no-undef": "error"
+  },
+
+  "overrides": [
+    {
+      "files": ["**/*.d.ts"],
+      "rules": {
+        "no-unassigned-import": "off",
+        "import/no-namespace": "off"
+      }
+    },
+
+    {
+      "files": ["{app-vite,cli,create-quasar,icongenie,extras}/**"],
+      "env": {
+        "node": true
+      },
+      "plugins": ["node"],
+      "rules": {
+        "import/first": "off",
+        "node/no-process-env": "off",
+        "node/callback-return": "off",
+        "node/no-sync": "off"
+      }
+    },
+
+    {
+      "files": ["ui/src/**", "ui/playground/**"],
+      "env": { "browser": true, "vue": true },
+      "globals": {
+        "__QUASAR_VERSION__": "readonly",
+        "__QUASAR_SSR__": "readonly",
+        "__QUASAR_SSR_SERVER__": "readonly",
+        "__QUASAR_SSR_CLIENT__": "readonly",
+        "__QUASAR_SSR_PWA__": "readonly",
+        "cordova": "readonly",
+        "process": "readonly",
+        "global": "readonly"
+      }
+    },
+
+    {
+      "files": [
+        "vite-plugin/playground/**",
+        "docs/src/**",
+        "app-vite/playground-ts/**",
+        "app-vite/playground-js/**"
+      ],
+      "env": { "browser": true, "vue": true },
+      "globals": {
+        "process": "readonly",
+        "gtag": "readonly",
+        "Prism": "readonly"
+      }
+    },
+
+    {
+      "files": [
+        "ui/build/**",
+        "utils/**",
+        "vite-plugin/src/**",
+        "vite-plugin/build/**",
+        "docs/build/**",
+        "docs/src-ssr/**"
+      ],
+      "env": { "node": true }
+    },
+
+    {
+      "files": ["**/testing/**"],
+      "env": { "node": true, "browser": true }
+    },
+
+    {
+      "files": ["ui/wrappers/**"],
+      "env": { "commonjs": true, "node": true }
+    },
+
+    {
+      "files": ["app-vite/exports/bex/**"],
+      "env": { "browser": true, "webextensions": true, "serviceworker": true }
+    },
+
+    {
+      "files": ["**/src-pwa/**"],
+      "env": { "browser": true, "serviceworker": true }
+    },
+
+    {
+      "files": ["**/*.test.{js,ts,vue}"],
+      "env": { "vitest": true },
+      "rules": {
+        "unicorn/consistent-function-scoping": "off"
+      }
+    },
+
+    {
+      "files": ["**/*.cjs"],
+      "rules": {
+        "no-commonjs": "off",
+        "unicorn/prefer-module": "off"
+      }
+    },
+
+    {
+      "files": ["docs/src/examples/**"],
+      "rules": {
+        "no-alert": "off"
+      }
+    },
+
+    {
+      "files": ["**/*.vue"],
+      "rules": {
+        "unicorn/prefer-top-level-await": "off",
+        "unicorn/consistent-function-scoping": "off"
+      }
+    }
+  ]
+}

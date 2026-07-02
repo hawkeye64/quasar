@@ -9,9 +9,7 @@
       </div>
       <div v-else class="text-center">
         <q-icon name="arrow_upward" />
-        <div>
-          Pan to up or down only
-        </div>
+        <div> Pan to up or down only </div>
         <q-icon name="arrow_downward" />
       </div>
 
@@ -22,32 +20,22 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    const info = ref(null)
-    const panning = ref(false)
+const info = ref(null)
+const panning = ref(false)
 
-    return {
-      info,
-      panning,
+function handlePan({ evt, ...newInfo }) {
+  info.value = newInfo
 
-      handlePan ({ evt, ...newInfo }) {
-        info.value = newInfo
+  // native Javascript event
+  console.log(evt)
 
-        // native Javascript event
-        // console.log(evt)
-
-        if (newInfo.isFirst) {
-          panning.value = true
-        }
-        else if (newInfo.isFinal) {
-          panning.value = false
-        }
-      }
-    }
+  if (newInfo.isFirst) {
+    panning.value = true
+  } else if (newInfo.isFinal) {
+    panning.value = false
   }
 }
 </script>

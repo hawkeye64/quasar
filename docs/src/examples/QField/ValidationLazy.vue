@@ -6,9 +6,7 @@
       :model-value="slider"
       label="Value must be less than 60"
       hint="Validation starts after first blur"
-      :rules="[
-        val => val < 60 || 'Please set value to maximum 60',
-      ]"
+      :rules="[val => val < 60 || 'Please set value to maximum 60']"
       lazy-rules
     >
       <template v-slot:control>
@@ -24,25 +22,22 @@
       </template>
     </q-field>
 
-    <q-btn class="q-mt-sm" label="Reset Validation" @click="reset" color="primary"/>
+    <q-btn
+      class="q-mt-sm"
+      label="Reset Validation"
+      @click="reset"
+      color="primary"
+    />
   </div>
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+import { ref, useTemplateRef } from 'vue'
 
-export default {
-  setup () {
-    const fieldRef = ref(null)
+const fieldRef = useTemplateRef('fieldRef')
+const slider = ref(50)
 
-    return {
-      slider: ref(50),
-      fieldRef,
-
-      reset () {
-        fieldRef.value.resetValidation()
-      }
-    }
-  }
+function reset() {
+  fieldRef.value.resetValidation()
 }
 </script>

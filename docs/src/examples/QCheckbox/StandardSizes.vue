@@ -8,7 +8,12 @@
       <q-checkbox size="xl" v-model="shape" val="xl" label="Size 'xl'" />
 
       <!-- custom size -->
-      <q-checkbox size="150px" v-model="shape" val="150px" label="Size '150px'" />
+      <q-checkbox
+        size="150px"
+        v-model="shape"
+        val="150px"
+        label="Size '150px'"
+      />
     </div>
 
     <div class="q-px-sm">
@@ -17,14 +22,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      shape: ref(['line'])
-    }
-  }
-}
+const shape = ref(['line'])
 </script>

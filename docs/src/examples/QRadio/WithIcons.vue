@@ -1,10 +1,34 @@
 <template>
   <div class="q-pa-md">
     <div class="q-gutter-sm">
-      <q-radio v-model="shape" checked-icon="task_alt" unchecked-icon="panorama_fish_eye" val="line" label="Line" />
-      <q-radio v-model="shape" checked-icon="task_alt" unchecked-icon="panorama_fish_eye" val="rectangle" label="Rectangle" />
-      <q-radio v-model="shape" checked-icon="task_alt" unchecked-icon="panorama_fish_eye" val="ellipse" label="Ellipse" />
-      <q-radio v-model="shape" checked-icon="task_alt" unchecked-icon="panorama_fish_eye" val="polygon" label="Polygon" />
+      <q-radio
+        v-model="shape"
+        checked-icon="task_alt"
+        unchecked-icon="panorama_fish_eye"
+        val="line"
+        label="Line"
+      />
+      <q-radio
+        v-model="shape"
+        checked-icon="task_alt"
+        unchecked-icon="panorama_fish_eye"
+        val="rectangle"
+        label="Rectangle"
+      />
+      <q-radio
+        v-model="shape"
+        checked-icon="task_alt"
+        unchecked-icon="panorama_fish_eye"
+        val="ellipse"
+        label="Ellipse"
+      />
+      <q-radio
+        v-model="shape"
+        checked-icon="task_alt"
+        unchecked-icon="panorama_fish_eye"
+        val="polygon"
+        label="Polygon"
+      />
     </div>
 
     <div class="q-px-sm">
@@ -13,14 +37,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      shape: ref('line')
-    }
-  }
-}
+const shape = ref('line')
 </script>

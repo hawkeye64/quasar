@@ -1,9 +1,11 @@
-import { h, computed, getCurrentInstance } from 'vue'
+import { computed, getCurrentInstance, h } from 'vue'
 
-import useDark, { useDarkProps } from '../../composables/private/use-dark.js'
+import useDark, {
+  useDarkProps
+} from '../../composables/private.use-dark/use-dark.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { hSlot } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { hSlot } from '../../utils/private.render/render.js'
 
 export default createComponent({
   name: 'QCard',
@@ -21,16 +23,19 @@ export default createComponent({
     bordered: Boolean
   },
 
-  setup (props, { slots }) {
-    const vm = getCurrentInstance()
-    const isDark = useDark(props, vm.proxy.$q)
+  setup(props, { slots }) {
+    const {
+      proxy: { $q }
+    } = getCurrentInstance()
+    const isDark = useDark(props, $q)
 
-    const classes = computed(() =>
-      'q-card'
-      + (isDark.value === true ? ' q-card--dark q-dark' : '')
-      + (props.bordered === true ? ' q-card--bordered' : '')
-      + (props.square === true ? ' q-card--square no-border-radius' : '')
-      + (props.flat === true ? ' q-card--flat no-shadow' : '')
+    const classes = computed(
+      () =>
+        'q-card' +
+        (isDark.value ? ' q-card--dark q-dark' : '') +
+        (props.bordered ? ' q-card--bordered' : '') +
+        (props.square ? ' q-card--square no-border-radius' : '') +
+        (props.flat ? ' q-card--flat no-shadow' : '')
     )
 
     return () => h(props.tag, { class: classes.value }, hSlot(slots.default))

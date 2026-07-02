@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 
-import { sortDate } from '../../utils/private/sort.js'
-import { isNumber, isDate, isPlainObject } from '../../utils/private/is.js'
+import { sortDate } from '../../utils/private.sort/sort.js'
+import { isDate, isNumber, isObject } from '../../utils/is/is.js'
 
 export const useTableSortProps = {
   sortMethod: Function,
@@ -13,7 +13,12 @@ export const useTableSortProps = {
   }
 }
 
-export function useTableSort (props, computedPagination, colList, setPagination) {
+export function useTableSort(
+  props,
+  computedPagination,
+  colList,
+  setPagination
+) {
   const columnToSort = computed(() => {
     const { sortBy } = computedPagination.value
 
@@ -22,7 +27,7 @@ export function useTableSort (props, computedPagination, colList, setPagination)
       : null
   })
 
-  const computedSortMethod = computed(() => (
+  const computedSortMethod = computed(() =>
     props.sortMethod !== void 0
       ? props.sortMethod
       : (data, sortBy, descending) => {
@@ -31,58 +36,59 @@ export function useTableSort (props, computedPagination, colList, setPagination)
             return data
           }
 
-          const
-            dir = descending === true ? -1 : 1,
-            val = typeof col.field === 'function'
-              ? v => col.field(v)
-              : v => v[ col.field ]
+          const dir = descending ? -1 : 1,
+            val =
+              typeof col.field === 'function'
+                ? v => col.field(v)
+                : v => v[col.field]
 
           return data.sort((a, b) => {
-            let
-              A = val(a),
+            let A = val(a),
               B = val(b)
 
+            if (col.rawSort !== void 0) {
+              return col.rawSort(A, B, a, b) * dir
+            }
             if (A === null || A === void 0) {
               return -1 * dir
             }
             if (B === null || B === void 0) {
-              return 1 * dir
+              return Number(dir)
             }
             if (col.sort !== void 0) {
+              // gets called without rows that have null/undefined as value
+              // due to the above two statements
               return col.sort(A, B, a, b) * dir
             }
-            if (isNumber(A) === true && isNumber(B) === true) {
+            if (isNumber(A) && isNumber(B)) {
               return (A - B) * dir
             }
-            if (isDate(A) === true && isDate(B) === true) {
+            if (isDate(A) && isDate(B)) {
               return sortDate(A, B) * dir
             }
             if (typeof A === 'boolean' && typeof B === 'boolean') {
               return (A - B) * dir
             }
 
-            [ A, B ] = [ A, B ].map(s => (s + '').toLocaleString().toLowerCase())
+            ;[A, B] = [A, B].map(s => String(s).toLocaleString().toLowerCase())
 
-            return A < B
-              ? -1 * dir
-              : (A === B ? 0 : dir)
+            return A < B ? -1 * dir : A === B ? 0 : dir
           })
         }
-  ))
+  )
 
-  function sort (col /* String(col name) or Object(col definition) */) {
+  function sort(col /* String(col name) or Object(col definition) */) {
     let sortOrder = props.columnSortOrder
 
-    if (isPlainObject(col) === true) {
+    if (isObject(col)) {
       if (col.sortOrder) {
         sortOrder = col.sortOrder
       }
 
       col = col.name
-    }
-    else {
-      const def = colList.value.find(def => def.name === col)
-      if (def !== void 0 && def.sortOrder) {
+    } else {
+      const def = colList.value.find(item => item.name === col)
+      if (def?.sortOrder) {
         sortOrder = def.sortOrder
       }
     }
@@ -92,23 +98,19 @@ export function useTableSort (props, computedPagination, colList, setPagination)
     if (sortBy !== col) {
       sortBy = col
       descending = sortOrder === 'da'
-    }
-    else if (props.binaryStateSort === true) {
+    } else if (props.binaryStateSort) {
       descending = !descending
-    }
-    else if (descending === true) {
+    } else if (descending) {
       if (sortOrder === 'ad') {
         sortBy = null
-      }
-      else {
+      } else {
         descending = false
       }
-    }
-    else { // ascending
+    } else {
+      // ascending
       if (sortOrder === 'ad') {
         descending = true
-      }
-      else {
+      } else {
         sortBy = null
       }
     }

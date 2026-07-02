@@ -14,19 +14,33 @@ export default {
     create: '作成', // 'Create',
     search: '検索', // 'Search',
     filter: 'フィルタ', // 'Filter',
-    refresh: '再読込' // 'Refresh'
+    refresh: '再読込', // 'Refresh'
+    expand: label => (label ? `「${label}」を展開します。` : '拡大'),
+    collapse: label => (label ? `「${label}」を折りたたむ` : '崩壊')
   },
   date: {
     days: '日曜日_月曜日_火曜日_水曜日_木曜日_金曜日_土曜日'.split('_'), // 'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split('_'),
     daysShort: '日_月_火_水_木_金_土'.split('_'), // 'Sun_Mon_Tue_Wed_Thu_Fri_Sat'.split('_'),
     months: '1月_2月_3月_4月_5月_6月_7月_8月_9月_10月_11月_12月'.split('_'), // 'January_February_March_April_May_June_July_August_September_October_November_December'.split('_'),
-    monthsShort: '1月_2月_3月_4月_5月_6月_7月_8月_9月_10月_11月_12月'.split('_'), // 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_'),
-    headerTitle: date => new Intl.DateTimeFormat('ja-JP', {
-      weekday: 'short', month: 'short', day: 'numeric'
-    }).format(date),
-    firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
+    monthsShort: '1月_2月_3月_4月_5月_6月_7月_8月_9月_10月_11月_12月'.split(
+      '_'
+    ), // 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_'),
+    headerTitle: date =>
+      new Intl.DateTimeFormat('ja-JP', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      }).format(date),
+    firstDayOfWeek: 0, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true, // true
-    pluralDay: '日間'
+    pluralDay: '日間',
+    prevMonth: '前月',
+    nextMonth: '翌月',
+    prevYear: '前年',
+    nextYear: '来年',
+    today: '今日',
+    prevRangeYears: range => `前${range}年`,
+    nextRangeYears: range => `次${range}年`
   },
   table: {
     noData: 'データがありません', // 'No data available',
@@ -35,8 +49,14 @@ export default {
     selectedRecords: rows => (rows > 0 ? rows + '行を選択中' : '行を選択'),
     recordsPerPage: 'ページあたりの行数', // 'Rows per page:',
     allRows: '全て', // 'All',
-    pagination: (start, end, total) => start + '-' + end + ' ／ ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' ／ ' + total,
     columns: '列' // 'Columns'
+  },
+  pagination: {
+    first: '最初のページ',
+    prev: '前のページ',
+    next: '次のページ',
+    last: '最後のページ'
   },
   editor: {
     url: 'URL', // 'URL',

@@ -1,40 +1,40 @@
-// there are some icons that are needed but not available
-// so we import them from MDI as svgs
+/* There are some icons that are needed but not available
+   so we import them from MDI as svg */
 
 import {
-  mdiFormatBold,
-  mdiFormatItalic,
-  mdiFormatStrikethroughVariant,
-  mdiFormatUnderline,
-  mdiFormatListBulleted,
-  mdiFormatListNumbered,
-  mdiFormatSubscript,
-  mdiFormatSuperscript,
-  mdiFormatAlignLeft,
   mdiFormatAlignCenter,
-  mdiFormatAlignRight,
   mdiFormatAlignJustify,
-  mdiFormatIndentDecrease,
-  mdiFormatIndentIncrease,
+  mdiFormatAlignLeft,
+  mdiFormatAlignRight,
+  mdiFormatBold,
   mdiFormatClear,
   mdiFormatColorText,
-  mdiFormatSize,
-  mdiMinus,
+  mdiFormatFont,
   mdiFormatHeader1,
   mdiFormatHeader2,
   mdiFormatHeader3,
   mdiFormatHeader4,
   mdiFormatHeader5,
   mdiFormatHeader6,
+  mdiFormatIndentDecrease,
+  mdiFormatIndentIncrease,
+  mdiFormatItalic,
+  mdiFormatListBulleted,
+  mdiFormatListNumbered,
+  mdiFormatSize,
+  mdiFormatStrikethroughVariant,
+  mdiFormatSubscript,
+  mdiFormatSuperscript,
+  mdiFormatUnderline,
+  mdiMinus,
   mdiNumeric1Box,
   mdiNumeric2Box,
   mdiNumeric3Box,
   mdiNumeric4Box,
   mdiNumeric5Box,
   mdiNumeric6Box,
-  mdiNumeric7Box,
-  mdiFormatFont
-} from '@quasar/extras/mdi-v6'
+  mdiNumeric7Box
+} from '@quasar/extras/mdi-v7'
 
 export default {
   name: 'ionicons-v4',

@@ -9,6 +9,7 @@ For usage with the UMD build see [here](/start/umd#quasar-global-object).
 :::
 
 ## Determine scrolling container
+
 Might be worthwhile to read how this is done [here](/vue-components/scroll-observer#determining-scrolling-container).
 
 ```js
@@ -22,21 +23,18 @@ getScrollTarget(DomElement) // returns a DOM Element (or window Object)
 
 This method searches for a parent DOM element which has one of the `scroll` or `overflow-auto` Quasar CSS Helper class attached to it. If none is found, then it considers that the scrolling takes place on the document itself.
 
-Please note that simply attaching `scroll` CSS class to a DOM element or on a Vue component will have no effect if the respective element is not overflowed (example, with: CSS `overflow: hidden` and a height smaller than its inner content height).
+Please note that simply attaching `scroll` CSS class to a DOM element or on a Vue component will have no effect if the respective element is not overflowed (example: a height smaller than its inner content height).
 
 Example of good container:
 
 ```html
-<!--
-  Quasar CSS helper 'overflow-hidden' is
-  equivalent to style="overflow: hidden"
--->
-<div class="scroll overflow-hidden" style="height: 100px">
+<div class="scroll" style="height: 100px">
   ...content expanding over the 100px height from container...
 </div>
 ```
 
 ## Get/set scroll position
+
 Vertically:
 
 ```js
@@ -68,6 +66,7 @@ setHorizontalScrollPosition (scrollTargetElement, offset[, duration])
 ```
 
 ### Scrolling to an element
+
 Below is an example using the scroll utils to scroll to an element within its container. It does not take into consideration if the container is on screen or more complex cases.
 
 ```js
@@ -75,7 +74,7 @@ import { scroll } from 'quasar'
 const { getScrollTarget, setVerticalScrollPosition } = scroll
 
 // takes an element object
-function scrollToElement (el) {
+function scrollToElement(el) {
   const target = getScrollTarget(el)
   const offset = el.offsetTop
   const duration = 1000
@@ -84,6 +83,7 @@ function scrollToElement (el) {
 ```
 
 ## Determine scroll size
+
 Vertically:
 
 ```js
@@ -93,7 +93,7 @@ const { getScrollHeight } = scroll
 // get scrolling container inner height
 getScrollHeight(scrollTargetDomElement) // returns a Number
 
-console.log( getScrollHeight(el) )
+console.log(getScrollHeight(el))
 // 824 (it's in pixels always)
 ```
 
@@ -106,11 +106,12 @@ const { getScrollWidth } = scroll
 // get scrolling container inner height
 getScrollWidth(scrollTargetDomElement) // returns a Number
 
-console.log( getScrollWidth(el) )
+console.log(getScrollWidth(el))
 // 824 (it's in pixels always)
 ```
 
 ## Determining scrollbar width
+
 Computes the width of scrollbar in pixels.
 
 ```js

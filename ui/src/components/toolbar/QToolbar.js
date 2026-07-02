@@ -1,7 +1,7 @@
-import { h, computed } from 'vue'
+import { computed, h } from 'vue'
 
-import { createComponent } from '../../utils/private/create.js'
-import { hSlot } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import { hSlot } from '../../utils/private.render/render.js'
 
 export default createComponent({
   name: 'QToolbar',
@@ -10,12 +10,14 @@ export default createComponent({
     inset: Boolean
   },
 
-  setup (props, { slots }) {
-    const classes = computed(() =>
-      'q-toolbar row no-wrap items-center'
-      + (props.inset === true ? ' q-toolbar--inset' : '')
+  setup(props, { slots }) {
+    const classes = computed(
+      () =>
+        'q-toolbar row no-wrap items-center' +
+        (props.inset ? ' q-toolbar--inset' : '')
     )
 
-    return () => h('div', { class: classes.value }, hSlot(slots.default))
+    return () =>
+      h('div', { class: classes.value, role: 'toolbar' }, hSlot(slots.default))
   }
 })

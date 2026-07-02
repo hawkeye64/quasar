@@ -14,19 +14,37 @@ export default {
     create: '新增',
     search: '搜尋',
     filter: '篩選',
-    refresh: '更新'
+    refresh: '更新',
+    expand: label => (label ? `展開"${label}"` : '擴張'),
+    collapse: label => (label ? `折疊"${label}"` : '坍塌')
   },
   date: {
     days: '星期日_星期一_星期二_星期三_星期四_星期五_星期六'.split('_'),
     daysShort: '週日_週一_週二_週三_週四_週五_週六'.split('_'),
-    months: '一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月'.split('_'),
-    monthsShort: '一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月'.split('_'),
-    headerTitle: date => new Intl.DateTimeFormat('zh-TW', {
-      weekday: 'short', month: 'short', day: 'numeric'
-    }).format(date),
+    months:
+      '一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月'.split(
+        '_'
+      ),
+    monthsShort:
+      '一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月'.split(
+        '_'
+      ),
+    headerTitle: date =>
+      new Intl.DateTimeFormat('zh-TW', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      }).format(date),
     firstDayOfWeek: 0, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: false,
-    pluralDay: '日'
+    pluralDay: '日',
+    prevMonth: '上个月',
+    nextMonth: '下个月',
+    prevYear: '上一年',
+    nextYear: '下一年',
+    today: '今天',
+    prevRangeYears: range => `以前${range}年`,
+    nextRangeYears: range => `接下来${range}年`
   },
   table: {
     noData: '沒有資料',
@@ -35,8 +53,15 @@ export default {
     selectedRecords: rows => '已選擇 ' + rows + ' 列',
     recordsPerPage: '每頁列數：',
     allRows: '全部',
-    pagination: (start, end, total) => start + '-' + end + ' 列，共 ' + total + ' 列',
+    pagination: (start, end, total) =>
+      start + ' - ' + end + ' 列，共 ' + total + ' 列',
     columns: '欄位'
+  },
+  pagination: {
+    first: '首頁',
+    prev: '上一頁',
+    next: '下一頁',
+    last: '最後一頁'
   },
   editor: {
     url: '網址',

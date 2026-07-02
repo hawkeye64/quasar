@@ -1,25 +1,11 @@
-import ClosePopup from './directives/ClosePopup.js'
-import Intersection from './directives/Intersection.js'
-import Morph from './directives/Morph.js'
-import Mutation from './directives/Mutation.js'
-import Ripple from './directives/Ripple.js'
-import ScrollFire from './directives/ScrollFire.js'
-import Scroll from './directives/Scroll.js'
-import TouchHold from './directives/TouchHold.js'
-import TouchPan from './directives/TouchPan.js'
-import TouchRepeat from './directives/TouchRepeat.js'
-import TouchSwipe from './directives/TouchSwipe.js'
-
-export {
-  ClosePopup,
-  Intersection,
-  Morph,
-  Mutation,
-  Ripple,
-  ScrollFire,
-  Scroll,
-  TouchHold,
-  TouchPan,
-  TouchRepeat,
-  TouchSwipe
-}
+export { default as ClosePopup } from './directives/close-popup/ClosePopup.js'
+export { default as Intersection } from './directives/intersection/Intersection.js'
+export { default as Morph } from './directives/morph/Morph.js'
+export { default as Mutation } from './directives/mutation/Mutation.js'
+export { default as Ripple } from './directives/ripple/Ripple.js'
+export { default as ScrollFire } from './directives/scroll-fire/ScrollFire.js'
+export { default as Scroll } from './directives/scroll/Scroll.js'
+export { default as TouchHold } from './directives/touch-hold/TouchHold.js'
+export { default as TouchPan } from './directives/touch-pan/TouchPan.js'
+export { default as TouchRepeat } from './directives/touch-repeat/TouchRepeat.js'
+export { default as TouchSwipe } from './directives/touch-swipe/TouchSwipe.js'

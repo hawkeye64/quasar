@@ -1,6 +1,7 @@
 <template>
   <div class="q-pa-md">
     <q-range
+      class="q-mt-lg"
       v-model="model"
       :min="-20"
       :max="20"
@@ -13,17 +14,11 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      model: ref({
-        min: -16,
-        max: 16
-      })
-    }
-  }
-}
+const model = ref({
+  min: -16,
+  max: 16
+})
 </script>

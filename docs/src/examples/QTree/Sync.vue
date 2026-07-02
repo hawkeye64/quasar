@@ -1,6 +1,7 @@
 <template>
   <div class="q-pa-md row q-col-gutter-sm">
-    <q-tree class="col-12 col-sm-6"
+    <q-tree
+      class="col-12 col-sm-6"
       :nodes="simple"
       node-key="label"
       tick-strategy="leaf"
@@ -33,47 +34,49 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      selected: ref('Pleasant surroundings'),
-      ticked: ref([ 'Quality ingredients', 'Good table presentation' ]),
-      expanded: ref([ 'Satisfied customers', 'Good service (disabled node)', 'Pleasant surroundings' ]),
+const selected = ref('Pleasant surroundings')
+const ticked = ref(['Quality ingredients', 'Good table presentation'])
 
-      simple: [
-        {
-          label: 'Satisfied customers',
-          children: [
-            {
-              label: 'Good food',
-              children: [
-                { label: 'Quality ingredients' },
-                { label: 'Good recipe' }
-              ]
-            },
-            {
-              label: 'Good service (disabled node)',
-              disabled: true,
-              children: [
-                { label: 'Prompt attention' },
-                { label: 'Professional waiter' }
-              ]
-            },
-            {
-              label: 'Pleasant surroundings',
-              children: [
-                { label: 'Happy atmosphere' },
-                { label: 'Good table presentation' },
-                { label: 'Pleasing decor' }
-              ]
-            }
-          ]
-        }
-      ]
-    }
+const expanded = ref([
+  'Satisfied customers (with avatar)',
+  'Good food (with icon)'
+])
+
+const simple = [
+  {
+    label: 'Satisfied customers (with avatar)',
+    avatar: 'https://cdn.quasar.dev/img/boy-avatar.png',
+    children: [
+      {
+        label: 'Good food (with icon)',
+        icon: 'restaurant_menu',
+        children: [{ label: 'Quality ingredients' }, { label: 'Good recipe' }]
+      },
+      {
+        label: 'Good service (disabled node with icon)',
+        icon: 'room_service',
+        disabled: true,
+        children: [
+          { label: 'Prompt attention' },
+          { label: 'Professional waiter' }
+        ]
+      },
+      {
+        label: 'Pleasant surroundings (with icon)',
+        icon: 'photo',
+        children: [
+          {
+            label: 'Happy atmosphere (with image)',
+            img: 'https://cdn.quasar.dev/img/logo_calendar_128px.png'
+          },
+          { label: 'Good table presentation' },
+          { label: 'Pleasing decor' }
+        ]
+      }
+    ]
   }
-}
+]
 </script>

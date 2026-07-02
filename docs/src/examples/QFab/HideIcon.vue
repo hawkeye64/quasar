@@ -9,22 +9,21 @@
       direction="right"
     >
       <q-fab-action color="primary" @click="onClick" hide-icon label="Email" />
-      <q-fab-action color="secondary" @click="onClick" hide-icon label="Alarm" />
+      <q-fab-action
+        color="secondary"
+        @click="onClick"
+        hide-icon
+        label="Alarm"
+      />
     </q-fab>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      fab: ref(true),
-      onClick () {
-        // console.log('Clicked on a fab action')
-      }
-    }
-  }
+const fab = ref(true)
+function onClick() {
+  console.log('Clicked on a fab action')
 }
 </script>

@@ -1,0 +1,38 @@
+{
+  "name": "@quasar/art",
+  "version": "1.0.0",
+  "description": "Quasar Art for the CLIs",
+  "homepage": "https://quasar.dev",
+  "bugs": "https://github.com/quasarframework/quasar/issues",
+  "license": "MIT",
+  "author": {
+    "name": "Razvan Stoenescu",
+    "email": "razvan.stoenescu@gmail.com",
+    "url": "https://github.com/quasarframework"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quasarframework/quasar"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://donate.quasar.dev"
+  },
+  "files": [
+    "assets",
+    "index.js"
+  ],
+  "type": "module",
+  "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node scripts/test.js && FORCE_COLOR=0 node scripts/test.js",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "gradient-string": "^3.0.0"
+  }
+}

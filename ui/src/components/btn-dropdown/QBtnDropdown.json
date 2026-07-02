@@ -1,5 +1,9 @@
 {
-  "mixins": [ "components/btn/use-btn", "composables/private/use-model-toggle" ],
+  "mixins": [
+    "components/btn/use-btn",
+    "composables/private.use-model-toggle/use-model-toggle",
+    "composables/private.use-transition/use-transition"
+  ],
 
   "meta": {
     "docsUrl": "https://v2.quasar.dev/vue-components/button-dropdown"
@@ -7,11 +11,8 @@
 
   "props": {
     "model-value": {
-      "extends": "model-value",
       "type": "Boolean",
-      "desc": "Controls Menu show/hidden state; Either use this property (along with a listener for 'update:modelValue' event) OR use v-model directive",
-      "required": false,
-      "examples": [ "v-model=\"menuState\"" ]
+      "__delete": ["default"]
     },
 
     "split": {
@@ -43,37 +44,41 @@
     },
 
     "content-style": {
-      "type": [ "String", "Array", "Object" ],
+      "type": ["String", "Array", "Object"],
       "tsType": "VueStyleProp",
       "desc": "Style definitions to be attributed to the menu",
       "examples": [
-        "background-color: #ff0000",
-        ":content-style=\"{ backgroundColor: '#ff0000' }\""
+        "'background-color: #ff0000'",
+        "{ backgroundColor: '#ff0000' }"
       ],
       "category": "style"
     },
 
     "content-class": {
-      "type": [ "String", "Array", "Object" ],
+      "type": ["String", "Array", "Object"],
       "tsType": "VueClassProp",
       "desc": "Class definitions to be attributed to the menu",
-      "examples": [
-        "my-special-class",
-        ":content-class=\"{ 'my-special-class': <condition> }\""
-      ],
+      "examples": ["'my-special-class'", "{ 'my-special-class': true }"],
       "category": "style"
     },
 
     "cover": {
       "type": "Boolean",
-      "desc": "Allows the menu to cover the button. When used, the 'menu-self' and 'menu-fit' props are no longer effective",
+      "desc": "Allows the menu to cover the button. When used, the 'menu-self' prop is no longer effective",
       "category": "position"
     },
 
     "persistent": {
       "type": "Boolean",
-      "desc": "Allows the menu to not be dismissed by a click/tap outside of the menu or by hitting the ESC key",
+      "desc": "Allows the menu to not be dismissed by a click/tap outside of the menu or by hitting the ESC key; Also, an app route change won't dismiss it",
       "category": "behavior"
+    },
+
+    "no-esc-dismiss": {
+      "type": "Boolean",
+      "desc": "User cannot dismiss the popup by hitting ESC key; No need to set it if 'persistent' prop is also set",
+      "category": "behavior",
+      "addedIn": "v2.18"
     },
 
     "no-route-dismiss": {
@@ -88,16 +93,41 @@
       "category": "behavior"
     },
 
+    "no-refocus": {
+      "type": "Boolean",
+      "desc": "(Accessibility) When the dropdown gets hidden, do not refocus on the DOM element that previously had focus",
+      "category": "behavior",
+      "addedIn": "v2.18"
+    },
+
+    "no-focus": {
+      "type": "Boolean",
+      "desc": "(Accessibility) When the dropdown gets shown, do not switch focus on it",
+      "category": "behavior",
+      "addedIn": "v2.18"
+    },
+
     "menu-anchor": {
       "type": "String",
       "desc": "Two values setting the starting position or anchor point of the menu relative to its target",
       "values": [
-        "top left", "top middle", "top right", "top start", "top end",
-        "center left", "center middle", "center right", "center start", "center end",
-        "bottom left", "bottom middle", "bottom right", "bottom start", "bottom end"
+        "'top left'",
+        "'top middle'",
+        "'top right'",
+        "'top start'",
+        "'top end'",
+        "'center left'",
+        "'center middle'",
+        "'center right'",
+        "'center start'",
+        "'center end'",
+        "'bottom left'",
+        "'bottom middle'",
+        "'bottom right'",
+        "'bottom start'",
+        "'bottom end'"
       ],
-      "default": "bottom end",
-      "examples": [ "top right", "bottom end" ],
+      "default": "'bottom end'",
       "category": "position"
     },
 
@@ -105,20 +135,39 @@
       "type": "String",
       "desc": "Two values setting the menu's own position relative to its target",
       "values": [
-        "top left", "top middle", "top right", "top start", "top end",
-        "center left", "center middle", "center right", "center start", "center end",
-        "bottom left", "bottom middle", "bottom right", "bottom start", "bottom end"
+        "'top left'",
+        "'top middle'",
+        "'top right'",
+        "'top start'",
+        "'top end'",
+        "'center left'",
+        "'center middle'",
+        "'center right'",
+        "'center start'",
+        "'center end'",
+        "'bottom left'",
+        "'bottom middle'",
+        "'bottom right'",
+        "'bottom start'",
+        "'bottom end'"
       ],
-      "default": "top end",
-      "examples": [ "top right", "bottom end" ],
+      "default": "'top end'",
       "category": "position"
     },
 
     "menu-offset": {
       "type": "Array",
       "desc": "An array of two numbers to offset the menu horizontally and vertically in pixels",
-      "examples": [ "[8, 8]", "[5, 10]" ],
+      "examples": ["[8, 8]", "[5, 10]"],
       "category": "position"
+    },
+
+    "toggle-aria-label": {
+      "type": "String",
+      "desc": "aria-label to be used on the dropdown toggle element",
+      "examples": ["'Open menu'"],
+      "category": "accessibility",
+      "addedIn": "v2.8.4"
     }
   },
 
@@ -129,6 +178,11 @@
 
     "label": {
       "desc": "Customize main button's content through this slot, unless you're using the 'icon' and 'label' props"
+    },
+
+    "loading": {
+      "desc": "Override the default QSpinner when in 'loading' state",
+      "addedIn": "v2.8"
     }
   },
 

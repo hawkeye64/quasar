@@ -1,4 +1,3 @@
-
 import {
   ionCheckmark,
   ionAlert,
@@ -7,7 +6,11 @@ import {
   ionArrowForward,
   ionArrowDown,
   ionArrowBack,
-  ionCaretDownOutline,
+  ionCaretDown,
+  ionChevronBack,
+  ionChevronDown,
+  ionChevronForward,
+  ionChevronUp,
   ionAperture,
   ionOptions,
   ionApps,
@@ -18,7 +21,6 @@ import {
   ionCalendar,
   ionLink,
   ionExpand,
-  ionChatboxEllipses,
   ionPrint,
   ionArrowUndo,
   ionArrowRedo,
@@ -27,6 +29,8 @@ import {
   ionClose,
   ionPlaySkipBackCircle,
   ionPlaySkipForwardCircle,
+  ionChevronBackCircle,
+  ionChevronForwardCircle,
   ionStar,
   ionCreate,
   ionWarning,
@@ -34,17 +38,11 @@ import {
   ionAddCircle,
   ionCloudUpload,
   ionTrash,
-  ionCheckmarkDone,
-  ionChevronDown,
-  ionChevronUp,
-  ionChevronBack,
-  ionChevronForward,
-  ionChevronBackCircle,
-  ionChevronForwardCircle
+  ionCheckmarkDone
 } from '@quasar/extras/ionicons-v6'
 
-// there are some icons that are needed but not available
-// so we import them from MDI as svgs
+/* There are some icons that are needed but not available
+   so we import them from MDI as svg */
 
 import {
   mdiFormatBold,
@@ -63,6 +61,7 @@ import {
   mdiFormatIndentIncrease,
   mdiFormatClear,
   mdiFormatColorText,
+  mdiFormatQuoteClose,
   mdiFormatSize,
   mdiMinus,
   mdiFormatHeader1,
@@ -79,7 +78,7 @@ import {
   mdiNumeric6Box,
   mdiNumeric7Box,
   mdiFormatFont
-} from '@quasar/extras/mdi-v6'
+} from '@quasar/extras/mdi-v7'
 
 export default {
   name: 'svg-ionicons-v6',
@@ -94,7 +93,7 @@ export default {
     right: ionArrowForward,
     down: ionArrowDown,
     left: ionArrowBack,
-    dropdown: ionCaretDownOutline
+    dropdown: ionCaretDown
   },
   chevron: {
     left: ionArrowBack,
@@ -125,10 +124,10 @@ export default {
     now: ionTime,
     today: ionCalendar
   },
-  editor: { // requires Material icons for some as Ionicons simply does not have everything needed
+  editor: {
     hyperlink: ionLink,
     toggleFullscreen: ionExpand,
-    quote: ionChatboxEllipses,
+    quote: mdiFormatQuoteClose,
     print: ionPrint,
     undo: ionArrowUndo,
     redo: ionArrowRedo,
@@ -172,8 +171,8 @@ export default {
     font: mdiFormatFont
   },
   expansionItem: {
-    icon: ionCaretDownOutline,
-    denseIcon: ionCaretDownOutline
+    icon: ionCaretDown,
+    denseIcon: ionCaretDown
   },
   fab: {
     icon: ionAdd,

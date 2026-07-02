@@ -1,89 +1,123 @@
-const { writeFileSync } = require('fs')
-const cpus = require('os').cpus().length
-const parallel = cpus > 1
-const maxJobCount = cpus - 1 || 1
-const run = parallel ? require('child_process').fork : require
-const { resolve, join } = require('path')
-const { Queue, sleep, retry } = require('./utils')
+import { cpus } from 'node:os'
+import { fork } from 'node:child_process'
+import { join } from 'node:path'
+
+import { Queue, retry, sleep } from './utils.js'
+import { generateReadme } from './readme.js'
+
+const startTime = Date.now() // Add timing start
+
+const cpuCount = cpus().length
+const isParallel = cpuCount > 1
+const maxJobCount = Math.max(cpuCount * 2 - 1, 1)
+const runScript = isParallel
+  ? (file, args, opts) => fork(file, args, opts)
+  : file => import(file)
 
 const materialFontVersions = {}
 
-async function generate () {
-  function handleChild (child) {
-    return new Promise((resolve, reject) => {
-      // watch for exit event
-      child.on('exit', (code, signal) => {
-        resolve()
-      })
-      
-      if (child.stdout) {
-        child.stdout.on('data', (data) => {
-          const str = data.toString()
-          if (!str.startsWith('.')) {
-            console.log(str)
-          }
-        })
-      }
-        
-      if (child.stderr) {
-        child.stderr.on('data', (data) => {
-          const str = data.toString()
-          if (!str.startsWith('.')) {
-            console.error(str)
-          }
-          const lines = str.split('\n')
-          lines.map(line => {
-            if (line.endsWith('.woff2')) {
-              const parts = line.match(/.*\/(.*?)/)[0].split('/')
-              if (parts.length) {
-                const version = parts[ parts.length - 2 ]
-                const name = parts[ parts.length - 3 ]
-                materialFontVersions[name] = version
-              }
-            }
-          })
-        })
-      }
-    })
-  }
+function collectFontVersions(text) {
+  text.split('\n').forEach(line => {
+    const versionMatch = line.match(/^QEXTRA_VERSION::([^:]+)::(v[^:\s]+)$/)
 
-  const queue = new Queue(
-    async (scriptFile) => {
-      await retry(async ({ tries }) => {
-        await sleep((tries - 1) * 100)
-        const child = run(join(__dirname, scriptFile), [], { silent: true })
-        await handleChild(child)
-      })
-    },
-    { concurrency: maxJobCount },
-  )
-
-  function runJob (scriptFile) {
-    if (parallel) {
-      queue.push(scriptFile)
-      return
+    if (versionMatch) {
+      const [, name, version] = versionMatch
+      materialFontVersions[name] = version
     }
-    return run(join(__dirname, scriptFile))
+  })
+}
+
+function handleChild(child) {
+  return new Promise((resolve, reject) => {
+    child.on('error', reject)
+    child.on('exit', code => {
+      if (code === 0) {
+        resolve()
+        return
+      }
+
+      reject(new Error(`Child exited with code ${code}`))
+    })
+
+    if (child.stdout) {
+      child.stdout.on('data', data => {
+        const output = data.toString()
+        if (!output.startsWith('.')) {
+          console.log(output)
+        }
+
+        collectFontVersions(output)
+      })
+    }
+
+    if (child.stderr) {
+      child.stderr.on('data', data => {
+        const errorOutput = data.toString()
+        if (!errorOutput.startsWith('.')) {
+          console.error(errorOutput)
+        }
+
+        collectFontVersions(errorOutput)
+      })
+    }
+  })
+}
+
+async function runJob(queue, scriptFile) {
+  if (isParallel) {
+    queue.push(scriptFile)
+  } else {
+    await runScript(join(import.meta.dirname, scriptFile))
   }
+}
 
-  // this one takes the longest, queue it up first
-  runJob('./material-icons.js')
+const queue = new Queue(
+  async scriptFile => {
+    await retry(async ({ tries }) => {
+      await sleep((tries - 1) * 100)
+      const child = await runScript(join(import.meta.dirname, scriptFile), [], {
+        silent: true
+      })
+      await handleChild(child)
+    })
+  },
+  { concurrency: maxJobCount }
+)
 
-  runJob('./webfonts.js')
-  runJob('./animate.js')
+const jobs = [
+  './webfonts.js',
+  './animate.js',
+  './mdi-v7.js',
+  './fontawesome-v7.js',
+  './ionicons-v8.js',
+  './eva-icons.js',
+  './themify.js',
+  './line-awesome.js',
+  './bootstrap-icons.js',
+  // './material-icons.js', // hasn't updated in 2 years
+  './material-symbols.js',
+  './package-json.js'
+]
 
-  runJob('./mdi-v6.js')
-  runJob('./fontawesome-v5.js')
-  runJob('./ionicons-v6.js')
-  runJob('./eva-icons.js')
-  runJob('./themify.js')
-  runJob('./line-awesome.js')
-  runJob('./bootstrap-icons.js')
+for (const scriptFile of jobs) {
+  await runJob(queue, scriptFile)
+  if (
+    [
+      // './material-icons.js', // hasn't updated in 2 years
+      './material-symbols.js',
+      './package-json.js'
+    ].includes(scriptFile)
+  ) {
+    await queue.wait({ empty: true })
+  }
+}
 
-  // don't exit before everything is done
-  await queue.wait({ empty: true })
-
+if (Object.keys(materialFontVersions).length !== 0) {
+  generateReadme({ googleVersions: materialFontVersions })
   console.log(JSON.stringify(materialFontVersions, null, 2))
 }
 
-generate()
+// Add timing end and display duration
+const endTime = Date.now()
+const duration = endTime - startTime
+console.log(`\nTotal execution time: ${duration}ms`)

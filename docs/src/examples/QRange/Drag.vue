@@ -4,27 +4,15 @@
       Model: {{ range.min }} to {{ range.max }} (0 to 100, step 1)
     </q-badge>
 
-    <q-range
-      v-model="range"
-      :min="0"
-      :max="100"
-      label
-      drag-range
-    />
+    <q-range v-model="range" :min="0" :max="100" label drag-range />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      range: ref({
-        min: 20,
-        max: 65
-      })
-    }
-  }
-}
+const range = ref({
+  min: 20,
+  max: 65
+})
 </script>

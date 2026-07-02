@@ -1,20 +1,11 @@
 <template>
   <div class="q-pa-md">
-    <q-time
-      v-model="time"
-      now-btn
-    />
+    <q-time v-model="time" now-btn />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      time: ref('04:56')
-    }
-  }
-}
+const time = ref('04:56')
 </script>

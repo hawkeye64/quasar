@@ -14,37 +14,54 @@ export default {
     create: 'Crear',
     search: 'Buscar',
     filter: 'Filtrar',
-    refresh: 'Actualizar'
+    refresh: 'Actualizar',
+    expand: label => (label ? `Expandir "${label}"` : 'Expandir'),
+    collapse: label => (label ? `Ocultar "${label}"` : 'Colapsar')
   },
   date: {
     days: 'Domingo_Lunes_Martes_Miércoles_Jueves_Viernes_Sábado'.split('_'),
     daysShort: 'Dom_Lun_Mar_Mié_Jue_Vie_Sáb'.split('_'),
-    months: 'Enero_Febrero_Marzo_Abril_Mayo_Junio_Julio_Agosto_Septiembre_Octubre_Noviembre_Diciembre'.split('_'),
+    months:
+      'Enero_Febrero_Marzo_Abril_Mayo_Junio_Julio_Agosto_Septiembre_Octubre_Noviembre_Diciembre'.split(
+        '_'
+      ),
     monthsShort: 'Ene_Feb_Mar_Abr_May_Jun_Jul_Ago_Sep_Oct_Nov_Dic'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'dias'
+    pluralDay: 'días',
+    prevMonth: 'Mes anterior',
+    nextMonth: 'Mes siguiente',
+    prevYear: 'Año anterior',
+    nextYear: 'Año siguiente',
+    today: 'Hoy',
+    prevRangeYears: range => `Anterior ${range} años`,
+    nextRangeYears: range => `Siguiente ${range} años`
   },
   table: {
     noData: 'Sin datos disponibles',
-    noResults: 'No se han encontrado resultado',
+    noResults: 'No se han encontrado resultados',
     loading: 'Cargando...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows > 1
         ? rows + ' filas seleccionadas.'
-        : (rows === 0 ? 'Sin' : '1') + ' fila seleccionada.'
-    ),
+        : (rows === 0 ? 'Sin' : '1') + ' fila seleccionada.',
     recordsPerPage: 'Filas por página:',
     allRows: 'Todas',
-    pagination: (start, end, total) => start + '-' + end + ' de ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' de ' + total,
     columns: 'Columnas'
+  },
+  pagination: {
+    first: 'Primera página',
+    prev: 'Página anterior',
+    next: 'Próxima página',
+    last: 'Última página'
   },
   editor: {
     url: 'URL',
     bold: 'Negrita',
-    italic: 'Itálico',
-    strikethrough: 'Tachado',
-    underline: 'Subrayado',
+    italic: 'Cursiva',
+    strikethrough: 'Tachada',
+    underline: 'Subrayada',
     unorderedList: 'Lista Desordenada',
     orderedList: 'Lista Ordenada',
     subscript: 'Subíndice',
@@ -85,7 +102,7 @@ export default {
     viewSource: 'Ver fuente'
   },
   tree: {
-    noNodes: 'Sin nodos disponibles',
-    noResults: 'No se encontraron nodos correspondientes'
+    noNodes: 'No hay nodos disponibles',
+    noResults: 'No se encontraron los nodos correspondientes'
   }
 }

@@ -8,11 +8,9 @@
       "extends": "model-value",
       "type": "Boolean",
       "desc": "Model of the component defining if it is shown or hidden to the user; Either use this property (along with a listener for 'update:modelValue' event) OR use v-model directive",
-      "default": true,
+      "default": "true",
       "required": false,
-      "examples": [
-        "v-model=\"headerState\""
-      ]
+      "examples": ["# v-model=\"headerState\""]
     },
 
     "reveal": {
@@ -24,10 +22,7 @@
     "reveal-offset": {
       "type": "Number",
       "desc": "Amount of scroll (in pixels) that should trigger a 'reveal' state change",
-      "default": 250,
-      "examples": [
-        ":reveal-offset=\"500\""
-      ],
+      "default": "250",
       "category": "behavior"
     },
 
@@ -42,10 +37,9 @@
     },
 
     "height-hint": {
-      "type": [ "Number", "String" ],
+      "type": ["Number", "String"],
       "desc": "When using SSR, you can optionally hint of the height (in pixels) of the QHeader",
-      "default": 50,
-      "examples": [ "150" ],
+      "default": "50",
       "category": "behavior"
     }
   },
@@ -65,6 +59,8 @@
           "desc": "New 'reveal' state"
         }
       }
-    }
+    },
+
+    "focusin": { "internal": true }
   }
 }

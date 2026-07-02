@@ -9,25 +9,21 @@
       toolbar-bg="primary"
       :toolbar="[
         ['bold', 'italic', 'underline'],
-        [{
-          label: $q.lang.editor.formatting,
-          icon: $q.iconSet.editor.formatting,
-          list: 'no-icons',
-          options: ['p', 'h3', 'h4', 'h5', 'h6', 'code']
-        }]
+        [
+          {
+            label: $q.lang.editor.formatting,
+            icon: $q.iconSet.editor.formatting,
+            list: 'no-icons',
+            options: ['p', 'h3', 'h4', 'h5', 'h6', 'code']
+          }
+        ]
       ]"
     />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      editor: ref('Customize it.')
-    }
-  }
-}
+const editor = ref('Customize it.')
 </script>

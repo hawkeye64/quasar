@@ -24,33 +24,30 @@
 
     <q-virtual-scroll
       ref="virtualListRef"
-      style="max-height: 300px;"
+      style="max-height: 300px"
       component="q-list"
       :items="heavyList"
       separator
       @virtual-scroll="onVirtualScroll"
+      v-slot="{ item, index }"
     >
-      <template v-slot="{ item, index }">
-        <q-item
-          :key="index"
-          dense
-          :class="{ 'bg-black text-white': index === virtualListIndex }"
-        >
-          <q-item-section>
-            <q-item-label>
-              #{{ index }} - {{ item.label }}
-            </q-item-label>
-          </q-item-section>
-        </q-item>
-      </template>
+      <q-item
+        :key="index"
+        dense
+        :class="{ 'bg-black text-white': index === virtualListIndex }"
+      >
+        <q-item-section>
+          <q-item-label> #{{ index }} - {{ item.label }} </q-item-label>
+        </q-item-section>
+      </q-item>
     </q-virtual-scroll>
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue'
+<script setup>
+import { onMounted, ref, useTemplateRef } from 'vue'
 
-const maxSize = 10000
+const maxSize = 10_000
 const heavyList = []
 
 for (let i = 0; i < maxSize; i++) {
@@ -59,28 +56,18 @@ for (let i = 0; i < maxSize; i++) {
   })
 }
 
-export default {
-  setup () {
-    const virtualListRef = ref(null)
-    const virtualListIndex = ref(1200)
+const virtualListRef = useTemplateRef('virtualListRef')
+const virtualListIndex = ref(1200)
 
-    onMounted(() => {
-      virtualListRef.value.scrollTo(virtualListIndex.value)
-    })
+onMounted(() => {
+  virtualListRef.value.scrollTo(virtualListIndex.value)
+})
 
-    return {
-      heavyList,
-      virtualListRef,
-      virtualListIndex,
+function onVirtualScroll({ index }) {
+  virtualListIndex.value = index
+}
 
-      onVirtualScroll ({ index }) {
-        virtualListIndex.value = index
-      },
-
-      executeScroll () {
-        virtualListRef.value.scrollTo(virtualListIndex.value, 'start-force')
-      }
-    }
-  }
+function executeScroll() {
+  virtualListRef.value.scrollTo(virtualListIndex.value, 'start-force')
 }
 </script>

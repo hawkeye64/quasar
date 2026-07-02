@@ -1,26 +1,21 @@
 {
   "name": "@quasar/cli",
-  "version": "1.2.2",
-  "description": "Quasar Framework global CLI",
-  "bin": {
-    "quasar": "./bin/quasar"
-  },
-  "files": [
-    "assets",
-    "bin",
-    "lib"
-  ],
+  "version": "5.0.2",
+  "description": "Quasar Framework - the Global CLI",
   "keywords": [
-    "quasar",
     "cli",
-    "web",
-    "spa",
-    "pwa",
+    "cordova",
     "electron",
+    "pwa",
+    "quasar",
+    "spa",
     "vue",
     "vuejs",
-    "cordova"
+    "web"
   ],
+  "homepage": "https://quasar.dev",
+  "bugs": "https://github.com/quasarframework/quasar/issues",
+  "license": "MIT",
   "author": {
     "name": "Razvan Stoenescu",
     "email": "razvan.stoenescu@gmail.com",
@@ -30,48 +25,36 @@
     "type": "git",
     "url": "https://github.com/quasarframework/quasar"
   },
-  "license": "MIT",
-  "bugs": "https://github.com/quasarframework/quasar/issues",
-  "homepage": "https://quasar.dev",
   "funding": {
     "type": "github",
     "url": "https://donate.quasar.dev"
   },
-  "engines": {
-    "node": ">= 12.0.0",
-    "npm": ">= 5.6.0",
-    "yarn": ">= 1.6.0"
+  "bin": {
+    "quasar": "./bin/quasar.js"
   },
-  "dependencies": {
-    "async": "3.2.1",
-    "chalk": "4.1.2",
-    "ci-info": "3.2.0",
-    "compression": "1.7.4",
-    "connect-history-api-fallback": "1.6.0",
-    "consolidate": "0.16.0",
-    "cors": "2.8.5",
-    "cross-spawn": "7.0.3",
-    "download-git-repo": "3.0.2",
-    "express": "4.17.1",
-    "fs-extra": "9.0.1",
-    "handlebars": "4.7.7",
-    "http-proxy-middleware": "2.0.1",
-    "inquirer": "8.2.0",
-    "metalsmith": "2.3.0",
-    "minimatch": "3.0.4",
-    "minimist": "1.2.5",
-    "multimatch": "5.0.0",
-    "open": "7.0.4",
-    "ora": "5.4.0",
-    "read-metadata": "1.0.0",
-    "rimraf": "3.0.2",
-    "route-cache": "0.4.5",
-    "selfsigned": "1.10.11",
-    "tildify": "2.0.0",
-    "update-notifier": "5.1.0",
-    "validate-npm-package-name": "3.0.0"
-  },
+  "files": [
+    "assets",
+    "bin",
+    "lib"
+  ],
+  "type": "module",
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.6.0",
+    "@hono/node-server": "^2.0.6",
+    "@quasar/art": "workspace:^",
+    "@quasar/ssl-certificate": "workspace:^",
+    "ci-info": "^4.4.0",
+    "cross-spawn": "^7.0.6",
+    "fs-extra": "^11.3.6",
+    "hono": "^4.12.27",
+    "kolorist": "^1.8.0",
+    "open": "^11.0.0",
+    "update-notifier": "^7.3.1"
+  },
+  "engines": {
+    "node": ">= 20.20.0"
   }
 }

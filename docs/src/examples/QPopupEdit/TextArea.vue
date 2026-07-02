@@ -1,6 +1,6 @@
 <template>
   <div class="q-pa-md">
-   <q-table
+    <q-table
       :rows="rows"
       :columns="columns"
       title="QDataTable with QPopupEdit"
@@ -16,11 +16,7 @@
 
           <q-td key="comment" :props="props">
             <div>{{ props.row.comment }}</div>
-            <q-popup-edit
-              buttons
-              v-model="props.row.comment"
-              v-slot="scope"
-            >
+            <q-popup-edit buttons v-model="props.row.comment" v-slot="scope">
               <q-input
                 type="textarea"
                 v-model="scope.value"
@@ -44,37 +40,50 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
 const columns = [
-  { name: 'desc', style: 'min-width: 160px; width: 160px', align: 'left', label: 'Dessert', field: 'name' },
-  { name: 'comment', style: 'min-width: 200px; width: 200px', align: 'left', label: 'Comment (editable)', field: 'comment' },
+  {
+    name: 'desc',
+    style: 'min-width: 160px; width: 160px',
+    align: 'left',
+    label: 'Dessert',
+    field: 'name'
+  },
+  {
+    name: 'comment',
+    style: 'min-width: 200px; width: 200px',
+    align: 'left',
+    label: 'Comment (editable)',
+    field: 'comment'
+  },
   { name: 'calories', align: 'center', label: 'Calories', field: 'calories' },
   { name: 'fat', label: 'Fat (g)', field: 'fat' }
 ]
 
-const rows = [
+const rows = ref([
+  // #region
   {
     name: 'Frozen Yogurt',
     comment: `It's cold but great and tastes different than normal ice cream, but it's great too!
 Have a taste!`,
     calories: 159,
-    fat: 6.0
+    fat: 6
   },
   {
     name: 'Ice cream sandwich',
     comment: `It's also cold but great!
 Have a taste!`,
     calories: 237,
-    fat: 9.0
+    fat: 9
   },
   {
     name: 'Eclair',
     comment: `It's not cold and also great!
 Have a taste!`,
     calories: 262,
-    fat: 16.0
+    fat: 16
   },
   {
     name: 'Cupcake',
@@ -88,14 +97,14 @@ Have a taste!`,
     comment: `It's spicy and great!
 Have a taste!`,
     calories: 356,
-    fat: 16.0
+    fat: 16
   },
   {
     name: 'Jelly bean',
     comment: `It's neither cold or warm, but great!
 Have one or two or several, but not too many!`,
     calories: 375,
-    fat: 0.0
+    fat: 0
   },
   {
     name: 'Lollipop',
@@ -116,23 +125,15 @@ Have a taste!`,
     comment: `It's an American classic glazed!
 Have one with coffee!`,
     calories: 452,
-    fat: 25.0
+    fat: 25
   },
   {
     name: 'KitKat',
     comment: `It's good with a break!
 Have a section to perfection!`,
     calories: 518,
-    fat: 26.0
+    fat: 26
   }
-]
-
-export default {
-  setup () {
-    return {
-      rows: ref(rows),
-      columns
-    }
-  }
-}
+  // #endregion
+])
 </script>

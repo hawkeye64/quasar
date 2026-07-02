@@ -1,6 +1,8 @@
 <template>
   <div class="q-pa-md">
     <q-table
+      flat
+      bordered
       title="Treats"
       :rows="rows"
       :columns="columns"
@@ -8,26 +10,43 @@
       :filter="filter"
       :loading="loading"
     >
-
       <template v-slot:top>
-        <q-btn color="primary" :disable="loading" label="Add row" @click="addRow" />
-        <q-btn class="q-ml-sm" color="primary" :disable="loading" label="Remove row" @click="removeRow" />
+        <q-btn
+          color="primary"
+          :disable="loading"
+          label="Add row"
+          @click="addRow"
+        />
+        <q-btn
+          v-if="rows.length !== 0"
+          class="q-ml-sm"
+          color="primary"
+          :disable="loading"
+          label="Remove row"
+          @click="removeRow"
+        />
         <q-space />
-        <q-input borderless dense debounce="300" color="primary" v-model="filter">
+        <q-input
+          borderless
+          dense
+          debounce="300"
+          color="primary"
+          v-model="filter"
+        >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
       </template>
-
     </q-table>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
 const columns = [
+  // #region
   {
     name: 'name',
     required: true,
@@ -37,22 +56,42 @@ const columns = [
     format: val => `${val}`,
     sortable: true
   },
-  { name: 'calories', align: 'center', label: 'Calories', field: 'calories', sortable: true },
+  {
+    name: 'calories',
+    align: 'center',
+    label: 'Calories',
+    field: 'calories',
+    sortable: true
+  },
   { name: 'fat', label: 'Fat (g)', field: 'fat', sortable: true },
   { name: 'carbs', label: 'Carbs (g)', field: 'carbs' },
   { name: 'protein', label: 'Protein (g)', field: 'protein' },
   { name: 'sodium', label: 'Sodium (mg)', field: 'sodium' },
-  { name: 'calcium', label: 'Calcium (%)', field: 'calcium', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) },
-  { name: 'iron', label: 'Iron (%)', field: 'iron', sortable: true, sort: (a, b) => parseInt(a, 10) - parseInt(b, 10) }
+  {
+    name: 'calcium',
+    label: 'Calcium (%)',
+    field: 'calcium',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  },
+  {
+    name: 'iron',
+    label: 'Iron (%)',
+    field: 'iron',
+    sortable: true,
+    sort: (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10)
+  }
+  // #endregion
 ]
 
 const originalRows = [
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24,
-    protein: 4.0,
+    protein: 4,
     sodium: 87,
     calcium: '14%',
     iron: '1%'
@@ -60,7 +99,7 @@ const originalRows = [
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37,
     protein: 4.3,
     sodium: 129,
@@ -70,9 +109,9 @@ const originalRows = [
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23,
-    protein: 6.0,
+    protein: 6,
     sodium: 337,
     calcium: '6%',
     iron: '7%'
@@ -90,7 +129,7 @@ const originalRows = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49,
     protein: 3.9,
     sodium: 327,
@@ -100,9 +139,9 @@ const originalRows = [
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94,
-    protein: 0.0,
+    protein: 0,
     sodium: 50,
     calcium: '0%',
     iron: '0%'
@@ -130,7 +169,7 @@ const originalRows = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51,
     protein: 4.9,
     sodium: 326,
@@ -140,58 +179,49 @@ const originalRows = [
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65,
     protein: 7,
     sodium: 54,
     calcium: '12%',
     iron: '6%'
   }
+  // #endregion
 ]
 
-export default {
-  setup () {
-    const loading = ref(false)
-    const filter = ref('')
-    const rowCount = ref(10)
-    const rows = ref([...originalRows])
+const loading = ref(false)
+const filter = ref('')
+const rowCount = ref(10)
+const rows = ref([...originalRows])
 
-    return {
-      columns,
-      rows,
+// emulate fetching data from server
+function addRow() {
+  loading.value = true
+  setTimeout(() => {
+    const index = Math.floor(Math.random() * (rows.value.length + 1)),
+      row = originalRows[Math.floor(Math.random() * originalRows.length)]
 
-      loading,
-      filter,
-      rowCount,
-
-      // emulate fetching data from server
-      addRow () {
-        loading.value = true
-        setTimeout(() => {
-          const
-            index = Math.floor(Math.random() * (rows.value.length + 1)),
-            row = originalRows[ Math.floor(Math.random() * originalRows.length) ]
-
-          if (rows.value.length === 0) {
-            rowCount.value = 0
-          }
-
-          row.id = ++rowCount.value
-          const newRow = { ...row } // extend({}, row, { name: `${row.name} (${row.__count})` })
-          rows.value = [ ...rows.value.slice(0, index), newRow, ...rows.value.slice(index) ]
-          loading.value = false
-        }, 500)
-      },
-
-      removeRow () {
-        loading.value = true
-        setTimeout(() => {
-          const index = Math.floor(Math.random() * rows.value.length)
-          rows.value = [ ...rows.value.slice(0, index), ...rows.value.slice(index + 1) ]
-          loading.value = false
-        }, 500)
-      }
+    if (rows.value.length === 0) {
+      rowCount.value = 0
     }
-  }
+
+    row.id = ++rowCount.value
+    const newRow = { ...row } // extend({}, row, { name: `${row.name} (${row.__count})` })
+    rows.value = [
+      ...rows.value.slice(0, index),
+      newRow,
+      ...rows.value.slice(index)
+    ]
+    loading.value = false
+  }, 500)
+}
+
+function removeRow() {
+  loading.value = true
+  setTimeout(() => {
+    const index = Math.floor(Math.random() * rows.value.length)
+    rows.value = [...rows.value.slice(0, index), ...rows.value.slice(index + 1)]
+    loading.value = false
+  }, 500)
 }
 </script>

@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    <% if (scope.linter === 'oxlint') { %>
+    "oxc.oxc-vscode",
+    <% } %>
+    "editorconfig.editorconfig",
+    "vue.volar",
+    "wayou.vscode-todo-highlight"
+  ],
+  "unwantedRecommendations": [
+    "octref.vetur",
+    "hookyqr.beautify",
+    "dbaeumer.jshint",
+    "ms-vscode.vscode-typescript-tslint-plugin"
+  ]
+}

@@ -52,7 +52,6 @@
         &:before
           box-shadow: $button-shadow-active
 
-
   &--no-uppercase
     text-transform: none
 
@@ -94,6 +93,9 @@
     min-width: 3em
     min-height: 3em
 
+  &--square
+    border-radius: 0
+
   &--flat, &--outline, &--unelevated
     &:before
       box-shadow: none
@@ -115,7 +117,7 @@
 
   &--fab, &--fab-mini
     .q-icon
-      font-size: 24px
+      font-size: $button-fab-icon-font-size
 
   &--fab
     padding: 16px

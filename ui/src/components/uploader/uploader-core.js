@@ -1,18 +1,37 @@
-import { h, ref, isRef, computed, watch, provide, onBeforeUnmount, getCurrentInstance } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  h,
+  isRef,
+  onBeforeUnmount,
+  provide,
+  ref,
+  watch
+} from 'vue'
 
 import QBtn from '../btn/QBtn.js'
 import QIcon from '../icon/QIcon.js'
 import QSpinner from '../spinner/QSpinner.js'
 import QCircularProgress from '../circular-progress/QCircularProgress.js'
 
-import useDark, { useDarkProps } from '../../composables/private/use-dark.js'
-import useFile, { useFileProps, useFileEmits } from '../../composables/private/use-file.js'
+import useDark, {
+  useDarkProps
+} from '../../composables/private.use-dark/use-dark.js'
+import useFile, {
+  useFileEmits,
+  useFileProps
+} from '../../composables/private.use-file/use-file.js'
 
-import { stop } from '../../utils/event.js'
-import { humanStorageSize } from '../../utils/format.js'
-import { uploaderKey } from '../../utils/private/symbols.js'
+import { stop } from '../../utils/event/event.js'
+import { humanStorageSize } from '../../utils/format/format.js'
+import { uploaderKey } from '../../utils/private.symbols/symbols.js'
+import {
+  injectMultipleProps,
+  injectProp
+} from '../../utils/private.inject-obj-prop/inject-obj-prop.js'
+import { vmIsDestroyed } from '../../utils/private.vm/vm.js'
 
-function getProgressLabel (p) {
+function getProgressLabel(p) {
   return (p * 100).toFixed(2) + '%'
 }
 
@@ -30,26 +49,33 @@ export const coreProps = {
   bordered: Boolean,
 
   noThumbnails: Boolean,
+  thumbnailFit: {
+    type: String,
+    default: 'cover'
+  },
+
   autoUpload: Boolean,
   hideUploadBtn: Boolean,
-
   disable: Boolean,
   readonly: Boolean
 }
 
 export const coreEmits = [
   ...useFileEmits,
-  'start', 'finish', 'added', 'removed'
+  'start',
+  'finish',
+  'added',
+  'removed'
 ]
 
-export function getRenderer (getPlugin) {
+export function getRenderer(getPlugin, expose) {
   const vm = getCurrentInstance()
   const { props, slots, emit, proxy } = vm
   const { $q } = proxy
 
   const isDark = useDark(props, $q)
 
-  function updateFileStatus (file, status, uploadedSize) {
+  function updateFileStatus(file, status, uploadedSize) {
     file.__status = status
 
     if (status === 'idle') {
@@ -64,17 +90,20 @@ export function getRenderer (getPlugin) {
       return
     }
 
-    file.__uploaded = status === 'uploaded'
-      ? file.size
-      : uploadedSize
+    file.__uploaded = status === 'uploaded' ? file.size : uploadedSize
 
-    file.__progress = status === 'uploaded'
-      ? 1
-      : Math.min(0.9999, file.__uploaded / file.size)
+    file.__progress =
+      status === 'uploaded' ? 1 : Math.min(0.9999, file.__uploaded / file.size)
 
     file.__progressLabel = getProgressLabel(file.__progress)
     proxy.$forceUpdate()
   }
+
+  const editable = computed(() => !props.disable && !props.readonly)
+  const dnd = ref(false)
+
+  const rootRef = ref(null)
+  const inputRef = ref(null)
 
   const state = {
     files: ref([]),
@@ -83,90 +112,98 @@ export function getRenderer (getPlugin) {
     uploadedSize: ref(0),
 
     updateFileStatus,
-    isAlive () {
-      return vm.isDeactivated !== true && vm.isUnmounted !== true
-    }
+    isAlive: () => !vmIsDestroyed(vm)
   }
-
-  Object.assign(state, getPlugin({ props, slots, emit, helpers: state }))
-
-  const uploadSize = ref(0)
-  const editable = computed(() => props.disable !== true && props.readonly !== true)
-
-  if (state.isBusy === void 0) {
-    state.isBusy = ref(false)
-  }
-
-  const dnd = ref(false)
-
-  const rootRef = ref(null)
-  const inputRef = ref(null)
-
-  provide(uploaderKey, renderInput)
 
   const {
     pickFiles,
     addFiles,
     onDragover,
+    onDragleave,
     processFiles,
     getDndNode,
     maxFilesNumber,
     maxTotalSizeNumber
   } = useFile({ editable, dnd, getFileInput, addFilesToQueue })
 
-  const canAddFiles = computed(() =>
-    editable.value === true
-    && state.isUploading.value !== true
-    // if single selection and no files are queued:
-    && (props.multiple === true || state.queuedFiles.value.length === 0)
-    // if max-files is set and current number of files does not exceeds it:
-    && (props.maxFiles === void 0 || state.files.value.length < maxFilesNumber.value)
-    // if max-total-size is set and current upload size does not exceeds it:
-    && (props.maxTotalSize === void 0 || uploadSize.value < maxTotalSizeNumber.value)
+  Object.assign(
+    state,
+    getPlugin({
+      props,
+      slots,
+      emit,
+      helpers: state,
+      exposeApi: obj => {
+        Object.assign(state, obj)
+      }
+    })
   )
 
-  const canUpload = computed(() =>
-    editable.value === true
-    && state.isBusy.value !== true
-    && state.isUploading.value !== true
-    && state.queuedFiles.value.length > 0
+  if (state.isBusy === void 0) {
+    state.isBusy = ref(false)
+  }
+
+  const uploadSize = ref(0)
+  const uploadProgress = computed(() =>
+    uploadSize.value === 0 ? 0 : state.uploadedSize.value / uploadSize.value
   )
-
-  const uploadProgress = computed(() => (
-    uploadSize.value === 0
-      ? 0
-      : state.uploadedSize.value / uploadSize.value
-  ))
-
-  const uploadProgressLabel = computed(() => getProgressLabel(uploadProgress.value))
+  const uploadProgressLabel = computed(() =>
+    getProgressLabel(uploadProgress.value)
+  )
   const uploadSizeLabel = computed(() => humanStorageSize(uploadSize.value))
 
-  const classes = computed(() =>
-    'q-uploader column no-wrap'
-    + (isDark.value === true ? ' q-uploader--dark q-dark' : '')
-    + (props.bordered === true ? ' q-uploader--bordered' : '')
-    + (props.square === true ? ' q-uploader--square no-border-radius' : '')
-    + (props.flat === true ? ' q-uploader--flat no-shadow' : '')
-    + (props.disable === true ? ' disabled q-uploader--disable' : '')
+  const canAddFiles = computed(
+    () =>
+      editable.value &&
+      !state.isUploading.value &&
+      // if single selection and no files are queued:
+      (props.multiple || state.queuedFiles.value.length === 0) &&
+      // if max-files is set and current number of files does not exceeds it:
+      (props.maxFiles === void 0 ||
+        state.files.value.length < maxFilesNumber.value) &&
+      // if max-total-size is set and current upload size does not exceeds it:
+      (props.maxTotalSize === void 0 ||
+        uploadSize.value < maxTotalSizeNumber.value)
   )
 
-  const colorClass = computed(() =>
-    'q-uploader__header'
-    + (props.color !== void 0 ? ` bg-${ props.color }` : '')
-    + (props.textColor !== void 0 ? ` text-${ props.textColor }` : '')
+  const canUpload = computed(
+    () =>
+      editable.value &&
+      !state.isBusy.value &&
+      !state.isUploading.value &&
+      state.queuedFiles.value.length !== 0
+  )
+
+  provide(uploaderKey, renderInput)
+
+  const classes = computed(
+    () =>
+      'q-uploader column no-wrap' +
+      (isDark.value ? ' q-uploader--dark q-dark' : '') +
+      (props.bordered ? ' q-uploader--bordered' : '') +
+      (props.square ? ' q-uploader--square no-border-radius' : '') +
+      (props.flat ? ' q-uploader--flat no-shadow' : '') +
+      (props.disable ? ' disabled q-uploader--disable' : '') +
+      (dnd.value ? ' q-uploader--dnd' : '')
+  )
+
+  const colorClass = computed(
+    () =>
+      'q-uploader__header' +
+      (props.color !== void 0 ? ` bg-${props.color}` : '') +
+      (props.textColor !== void 0 ? ` text-${props.textColor}` : '')
   )
 
   watch(state.isUploading, (newVal, oldVal) => {
-    if (oldVal === false && newVal === true) {
+    if (!oldVal && newVal) {
       emit('start')
-    }
-    else if (oldVal === true && newVal === false) {
+    } else if (oldVal && !newVal) {
       emit('finish')
     }
   })
 
-  function reset () {
-    if (props.disable === false) {
+  function reset() {
+    if (!props.disable) {
       state.abort()
       state.uploadedSize.value = 0
       uploadSize.value = 0
@@ -177,25 +214,23 @@ export function getRenderer (getPlugin) {
     }
   }
 
-  function removeUploadedFiles () {
-    if (props.disable === false) {
-      batchRemoveFiles([ 'uploaded' ], () => {
+  function removeUploadedFiles() {
+    if (!props.disable) {
+      batchRemoveFiles(['uploaded'], () => {
         state.uploadedFiles.value = []
       })
     }
   }
 
-  function removeQueuedFiles () {
-    batchRemoveFiles([ 'idle', 'failed' ], ({ size }) => {
+  function removeQueuedFiles() {
+    batchRemoveFiles(['idle', 'failed'], ({ size }) => {
       uploadSize.value -= size
       state.queuedFiles.value = []
     })
   }
 
-  function batchRemoveFiles (statusList, cb) {
-    if (props.disable === true) {
-      return
-    }
+  function batchRemoveFiles(statusList, cb) {
+    if (props.disable) return
 
     const removed = {
       files: [],
@@ -203,35 +238,33 @@ export function getRenderer (getPlugin) {
     }
 
     const localFiles = state.files.value.filter(f => {
-      if (statusList.indexOf(f.__status) === -1) {
-        return true
-      }
+      if (!statusList.includes(f.__status)) return true
 
       removed.size += f.size
       removed.files.push(f)
 
-      f.__img !== void 0 && window.URL.revokeObjectURL(f.__img.src)
+      if (f.__img !== void 0) window.URL.revokeObjectURL(f.__img.src)
 
       return false
     })
 
-    if (removed.files.length > 0) {
+    if (removed.files.length !== 0) {
       state.files.value = localFiles
       cb(removed)
       emit('removed', removed.files)
     }
   }
 
-  function removeFile (file) {
-    if (props.disable) { return }
+  function removeFile(file) {
+    if (props.disable) return
 
     if (file.__status === 'uploaded') {
-      state.uploadedFiles.value = state.uploadedFiles.value.filter(f => f.__key !== file.__key)
-    }
-    else if (file.__status === 'uploading') {
+      state.uploadedFiles.value = state.uploadedFiles.value.filter(
+        f => f.__key !== file.__key
+      )
+    } else if (file.__status === 'uploading') {
       file.__abort()
-    }
-    else {
+    } else {
       uploadSize.value -= file.size
     }
 
@@ -240,63 +273,67 @@ export function getRenderer (getPlugin) {
         return true
       }
 
-      f.__img !== void 0 && window.URL.revokeObjectURL(f.__img.src)
+      if (f.__img !== void 0) window.URL.revokeObjectURL(f.__img.src)
 
       return false
     })
 
-    state.queuedFiles.value = state.queuedFiles.value.filter(f => f.__key !== file.__key)
-    emit('removed', [ file ])
+    state.queuedFiles.value = state.queuedFiles.value.filter(
+      f => f.__key !== file.__key
+    )
+    emit('removed', [file])
   }
 
-  function revokeImgURLs () {
+  function revokeImgURLs() {
     state.files.value.forEach(f => {
-      f.__img !== void 0 && window.URL.revokeObjectURL(f.__img.src)
+      if (f.__img !== void 0) window.URL.revokeObjectURL(f.__img.src)
     })
   }
 
-  function getFileInput () {
-    return inputRef.value
-      || rootRef.value.getElementsByClassName('q-uploader__input')[ 0 ]
+  function getFileInput() {
+    return (
+      inputRef.value ||
+      rootRef.value.getElementsByClassName('q-uploader__input')[0]
+    )
   }
 
-  function addFilesToQueue (e, fileList) {
+  function addFilesToQueue(e, fileList) {
     const localFiles = processFiles(e, fileList, state.files.value, true)
-
-    if (localFiles === void 0) { return }
-
     const fileInput = getFileInput()
+
     if (fileInput !== void 0 && fileInput !== null) {
       fileInput.value = ''
     }
+
+    if (localFiles === void 0) return
 
     localFiles.forEach(file => {
       state.updateFileStatus(file, 'idle')
       uploadSize.value += file.size
 
-      if (props.noThumbnails !== true && file.type.toUpperCase().startsWith('IMAGE')) {
+      if (!props.noThumbnails && file.type.toUpperCase().startsWith('IMAGE')) {
         const img = new Image()
         img.src = window.URL.createObjectURL(file)
         file.__img = img
       }
     })
 
-    state.files.value = state.files.value.concat(localFiles)
-    state.queuedFiles.value = state.queuedFiles.value.concat(localFiles)
+    state.files.value.push(...localFiles)
+    state.queuedFiles.value.push(...localFiles)
     emit('added', localFiles)
-    props.autoUpload === true && state.upload()
+    if (props.autoUpload) state.upload()
   }
 
-  function upload () {
-    canUpload.value === true && state.upload()
+  function upload() {
+    if (canUpload.value) state.upload()
   }
 
-  function getBtn (show, icon, fn) {
-    if (show === true) {
+  function getBtn(show, icon, fn) {
+    if (show) {
       const data = {
         type: 'a',
         key: icon,
-        icon: $q.iconSet.uploader[ icon ],
+        icon: $q.iconSet.uploader[icon],
         flat: true,
         dense: true
       }
@@ -306,8 +343,7 @@ export function getRenderer (getPlugin) {
       if (icon === 'add') {
         data.onClick = pickFiles
         child = renderInput
-      }
-      else {
+      } else {
         data.onClick = fn
       }
 
@@ -315,7 +351,7 @@ export function getRenderer (getPlugin) {
     }
   }
 
-  function renderInput () {
+  function renderInput() {
     return h('input', {
       ref: inputRef,
       class: 'q-uploader__input overflow-hidden absolute-full',
@@ -323,7 +359,7 @@ export function getRenderer (getPlugin) {
       type: 'file',
       title: '', // try to remove default tooltip
       accept: props.accept,
-      multiple: props.multiple === true ? 'multiple' : void 0,
+      multiple: props.multiple ? 'multiple' : void 0,
       capture: props.capture,
       onMousedown: stop, // need to stop refocus from QBtn
       onClick: pickFiles,
@@ -331,135 +367,194 @@ export function getRenderer (getPlugin) {
     })
   }
 
-  function getHeader () {
+  function getHeader() {
     if (slots.header !== void 0) {
-      return slots.header(slotScope.value)
+      return slots.header(publicApi)
     }
 
     return [
-      h('div', {
-        class: 'q-uploader__header-content flex flex-center no-wrap q-gutter-xs'
-      }, [
-        getBtn(state.queuedFiles.value.length > 0, 'removeQueue', removeQueuedFiles),
-        getBtn(state.uploadedFiles.value.length > 0, 'removeUploaded', removeUploadedFiles),
+      h(
+        'div',
+        {
+          class: 'q-uploader__header-content column'
+        },
+        [
+          h(
+            'div',
+            {
+              class: 'flex flex-center no-wrap q-gutter-xs'
+            },
+            [
+              getBtn(
+                state.queuedFiles.value.length !== 0,
+                'removeQueue',
+                removeQueuedFiles
+              ),
+              getBtn(
+                state.uploadedFiles.value.length !== 0,
+                'removeUploaded',
+                removeUploadedFiles
+              ),
 
-        state.isUploading.value === true
-          ? h(QSpinner, { class: 'q-uploader__spinner' })
-          : null,
+              state.isUploading.value
+                ? h(QSpinner, { class: 'q-uploader__spinner' })
+                : null,
 
-        h('div', { class: 'col column justify-center' }, [
-          props.label !== void 0
-            ? h('div', { class: 'q-uploader__title' }, [ props.label ])
-            : null,
+              h('div', { class: 'col column justify-center' }, [
+                props.label !== void 0
+                  ? h('div', { class: 'q-uploader__title' }, [props.label])
+                  : null,
 
-          h('div', { class: 'q-uploader__subtitle' }, [
-            uploadSizeLabel.value + ' / ' + uploadProgressLabel.value
-          ])
-        ]),
+                h('div', { class: 'q-uploader__subtitle' }, [
+                  uploadSizeLabel.value + ' / ' + uploadProgressLabel.value
+                ])
+              ]),
 
-        getBtn(canAddFiles.value, 'add'),
-        getBtn(props.hideUploadBtn === false && canUpload.value === true, 'upload', state.upload),
-        getBtn(state.isUploading.value, 'clear', state.abort)
-      ])
+              getBtn(canAddFiles.value, 'add'),
+              getBtn(
+                !props.hideUploadBtn && canUpload.value,
+                'upload',
+                state.upload
+              ),
+              getBtn(state.isUploading.value, 'clear', state.abort)
+            ]
+          )
+        ]
+      )
     ]
   }
 
-  function getList () {
+  function getList() {
     if (slots.list !== void 0) {
-      return slots.list(slotScope.value)
+      return slots.list(publicApi)
     }
 
-    return state.files.value.map(file => h('div', {
-      key: file.__key,
-      class: 'q-uploader__file relative-position'
-        + (props.noThumbnails !== true && file.__img !== void 0 ? ' q-uploader__file--img' : '')
-        + (
-          file.__status === 'failed'
-            ? ' q-uploader__file--failed'
-            : (file.__status === 'uploaded' ? ' q-uploader__file--uploaded' : '')
-        ),
-      style: props.noThumbnails !== true && file.__img !== void 0
-        ? { backgroundImage: 'url("' + file.__img.src + '")' }
-        : null
-    }, [
-      h('div', {
-        class: 'q-uploader__file-header row flex-center no-wrap'
-      }, [
-        file.__status === 'failed'
-          ? h(QIcon, {
-              class: 'q-uploader__file-status',
-              name: $q.iconSet.type.negative,
-              color: 'negative'
-            })
-          : null,
+    return state.files.value.map(file =>
+      h(
+        'div',
+        {
+          key: file.__key,
+          class:
+            'q-uploader__file relative-position' +
+            (!props.noThumbnails && file.__img !== void 0
+              ? ' q-uploader__file--img'
+              : '') +
+            (file.__status === 'failed'
+              ? ' q-uploader__file--failed'
+              : file.__status === 'uploaded'
+                ? ' q-uploader__file--uploaded'
+                : ''),
+          style:
+            !props.noThumbnails && file.__img !== void 0
+              ? {
+                  backgroundImage: 'url("' + file.__img.src + '")',
+                  backgroundSize: props.thumbnailFit
+                }
+              : null
+        },
+        [
+          h(
+            'div',
+            {
+              class: 'q-uploader__file-header row flex-center no-wrap'
+            },
+            [
+              file.__status === 'failed'
+                ? h(QIcon, {
+                    class: 'q-uploader__file-status',
+                    name: $q.iconSet.type.negative,
+                    color: 'negative'
+                  })
+                : null,
 
-        h('div', { class: 'q-uploader__file-header-content col' }, [
-          h('div', { class: 'q-uploader__title' }, [ file.name ]),
-          h('div', {
-            class: 'q-uploader__subtitle row items-center no-wrap'
-          }, [
-            file.__sizeLabel + ' / ' + file.__progressLabel
-          ])
-        ]),
+              h('div', { class: 'q-uploader__file-header-content col' }, [
+                h('div', { class: 'q-uploader__title' }, [file.name]),
+                h(
+                  'div',
+                  {
+                    class: 'q-uploader__subtitle row items-center no-wrap'
+                  },
+                  [file.__sizeLabel + ' / ' + file.__progressLabel]
+                )
+              ]),
 
-        file.__status === 'uploading'
-          ? h(QCircularProgress, {
-              value: file.__progress,
-              min: 0,
-              max: 1,
-              indeterminate: file.__progress === 0
-            })
-          : h(QBtn, {
-            round: true,
-            dense: true,
-            flat: true,
-            icon: $q.iconSet.uploader[ file.__status === 'uploaded' ? 'done' : 'clear' ],
-            onClick: () => { removeFile(file) }
-          })
-      ])
-    ]))
+              file.__status === 'uploading'
+                ? h(QCircularProgress, {
+                    value: file.__progress,
+                    min: 0,
+                    max: 1,
+                    indeterminate: file.__progress === 0
+                  })
+                : h(QBtn, {
+                    round: true,
+                    dense: true,
+                    flat: true,
+                    icon: $q.iconSet.uploader[
+                      file.__status === 'uploaded' ? 'done' : 'clear'
+                    ],
+                    onClick: () => {
+                      removeFile(file)
+                    }
+                  })
+            ]
+          )
+        ]
+      )
+    )
   }
 
   onBeforeUnmount(() => {
-    state.isUploading.value === true && state.abort()
-    state.files.value.length > 0 && revokeImgURLs()
+    if (state.isUploading.value) state.abort()
+    if (state.files.value.length !== 0) revokeImgURLs()
   })
 
-  const publicMethods = {
-    pickFiles,
-    addFiles,
+  const publicApi = {}
+
+  for (const key in state) {
+    if (isRef(state[key])) {
+      injectProp(publicApi, key, () => state[key].value)
+    } else {
+      // method or non-computed prop
+      publicApi[key] = state[key]
+    }
+  }
+
+  Object.assign(publicApi, {
+    upload,
     reset,
     removeUploadedFiles,
     removeQueuedFiles,
     removeFile,
-    upload,
-    abort: state.abort
-  }
 
-  // TODO: the result of this computed, especially the dynamic part, isn't currently typed
-  // This result in an error with Volar when accessing the state (eg. files array)
-  const slotScope = computed(() => {
-    const acc = {
-      canAddFiles: canAddFiles.value,
-      canUpload: canUpload.value,
-      uploadSizeLabel: uploadSizeLabel.value,
-      uploadProgressLabel: uploadProgressLabel.value
-    }
-
-    for (const key in state) {
-      acc[ key ] = isRef(state[ key ]) === true
-        ? state[ key ].value
-        : state[ key ]
-    }
-
-    // TODO: (Qv3) Put the QUploader instance under `ref`
-    // property for consistency and flexibility
-    // return { ref: { ...acc, ...publicMethods } }
-    return { ...acc, ...publicMethods }
+    pickFiles,
+    addFiles
   })
 
-  // expose public methods
-  Object.assign(proxy, publicMethods)
+  injectMultipleProps(publicApi, {
+    canAddFiles: () => canAddFiles.value,
+    canUpload: () => canUpload.value,
+    uploadSizeLabel: () => uploadSizeLabel.value,
+    uploadProgressLabel: () => uploadProgressLabel.value
+  })
+
+  // expose public api (methods & computed props)
+  expose({
+    ...state,
+
+    upload,
+    reset,
+    removeUploadedFiles,
+    removeQueuedFiles,
+    removeFile,
+
+    pickFiles,
+    addFiles,
+
+    canAddFiles,
+    canUpload,
+    uploadSizeLabel,
+    uploadProgressLabel
+  })
 
   return () => {
     const children = [
@@ -468,16 +563,22 @@ export function getRenderer (getPlugin) {
       getDndNode('uploader')
     ]
 
-    state.isBusy.value === true && children.push(
-      h('div', {
-        class: 'q-uploader__overlay absolute-full flex flex-center'
-      }, [ h(QSpinner) ])
-    )
+    if (state.isBusy.value) {
+      children.push(
+        h(
+          'div',
+          {
+            class: 'q-uploader__overlay absolute-full flex flex-center'
+          },
+          [h(QSpinner)]
+        )
+      )
+    }
 
     const data = { ref: rootRef, class: classes.value }
 
-    if (canAddFiles.value === true) {
-      data.onDragover = onDragover
+    if (canAddFiles.value) {
+      Object.assign(data, { onDragover, onDragleave })
     }
 
     return h('div', data, children)

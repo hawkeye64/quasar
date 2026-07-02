@@ -1,6 +1,6 @@
 <template>
   <div class="q-pa-md">
-    <q-card class="my-card">
+    <q-card class="my-card" flat bordered>
       <q-card-section>
         <div class="text-h6">Our Changing Planet</div>
         <div class="text-subtitle2">by John Doe</div>
@@ -26,6 +26,7 @@
             <td class="text-right">4</td>
             <td class="text-right">87</td>
           </tr>
+          <!-- #region -->
           <tr>
             <td class="text-left">Ice cream sandwich</td>
             <td class="text-right">237</td>
@@ -58,6 +59,7 @@
             <td class="text-right">3.9</td>
             <td class="text-right">327</td>
           </tr>
+          <!-- #endregion -->
         </tbody>
       </q-markup-table>
     </q-card>

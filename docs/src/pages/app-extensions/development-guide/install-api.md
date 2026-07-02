@@ -3,24 +3,64 @@ title: App Extension Install API
 desc: The API for the install script of a Quasar App Extension. Initializes the app space by rendering or changing files and more.
 ---
 
-This page refers to `src/install.js` file which is executed on the installation of the App Extension only. Not all App Extensions will need an install -- this is an optional step.
+This page refers to `/ae/src/install.js|ts` file which is executed on the installation of the App Extension only. Not all App Extensions will need an install -- this is an optional step.
 
 Example of basic structure of the file:
 
-```js
-module.exports = function (api) {
-  // props and methods for "api" Object
-  // are described below
+```js /ae/src/install.js (or .ts)
+import { defineInstallScript } from '#q-app'
+
+// can be async
+export default defineInstallScript((/* api */) => {})
+```
+
+## The API param
+
+### api.ctx
+
+Same as the `ctx` from the `/quasar.config` file.
+
+```js api.ctx example:
+{
+  appPaths: {
+    cliDir: '...absolute path of it',
+    appDir: '...absolute path of it',
+    srcDir: '...absolute path of it',
+    publicDir: '...absolute path of it',
+    pwaDir: '...absolute path of it',
+    ssrDir: '...absolute path of it',
+    cordovaDir: '...absolute path of it',
+    capacitorDir: '...absolute path of it',
+    electronDir: '...absolute path of it',
+    bexDir: '...absolute path of it',
+    quasarConfigFilename: '...absolute path of the quasar.config file',
+    quasarConfigInputFormat: 'js', // or 'ts'
+    resolve: {
+      cli: (...paths) => theAbsolutePathToCliDir,
+      app: (...paths) => theAbsolutePathToAppDir,
+      src: (...paths) => theAbsolutePathToAppSrcDir,
+      public: (...paths) => theAbsolutePathToPublicDir,
+      pwa: (...paths) => theAbsolutePathToAppSrcPwaDir,
+      ssr: (...paths) => theAbsolutePathToAppSrcSsrDir,
+      cordova: (...paths) => theAbsolutePathToAppSrcCordovaDir,
+      capacitor: (...paths) => theAbsolutePathToAppSrcCapacitorDir,
+      electron: (...paths) => theAbsolutePathToAppSrcElectronDir,
+      bex: (...paths) => theAbsolutePathToAppSrcBexDir
+    }
+  }
 }
 ```
 
-## api.extId
+### api.extId
+
 Contains the `ext-id` (String) of this App Extension.
 
-## api.prompts
+### api.prompts
+
 Is an Object which has the answers to the prompts when this App Extension gets installed. For more info on prompts, check out [Prompts API](/app-extensions/development-guide/prompts-api).
 
-## api.resolve
+### api.resolve
+
 Resolves paths within the app on which this App Extension is running. Eliminates the need to import `path` and resolve the paths yourself.
 
 ```js
@@ -29,6 +69,9 @@ api.resolve.app('src/my-file.js')
 
 // resolves to root/src of app
 api.resolve.src('my-file.js')
+
+// resolves to root/public of app
+api.resolve.public('my-image.png')
 
 // resolves to root/src-pwa of app
 api.resolve.pwa('some-file.js')
@@ -41,16 +84,73 @@ api.resolve.cordova('config.xml')
 
 // resolves to root/src-electron of app
 api.resolve.electron('some-file.js')
+
+// resolves to root/src-bex of app
+api.resolve.bex('some-file.js')
 ```
 
-## api.appDir
+### api.appDir
+
 Contains the full path (String) to the root of the app on which this App Extension is running.
 
-## api.compatibleWith
+### api.logger
+
+A logger scoped to this App Extension. Every method tags its output with `AE (<extId>)`, so users can see which extension printed which line.
+
+```js
+api.logger.log('hello') // green-bannered line
+api.logger.warn('careful') // yellow-bannered warning
+api.logger.fatal('boom') // red-bannered error; exits with code 1
+api.logger.tip('try foo') // TIP-pilled tip line
+api.logger.info('synced') // INFO-pilled line
+api.logger.info('synced', 'SYNC') // custom pill text instead of INFO
+api.logger.success('built')
+api.logger.error('oh no')
+api.logger.warning('hmm')
+
+const finish = api.logger.progress({
+  tool: 'ssg',
+  waitAction: 'building',
+  doneAction: 'built'
+})
+// ...later
+finish() // prints the DONE line with elapsed time
+
+api.logger.dot // the bullet character the helpers print
+```
+
+### api.hasTypescript
+
+```js
+/**
+ * @return {Promise<boolean>} host project has TypeScript active or not
+ */
+await api.hasTypescript()
+```
+
+### api.getStorePackageName
+
+```js
+/**
+ * @return {Promise<string|undefined>} 'pinia' | 'vuex' | undefined
+ */
+await api.getStorePackageName()
+```
+
+### api.getNodePackagerName
+
+```js
+/**
+ * @return {Promise<'npm' | 'yarn' | 'pnpm' | 'bun'>}
+ */
+await api.getNodePackagerName()
+```
+
+### api.compatibleWith
 
 Ensure the App Extension is compatible with a package installed in the host app through a semver condition.
 
-If the semver condition is not met, then @quasar/app errors out and halts execution.
+If the semver condition is not met, then Quasar CLI errors out and halts execution.
 
 Example of semver condition: `'1.x || >=2.5.0 || 5.0.0 - 7.2.3'`.
 
@@ -59,10 +159,14 @@ Example of semver condition: `'1.x || >=2.5.0 || 5.0.0 - 7.2.3'`.
  * @param {string} packageName
  * @param {string} semverCondition
  */
-api.compatibleWith('@quasar/app', '1.x')
+api.compatibleWith(packageName, '3.x')
 ```
 
-## api.hasPackage
+```js A more complex example:
+api.compatibleWith('@quasar/app-vite', '^3.0.0-rc.1')
+```
+
+### api.hasPackage
 
 Determine if some package is installed in the host app through a semver condition.
 
@@ -77,12 +181,13 @@ Example of semver condition: `'1.x || >=2.5.0 || 5.0.0 - 7.2.3'`.
 if (api.hasPackage('vuelidate')) {
   // hey, this app has it (any version of it)
 }
-if (api.hasPackage('quasar', '^1.0.0')) {
-  // hey, this app has v1 installed
+if (api.hasPackage('quasar', '^2.0.0')) {
+  // hey, this app has Quasar UI v2 installed
 }
 ```
 
-## api.hasExtension
+### api.hasExtension
+
 Check if another app extension is npm installed and Quasar CLI has invoked it.
 
 ```js
@@ -97,7 +202,7 @@ if (api.hasExtension(extId)) {
 }
 ```
 
-## api.getPackageVersion
+### api.getPackageVersion
 
 Get the version of a host app package.
 
@@ -106,13 +211,14 @@ Get the version of a host app package.
  * @param {string} packageName
  * @return {string|undefined} version of app's package
  */
-console.log( api.getPackageVersion(packageName) )
+console.log(api.getPackageVersion(packageName))
 // output examples:
 //   1.1.3
 //   undefined (when package not found)
 ```
 
-## api.extendPackageJson
+### api.extendPackageJson
+
 Helper method to extend package.json with new props. If specifying existing props, **it will override** them.
 
 ```js
@@ -121,14 +227,15 @@ Helper method to extend package.json with new props. If specifying existing prop
  */
 api.extendPackageJson({
   scripts: {
-    'electron': 'quasar dev -m electron'
+    electron: 'quasar dev -m electron'
   }
 })
 ```
 
 The above example adds an npm script to the app's package.json, so you can then execute `yarn electron` (or the equivalent `npm run electron`).
 
-## api.extendJsonFile
+### api.extendJsonFile
+
 Extend a JSON file with new props (deep merge). If specifying existing props, it will override them.
 
 ```js
@@ -141,7 +248,8 @@ api.extendJsonFile('src/some.json', {
 })
 ```
 
-## api.render
+### api.render
+
 Renders (copies) a folder from your App Extension templates (any folder you specify) into root of the app. Maintains the same folder structure that the template folder has.
 
 If some of the files already exist in the app then it will ask the user if they should be overwritten or not.
@@ -159,7 +267,8 @@ Needs a relative path to the folder of the file calling render().
 api.render('./path/to/a/template/folder')
 ```
 
-### Filename edge cases
+#### Filename edge cases
+
 If you want to render a template file that either begins with a dot (i.e. .env) you will have to follow a specific naming convention, since dotfiles are ignored when publishing your plugin to npm:
 
 ```bash
@@ -185,13 +294,13 @@ some-folder/__my.css
 /_my.css
 ```
 
-### Using scope
-You can also inject some decision-making code into the files to be rendered by interpolating with [lodash.template](https://www.npmjs.com/package/lodash.template) syntax.
+#### Using scope
+
+You can also inject some decision-making code into the files to be rendered by interpolating with [lodash/template](https://lodash.com/docs/4.17.15#template) syntax.
 
 Example:
 
-```js
-// src/install.js
+```js src/install.js
 // (my-folder is located in same folder as
 // the file in which following call takes place)
 api.render('./my-folder', {
@@ -203,9 +312,7 @@ Let's imagine we use a [Prompts API](/app-extensions/development-guide/prompts-a
 
 We can take some decisions on what the files that we render look like, during rendering them. This removes the need of creating two folders and deciding which to render, based on some decision.
 
-```js
-// src/my-folder/some-file.js
-
+```js src/my-folder/some-file.js
 <% if (prompts.featureX) { %>
 const message = 'This is content when "Feature X" exists'
 <% } else { %>
@@ -215,7 +322,7 @@ const message = 'This is content when we don\'t have "Feature X"'
 
 Possibilities are limited only by your imagination.
 
-## api.renderFile
+### api.renderFile
 
 Similar with api.render() with the difference that this method renders a single file.
 
@@ -228,14 +335,18 @@ Similar with api.render() with the difference that this method renders a single 
  * @param {string} relativeTargetPath (file path relative to the root of the app -- including filename!)
  * @param {object} scope (optional; rendering scope variables)
  */
-api.renderFile('./path/to/a/template/filename', 'path/relative/to/app/root/filename', {
-  prompts: api.prompts
-})
+api.renderFile(
+  './path/to/a/template/filename',
+  'path/relative/to/app/root/filename',
+  {
+    prompts: api.prompts
+  }
+)
 
 api.renderFile('./my-file.json', 'src/my-file.json')
 ```
 
-## api.getPersistentConf
+### api.getPersistentConf
 
 Get the internal persistent config of this extension. Returns empty object if it has none.
 
@@ -246,7 +357,7 @@ Get the internal persistent config of this extension. Returns empty object if it
 api.getPersistentConf()
 ```
 
-## api.setPersistentConf
+### api.setPersistentConf
 
 Set the internal persistent config of this extension. If it already exists, it is overwritten.
 
@@ -259,7 +370,7 @@ api.setPersistentConf({
 })
 ```
 
-## api.mergePersistentConf
+### api.mergePersistentConf
 
 Deep merge into the internal persistent config of this extension. If extension does not have any config already set, this is essentially equivalent to setting it for the first time.
 
@@ -272,7 +383,8 @@ api.mergePersistentConf({
 })
 ```
 
-## api.onExitLog
+### api.onExitLog
+
 Adds a message to be printed after App CLI finishes up installing the App Extension and is about to exit. Can be called multiple times to register multiple exit logs.
 
 ```js

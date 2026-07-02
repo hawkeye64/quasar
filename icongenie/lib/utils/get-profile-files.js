@@ -1,11 +1,11 @@
-const { basename } = require('path')
-const glob = require('fast-glob')
-const { lstatSync } = require('fs')
+import { basename } from 'node:path'
+import { globSync } from 'tinyglobby'
+import { lstatSync } from 'node:fs'
 
-const { warn } = require('../utils/logger')
+import { warn } from '../utils/logger.js'
 
-function parseFolder (folder) {
-  const profileFiles = glob.sync(`icongenie-*.json`, {
+function parseFolder(folder) {
+  const profileFiles = globSync(`icongenie-*.json`, {
     cwd: folder,
     deep: 1,
     absolute: true
@@ -22,9 +22,7 @@ function parseFolder (folder) {
   console.log(` * ${folder}`)
 
   profileFiles.forEach((file, index) => {
-    const prefix = index + 1 < profileFiles.length
-      ? `├──`
-      : `└──`
+    const prefix = index + 1 < profileFiles.length ? `├──` : `└──`
 
     console.log(` ${prefix} ${basename(file)}`)
   })
@@ -34,8 +32,8 @@ function parseFolder (folder) {
   return profileFiles
 }
 
-module.exports = function getProfileFiles (profileParam) {
+export function getProfileFiles(profileParam) {
   return lstatSync(profileParam).isDirectory()
     ? parseFolder(profileParam)
-    : [ profileParam ]
+    : [profileParam]
 }

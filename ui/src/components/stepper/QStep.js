@@ -1,27 +1,38 @@
-import { h, ref, computed, inject, getCurrentInstance, KeepAlive } from 'vue'
+import { KeepAlive, computed, getCurrentInstance, h, inject, ref } from 'vue'
 
 import QSlideTransition from '../slide-transition/QSlideTransition.js'
 import StepHeader from './StepHeader.js'
 
-import { usePanelChildProps } from '../../composables/private/use-panel.js'
-import useCache from '../../composables/private/use-cache.js'
+import { usePanelChildProps } from '../../composables/private.use-panel/use-panel.js'
+import useRenderCache from '../../composables/use-render-cache/use-render-cache.js'
 
-import { createComponent } from '../../utils/private/create.js'
-import { stepperKey } from '../../utils/private/symbols.js'
-import { hSlot } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import {
+  emptyRenderFn,
+  stepperKey
+} from '../../utils/private.symbols/symbols.js'
+import { hSlot } from '../../utils/private.render/render.js'
 
-function getStepWrapper (slots) {
-  return h('div', {
-    class: 'q-stepper__step-content'
-  }, [
-    h('div', {
-      class: 'q-stepper__step-inner'
-    }, hSlot(slots.default))
-  ])
+function getStepWrapper(slots) {
+  return h(
+    'div',
+    {
+      class: 'q-stepper__step-content'
+    },
+    [
+      h(
+        'div',
+        {
+          class: 'q-stepper__step-inner'
+        },
+        hSlot(slots.default)
+      )
+    ]
+  )
 }
 
 const PanelWrapper = {
-  setup (_, { slots }) {
+  setup(_, { slots }) {
     return () => getStepWrapper(slots)
   }
 }
@@ -39,7 +50,7 @@ export default createComponent({
       required: true
     },
     caption: String,
-    prefix: [ String, Number ],
+    prefix: [String, Number],
 
     doneIcon: String,
     doneColor: String,
@@ -53,56 +64,66 @@ export default createComponent({
       default: true
     },
     done: Boolean,
-    error: Boolean
+    error: Boolean,
+
+    onScroll: [Function, Array]
   },
 
-  setup (props, { attrs, slots }) {
-    const { proxy: { $q } } = getCurrentInstance()
+  setup(props, { slots, emit }) {
+    const {
+      proxy: { $q }
+    } = getCurrentInstance()
 
-    const $stepper = inject(stepperKey, () => {
-      console.error('QStep needs to be child of QStepper')
-    })
+    const $stepper = inject(stepperKey, emptyRenderFn)
+    if ($stepper === emptyRenderFn) {
+      console.error('QStep needs to be a child of QStepper')
+      return emptyRenderFn
+    }
 
-    const { getCacheWithFn } = useCache()
+    const { getCache } = useRenderCache()
 
     const rootRef = ref(null)
 
     const isActive = computed(() => $stepper.value.modelValue === props.name)
 
-    const scrollEvent = computed(() => (
-      ($q.platform.is.ios !== true && $q.platform.is.chrome === true)
-        || isActive.value !== true
-        || $stepper.value.vertical !== true
+    const scrollEvent = computed(() =>
+      (!$q.platform.is.ios && $q.platform.is.chrome) ||
+      !isActive.value ||
+      !$stepper.value.vertical
         ? {}
         : {
-          onScroll (e) {
-            const { target } = e
-            if (target.scrollTop > 0) {
-              target.scrollTop = 0
-            }
-            attrs.onScroll !== void 0 && attrs.onScroll(e)
-          }
-        }
-    ))
+            onScroll(e) {
+              const { target } = e
+              if (target.scrollTop > 0) {
+                target.scrollTop = 0
+              }
 
-    const contentKey = computed(() => (
+              if (props.onScroll !== void 0) emit('scroll', e)
+            }
+          }
+    )
+
+    const contentKey = computed(() =>
       typeof props.name === 'string' || typeof props.name === 'number'
         ? props.name
         : String(props.name)
-    ))
+    )
 
-    function getStepContent () {
+    function getStepContent() {
       const vertical = $stepper.value.vertical
 
-      if (vertical === true && $stepper.value.keepAlive === true) {
+      if (vertical && $stepper.value.keepAlive) {
         return h(
           KeepAlive,
           $stepper.value.keepAliveProps.value,
-          isActive.value === true
+          isActive.value
             ? [
                 h(
-                  $stepper.value.needsUniqueKeepAliveWrapper.value === true
-                    ? getCacheWithFn(contentKey.value, () => ({ ...PanelWrapper, name: contentKey.value }))
+                  $stepper.value.needsUniqueKeepAliveWrapper.value
+                    ? getCache(contentKey.value, () => ({
+                        ...PanelWrapper,
+                        name: contentKey.value
+                      }))
                     : PanelWrapper,
                   { key: contentKey.value },
                   slots.default
@@ -112,27 +133,31 @@ export default createComponent({
         )
       }
 
-      return vertical !== true || isActive.value === true
-        ? getStepWrapper(slots)
-        : void 0
+      return !vertical || isActive.value ? getStepWrapper(slots) : void 0
     }
 
-    return () => h(
-      'div',
-      { ref: rootRef, class: 'q-stepper__step', ...scrollEvent.value },
-      $stepper.value.vertical === true
-        ? [
-            h(StepHeader, {
-              stepper: $stepper.value,
-              step: props,
-              goToPanel: $stepper.value.goToPanel
-            }),
+    return () =>
+      h(
+        'div',
+        {
+          ref: rootRef,
+          class: 'q-stepper__step',
+          role: 'tabpanel',
+          ...scrollEvent.value
+        },
+        $stepper.value.vertical
+          ? [
+              h(StepHeader, {
+                stepper: $stepper.value,
+                step: props,
+                goToPanel: $stepper.value.goToPanel
+              }),
 
-            $stepper.value.animated === true
-              ? h(QSlideTransition, getStepContent)
-              : getStepContent()
-          ]
-        : [ getStepContent() ]
-    )
+              $stepper.value.animated
+                ? h(QSlideTransition, getStepContent)
+                : getStepContent()
+            ]
+          : [getStepContent()]
+      )
   }
 })

@@ -22,50 +22,47 @@
     >
       <q-carousel-slide name="style" class="column no-wrap flex-center">
         <q-icon name="style" size="56px" />
-        <div class="q-mt-md text-center text-black">
+        <div class="q-mt-md text-center">
           {{ lorem }}
         </div>
       </q-carousel-slide>
+      <!-- #region -->
       <q-carousel-slide name="tv" class="column no-wrap flex-center">
         <q-icon name="live_tv" size="56px" />
-        <div class="q-mt-md text-center text-black">
+        <div class="q-mt-md text-center">
           {{ lorem }}
         </div>
       </q-carousel-slide>
       <q-carousel-slide name="layers" class="column no-wrap flex-center">
         <q-icon name="layers" size="56px" />
-        <div class="q-mt-md text-center text-black">
+        <div class="q-mt-md text-center">
           {{ lorem }}
         </div>
       </q-carousel-slide>
       <q-carousel-slide name="map" class="column no-wrap flex-center">
         <q-icon name="terrain" size="56px" />
-        <div class="q-mt-md text-center text-black">
+        <div class="q-mt-md text-center">
           {{ lorem }}
         </div>
       </q-carousel-slide>
+      <!-- #endregion -->
     </q-carousel>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      controlType: ref('flat'),
-      controlTypeOptions: [
-        { value: 'regular', label: 'regular' },
-        { value: 'unelevated', label: 'unelevated' },
-        { value: 'flat', label: 'flat (default)' },
-        { value: 'outline', label: 'outline' },
-        { value: 'push', label: 'push' }
-      ],
+const controlType = ref('flat')
+const controlTypeOptions = [
+  { value: 'regular', label: 'regular' },
+  { value: 'unelevated', label: 'unelevated' },
+  { value: 'flat', label: 'flat (default)' },
+  { value: 'outline', label: 'outline' },
+  { value: 'push', label: 'push' }
+]
 
-      slide: ref('style'),
-      lorem: 'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Itaque voluptatem totam, architecto cupiditate officia rerum, error dignissimos praesentium libero ab nemo.'
-    }
-  }
-}
+const slide = ref('style')
+const lorem =
+  'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Itaque voluptatem totam, architecto cupiditate officia rerum, error dignissimos praesentium libero ab nemo.'
 </script>

@@ -1,3 +1,5 @@
+import { NamedColor } from "../api/color";
+
 export interface colorsRgba {
   r: number;
   g: number;
@@ -22,7 +24,10 @@ export namespace colors {
   function lighten(color: string, percent: number): string;
   function luminosity(color: string | colorsRgba): number;
   function brightness(color: string | colorsRgba): number;
-  function blend(fgColor: string | colorsRgba, bColor: string | colorsRgba): string;
+  function blend(
+    foregroundColor: string | colorsRgba,
+    backgroundColor: string | colorsRgba
+  ): string;
   function changeAlpha(color: string, offset: number): string;
-  function getPaletteColor(colorName: string): string;
+  function getPaletteColor(colorName: NamedColor): string;
 }

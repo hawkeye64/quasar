@@ -1,6 +1,6 @@
 <template>
   <div class="q-pa-md">
-   <q-table
+    <q-table
       :rows="rows"
       :columns="columns"
       title="QDataTable with QPopupEdit"
@@ -11,24 +11,56 @@
         <q-tr :props="props">
           <q-td key="desc" :props="props">
             {{ props.row.name }}
-            <q-popup-edit v-model="props.row.name" title="Edit the Name" auto-save v-slot="scope">
-              <q-input v-model="scope.value" dense autofocus counter @keyup.enter="scope.set" />
+            <q-popup-edit
+              v-model="props.row.name"
+              title="Edit the Name"
+              auto-save
+              v-slot="scope"
+            >
+              <q-input
+                v-model="scope.value"
+                dense
+                autofocus
+                counter
+                @keyup.enter="scope.set"
+              />
             </q-popup-edit>
           </q-td>
           <q-td key="calories" :props="props">
             {{ props.row.calories }}
-            <q-popup-edit v-model.number="props.row.calories" auto-save v-slot="scope">
-              <q-input type="number" v-model.number="scope.value" dense autofocus @keyup.enter="scope.set" />
+            <q-popup-edit
+              v-model.number="props.row.calories"
+              auto-save
+              v-slot="scope"
+            >
+              <q-input
+                type="number"
+                v-model.number="scope.value"
+                dense
+                autofocus
+                @keyup.enter="scope.set"
+              />
             </q-popup-edit>
           </q-td>
           <q-td key="fat" :props="props">
             {{ props.row.fat }}
-            <q-popup-edit disable v-model="props.row.fat" auto-save v-slot="scope">
+            <q-popup-edit
+              disable
+              v-model="props.row.fat"
+              auto-save
+              v-slot="scope"
+            >
               <div class="text-italic text-primary q-mb-xs">
                 My Custom Title
               </div>
 
-              <q-input type="number" v-model.number="scope.value" dense autofocus @keyup.enter="scope.set" />
+              <q-input
+                type="number"
+                v-model.number="scope.value"
+                dense
+                autofocus
+                @keyup.enter="scope.set"
+              />
             </q-popup-edit>
           </q-td>
           <q-td key="carbs" :props="props">
@@ -42,16 +74,14 @@
           </q-td>
           <q-td key="calcium" :props="props">
             {{ props.row.calcium }}
-            <q-popup-edit v-model="props.row.calcium">
-              <template v-slot:title>
-                <div class="text-italic text-primary">
-                  My Custom Title
-                </div>
-              </template>
-
-              <template v-slot="scope">
-                <q-input type="number" v-model.number="scope.value" dense autofocus @keyup.enter="scope.set" />
-              </template>
+            <q-popup-edit v-model="props.row.calcium" v-slot="scope">
+              <div class="text-italic text-primary"> My Custom Title </div>
+              <q-input
+                v-model="scope.value"
+                dense
+                autofocus
+                @keyup.enter="scope.set"
+              />
             </q-popup-edit>
           </q-td>
           <q-td key="iron" :props="props">
@@ -63,11 +93,17 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
 const columns = [
-  { name: 'desc', align: 'left', label: 'Dessert (100g serving)', field: 'name' },
+  // #region
+  {
+    name: 'desc',
+    align: 'left',
+    label: 'Dessert (100g serving)',
+    field: 'name'
+  },
   { name: 'calories', align: 'center', label: 'Calories', field: 'calories' },
   { name: 'fat', label: 'Fat (g)', field: 'fat' },
   { name: 'carbs', label: 'Carbs (g)', field: 'carbs' },
@@ -75,15 +111,17 @@ const columns = [
   { name: 'sodium', label: 'Sodium (mg)', field: 'sodium' },
   { name: 'calcium', label: 'Calcium (%)', field: 'calcium' },
   { name: 'iron', label: 'Iron (%)', field: 'iron' }
+  // #endregion
 ]
 
-const rows = [
+const rows = ref([
+  // #region
   {
     name: 'Frozen Yogurt',
     calories: 159,
-    fat: 6.0,
+    fat: 6,
     carbs: 24,
-    protein: 4.0,
+    protein: 4,
     sodium: 87,
     calcium: '14%',
     iron: '1%'
@@ -91,7 +129,7 @@ const rows = [
   {
     name: 'Ice cream sandwich',
     calories: 237,
-    fat: 9.0,
+    fat: 9,
     carbs: 37,
     protein: 4.3,
     sodium: 129,
@@ -101,9 +139,9 @@ const rows = [
   {
     name: 'Eclair',
     calories: 262,
-    fat: 16.0,
+    fat: 16,
     carbs: 23,
-    protein: 6.0,
+    protein: 6,
     sodium: 337,
     calcium: '6%',
     iron: '7%'
@@ -121,7 +159,7 @@ const rows = [
   {
     name: 'Gingerbread',
     calories: 356,
-    fat: 16.0,
+    fat: 16,
     carbs: 49,
     protein: 3.9,
     sodium: 327,
@@ -131,9 +169,9 @@ const rows = [
   {
     name: 'Jelly bean',
     calories: 375,
-    fat: 0.0,
+    fat: 0,
     carbs: 94,
-    protein: 0.0,
+    protein: 0,
     sodium: 50,
     calcium: '0%',
     iron: '0%'
@@ -161,7 +199,7 @@ const rows = [
   {
     name: 'Donut',
     calories: 452,
-    fat: 25.0,
+    fat: 25,
     carbs: 51,
     protein: 4.9,
     sodium: 326,
@@ -171,21 +209,13 @@ const rows = [
   {
     name: 'KitKat',
     calories: 518,
-    fat: 26.0,
+    fat: 26,
     carbs: 65,
     protein: 7,
     sodium: 54,
     calcium: '12%',
     iron: '6%'
   }
-]
-
-export default {
-  setup () {
-    return {
-      rows: ref(rows),
-      columns
-    }
-  }
-}
+  // #endregion
+])
 </script>

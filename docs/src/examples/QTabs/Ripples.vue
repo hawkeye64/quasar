@@ -18,24 +18,33 @@
         narrow-indicator
         dense
         align="justify"
-        class="text-purple"
+        class="text-secondary"
       >
-        <q-tab :ripple="{ color: 'orange' }" name="mails" icon="mail" label="Mails" />
-        <q-tab :ripple="{ color: 'orange' }" name="alarms" icon="alarm" label="Alarms" />
-        <q-tab :ripple="{ color: 'orange' }" name="movies" icon="movie" label="Movies" />
+        <q-tab
+          :ripple="{ color: 'orange' }"
+          name="mails"
+          icon="mail"
+          label="Mails"
+        />
+        <q-tab
+          :ripple="{ color: 'orange' }"
+          name="alarms"
+          icon="alarm"
+          label="Alarms"
+        />
+        <q-tab
+          :ripple="{ color: 'orange' }"
+          name="movies"
+          icon="movie"
+          label="Movies"
+        />
       </q-tabs>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      tab: ref('mails')
-    }
-  }
-}
+const tab = ref('mails')
 </script>

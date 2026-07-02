@@ -1,25 +1,27 @@
-const { existsSync } = require('fs')
-const { normalize, join, sep } = require('path')
+import { existsSync } from 'node:fs'
+import { join, normalize, sep } from 'node:path'
 
-function getAppDir () {
-  let dir = process.cwd()
+import { fatal } from './logger.js'
 
-  while (dir.length && dir[dir.length - 1] !== sep) {
-    if (existsSync(join(dir, 'quasar.conf.js'))) {
-      return dir
+function getAppInfo() {
+  let appDir = process.cwd()
+
+  while (appDir.length !== 0 && appDir.at(-1) !== sep) {
+    if (
+      existsSync(join(appDir, 'quasar.config.js')) ||
+      existsSync(join(appDir, 'quasar.config.mjs')) ||
+      existsSync(join(appDir, 'quasar.config.ts')) ||
+      existsSync(join(appDir, 'quasar.config.cjs')) ||
+      existsSync(join(appDir, 'quasar.conf.js')) // legacy
+    ) {
+      return appDir
     }
 
-    dir = normalize(join(dir, '..'))
+    appDir = normalize(join(appDir, '..'))
   }
 
-  const { warn } = require('./logger')
-
-  warn(`Error. This command must be executed inside a Quasar v1+ project folder.`)
-  warn()
-  process.exit(1)
+  fatal(`Error. This command must be executed inside a Quasar project folder.`)
 }
 
-const appDir = getAppDir()
-
-module.exports.appDir = appDir
-module.exports.resolveDir = dir => join(appDir, dir)
+export const appDir = getAppInfo()
+export const resolveDir = dir => join(appDir, dir)

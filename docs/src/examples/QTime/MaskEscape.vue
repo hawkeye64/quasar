@@ -1,9 +1,7 @@
 <template>
   <div class="q-pa-md">
     <div class="q-gutter-sm">
-      <q-badge color="teal">
-        Model: {{ model }}
-      </q-badge>
+      <q-badge color="teal"> Model: {{ model }} </q-badge>
       <q-badge color="purple" text-color="white">
         Mask: hh[h and ]mm[ minutes (]A)
       </q-badge>
@@ -15,14 +13,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
-export default {
-  setup () {
-    return {
-      model: ref('10h and 20 minutes (AM)')
-    }
-  }
-}
+const model = ref('10h and 20 minutes (AM)')
 </script>

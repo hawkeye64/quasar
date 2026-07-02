@@ -1,0 +1,42 @@
+{
+  "name": "create-quasar",
+  "version": "4.0.7",
+  "description": "Scaffolds Quasar Apps & App Extensions",
+  "homepage": "https://quasar.dev",
+  "bugs": "https://github.com/quasarframework/quasar/issues",
+  "license": "MIT",
+  "author": {
+    "name": "Razvan Stoenescu",
+    "email": "razvan.stoenescu@gmail.com",
+    "url": "https://github.com/quasarframework"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quasarframework/quasar"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://donate.quasar.dev"
+  },
+  "bin": {
+    "create-quasar": "bin/create-quasar.js"
+  },
+  "type": "module",
+  "main": "bin/create-quasar.js",
+  "scripts": {
+    "test": "node bin/create-quasar.js"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.6.0",
+    "@quasar/art": "workspace:^",
+    "ci-info": "^4.4.0",
+    "cross-spawn": "^7.0.6",
+    "fs-extra": "^11.3.6",
+    "kolorist": "^1.8.0",
+    "tinyglobby": "^0.2.17",
+    "update-notifier": "^7.3.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

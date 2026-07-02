@@ -1,0 +1,14 @@
+{
+  "name": "quasar-ssr-app-koa",
+  "version": "1.0.0",
+  "description": "Quasar SSR server folder",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "koa": "^3.2.0",
+    "koa-compress": "^5.2.1",
+    "koa-connect": "^2.1.1",
+    "koa-mount": "^4.2.0",
+    "koa-static": "^5.0.0"
+  }
+}

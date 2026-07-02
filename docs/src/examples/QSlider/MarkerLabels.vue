@@ -1,11 +1,6 @@
 <template>
   <div class="q-px-lg q-pt-md q-pb-xl">
-    <q-slider
-      v-model="model"
-      marker-labels
-      :min="0"
-      :max="6"
-    />
+    <q-slider v-model="model" marker-labels :min="0" :max="6" />
 
     <q-slider
       class="q-mt-xl"
@@ -45,28 +40,19 @@
   </div>
 </template>
 
-<script>
-import { ref, computed } from 'vue'
+<script setup>
+import { computed, ref } from 'vue'
 
-export default {
-  setup () {
-    const model = ref(2)
-    const priceModel = ref(4)
+const model = ref(2)
+const fnMarkerLabel = val => `${10 * val}%`
+const objMarkerLabel = { 0: '0°C', 3: { label: '3°C' }, 5: '5°C', 6: '6°C' }
 
-    return {
-      model,
-      fnMarkerLabel: val => `${10 * val}%`,
-      objMarkerLabel: { 0: '0°C', 3: { label: '3°C' }, 5: '5°C', 6: '6°C' },
-
-      priceModel,
-      priceLabel: computed(() => `$ ${priceModel.value}`),
-      arrayMarkerLabel: [
-        { value: 3, label: '$3' },
-        { value: 4, label: '$4' },
-        { value: 5, label: '$5' },
-        { value: 6, label: '$6' }
-      ]
-    }
-  }
-}
+const priceModel = ref(4)
+const priceLabel = computed(() => `$ ${priceModel.value}`)
+const arrayMarkerLabel = [
+  { value: 3, label: '$3' },
+  { value: 4, label: '$4' },
+  { value: 5, label: '$5' },
+  { value: 6, label: '$6' }
+]
 </script>

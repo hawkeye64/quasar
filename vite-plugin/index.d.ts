@@ -11,6 +11,19 @@ export interface QuasarPluginOpts {
    *   "combined": q-carousel QPage
    */
   autoImportComponentCase?: "kebab" | "pascal" | "combined";
+
+  /**
+   * Auto import - which file extensions should be interpreted as referring to Vue SFC?
+   * @default [ 'vue' ]
+   */
+  autoImportVueExtensions?: string[];
+
+  /**
+   * Auto import - which file extensions should be interpreted as referring to script files?
+   * @default [ 'js', 'jsx', 'ts', 'tsx' ]
+   */
+  autoImportScriptExtensions?: string[];
+
   /**
    * Would you like to use Quasar's SCSS/Sass variables?
    *   true
@@ -21,13 +34,21 @@ export interface QuasarPluginOpts {
    *      --> yes, and I'd also like to customize those variables
    */
   sassVariables?: string | boolean;
+
   /**
    * How will Quasar be used? In a:
    *    "web-client" (default)
-   *    "ssr-server" (NOT YET AVAILABLE) SSR on server-side
-   *    "ssr-client" (NOT YET AVAILABLE) SSR on client-side
+   *    "ssr-server" (used by @quasar/app-vite)
+   *    "ssr-client" (used by @quasar/app-vite)
    */
-  // runMode?: "web-client" | "ssr-client" | "ssr-server";
+  runMode?: "web-client" | "ssr-client" | "ssr-server";
+
+  /**
+   * Treeshake Quasar's UI on dev too?
+   * Recommended to leave this as false for performance reasons.
+   * @default false
+   */
+  devTreeshaking?: boolean;
 }
 
 export function quasar(opts?: QuasarPluginOpts): Plugin;

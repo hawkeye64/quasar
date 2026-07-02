@@ -14,30 +14,47 @@ export default {
     create: 'Létrehozás',
     search: 'Keresés',
     filter: 'Szűrés',
-    refresh: 'Frissítés'
+    refresh: 'Frissítés',
+    expand: label => (label ? `A "${label}" kiterjesztése` : 'Kiterjed'),
+    collapse: label => (label ? `A "${label}" összecsukása` : 'Összeomlás')
   },
   date: {
     days: 'Vasárnap_Hétfő_Kedd_Szerda_Csütörtök_Péntek_Szombat'.split('_'),
     daysShort: 'Vas_Hét_Ke_Sze_Csü_Pén_Szo'.split('_'),
-    months: 'Január_Február_Március_Április_Május_Június_Július_Augusztus_Szeptember_Október_November_December'.split('_'),
+    months:
+      'Január_Február_Március_Április_Május_Június_Július_Augusztus_Szeptember_Október_November_December'.split(
+        '_'
+      ),
     monthsShort: 'Jan_Feb_Már_Ápr_Máj_Jún_Júl_Aug_Szep_Okt_Nov_Dec'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
-    pluralDay: 'nap'
+    pluralDay: 'nap',
+    prevMonth: 'Előző hónap',
+    nextMonth: 'Következő hónapban',
+    prevYear: 'Előző év',
+    nextYear: 'Jövőre',
+    today: 'Ma',
+    prevRangeYears: range => `Előző ${range} évek`,
+    nextRangeYears: range => `Következő ${range} évek`
   },
   table: {
     noData: 'Nincs elérhető adat',
     noResults: 'Nincsenek egyező találatok',
     loading: 'Betöltés...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows === 1
         ? '1 kiválasztott elem.'
-        : (rows === 0 ? 'Nincs' : rows) + ' kiválasztott elem.'
-    ),
+        : (rows === 0 ? 'Nincs' : rows) + ' kiválasztott elem.',
     recordsPerPage: 'Elemek száma oldalanként:',
     allRows: 'Összes',
-    pagination: (start, end, total) => start + '-' + end + ' / ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' / ' + total,
     columns: 'Oszlopok'
+  },
+  pagination: {
+    first: 'Első oldal',
+    prev: 'Előző oldal',
+    next: 'Következő oldal',
+    last: 'Utolsó oldal'
   },
   editor: {
     url: 'URL',

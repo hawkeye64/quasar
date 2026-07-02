@@ -3,7 +3,7 @@ export default {
   nativeName: 'Slovenski Jezik',
   label: {
     clear: 'Počisti',
-    ok: 'Vredu',
+    ok: 'V redu',
     cancel: 'Prekliči',
     close: 'Zapri',
     set: 'Postavi',
@@ -14,30 +14,49 @@ export default {
     create: 'Ustvari',
     search: 'Išči',
     filter: 'Filtriraj',
-    refresh: 'Ponovno naloži'
+    refresh: 'Ponovno naloži',
+    expand: label => (label ? `Razširi "${label}"` : 'Razširi'),
+    collapse: label => (label ? `Strni "${label}"` : 'Strni')
   },
   date: {
     days: 'Nedelja_Ponedeljek_Torek_Sreda_Četrtek_Petek_Sobota'.split('_'),
     daysShort: 'Ned_Pon_Tor_Sre_Čet_Pet_Sob'.split('_'),
-    months: 'Januar_Februar_Marec_April_Maj_Junij_Julij_Avgust_September_Oktober_November_December'.split('_'),
+    months:
+      'Januar_Februar_Marec_April_Maj_Junij_Julij_Avgust_September_Oktober_November_December'.split(
+        '_'
+      ),
     monthsShort: 'Jan_Feb_Mar_Apr_Maj_Jun_Jul_Avg_Sep_Okt_Nov_Dec'.split('_'),
     firstDayOfWeek: 1, // 0-6, 0 - Nedelja, 1 Ponedeljek, ...
     format24h: true,
-    pluralDay: 'dni'
+    pluralDay: 'dni',
+    prevMonth: 'Prejšnji mesec',
+    nextMonth: 'Naslednji mesec',
+    prevYear: 'Prejšnje leto',
+    nextYear: 'Naslednje leto',
+    today: 'Danes',
+    prevRangeYears: range => `Prejšnja ${range} leta`,
+    nextRangeYears: range => `Naslednja ${range} leta`
   },
   table: {
     noData: 'Ni dosegljivih podatkov',
     noResults: 'Ne najdem ustreznic',
     loading: 'Nalagam...',
-    selectedRecords: rows => (
+    selectedRecords: rows =>
       rows === 1
         ? '1 izbrana vrstica.'
-        : (rows === 2 ? '2 izbrani vrstici.' : (rows === 0 ? 'Ni' : rows) + ' izbranih vrstic.')
-    ),
+        : rows === 2
+          ? '2 izbrani vrstici.'
+          : (rows === 0 ? 'Ni' : rows) + ' izbranih vrstic.',
     recordsPerPage: 'Vrstic na stran:',
     allRows: 'Vse',
-    pagination: (start, end, total) => start + '-' + end + ' od ' + total,
+    pagination: (start, end, total) => start + ' - ' + end + ' od ' + total,
     columns: 'Stolpci'
+  },
+  pagination: {
+    first: 'Prva stran',
+    prev: 'Prejšnja stran',
+    next: 'Naslednja stran',
+    last: 'Zadnja stran'
   },
   editor: {
     url: 'URL',

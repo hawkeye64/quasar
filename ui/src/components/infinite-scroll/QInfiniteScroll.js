@@ -1,11 +1,28 @@
-import { h, ref, computed, watch, onMounted, onActivated, onDeactivated, onBeforeUnmount, nextTick, getCurrentInstance } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  h,
+  nextTick,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  onMounted,
+  ref,
+  watch
+} from 'vue'
 
-import { createComponent } from '../../utils/private/create.js'
-import debounce from '../../utils/debounce.js'
-import { height } from '../../utils/dom.js'
-import { getScrollTarget, getScrollHeight, getVerticalScrollPosition, setVerticalScrollPosition } from '../../utils/scroll.js'
-import { listenOpts } from '../../utils/event.js'
-import { hSlot, hUniqueSlot } from '../../utils/private/render.js'
+import { createComponent } from '../../utils/private.create/create.js'
+import debounce from '../../utils/debounce/debounce.js'
+import { height } from '../../utils/dom/dom.js'
+import {
+  getScrollHeight,
+  getScrollTarget,
+  getVerticalScrollPosition,
+  scrollTargetProp,
+  setVerticalScrollPosition
+} from '../../utils/scroll/scroll.js'
+import { listenOpts } from '../../utils/event/event.js'
+import { hSlot, hUniqueSlot } from '../../utils/private.render/render.js'
 
 const { passive } = listenOpts
 
@@ -19,57 +36,60 @@ export default createComponent({
     },
 
     debounce: {
-      type: [ String, Number ],
+      type: [String, Number],
       default: 100
     },
 
-    scrollTarget: {
-      default: void 0
-    },
+    scrollTarget: scrollTargetProp,
 
-    initialIndex: Number,
+    initialIndex: {
+      type: Number,
+      default: 0
+    },
 
     disable: Boolean,
     reverse: Boolean
   },
 
-  emits: [ 'load' ],
+  emits: ['load'],
 
-  setup (props, { slots, emit }) {
+  setup(props, { slots, emit }) {
     const isFetching = ref(false)
     const isWorking = ref(true)
     const rootRef = ref(null)
+    const loadingRef = ref(null)
 
-    let index = props.initialIndex || 0
+    let index = props.initialIndex
     let localScrollTarget, poll
 
-    const classes = computed(() =>
-      'q-infinite-scroll__loading'
-      + (isFetching.value === true ? '' : ' invisible')
+    const classes = computed(
+      () =>
+        'q-infinite-scroll__loading' + (isFetching.value ? '' : ' invisible')
     )
 
-    function immediatePoll () {
-      if (props.disable === true || isFetching.value === true || isWorking.value === false) {
+    function immediatePoll() {
+      if (props.disable || isFetching.value || !isWorking.value) {
         return
       }
 
-      const
-        scrollHeight = getScrollHeight(localScrollTarget),
+      const scrollHeight = getScrollHeight(localScrollTarget),
         scrollPosition = getVerticalScrollPosition(localScrollTarget),
         containerHeight = height(localScrollTarget)
 
-      if (props.reverse === false) {
-        if (Math.round(scrollPosition + containerHeight + props.offset) >= Math.round(scrollHeight)) {
+      if (!props.reverse) {
+        if (
+          Math.round(scrollPosition + containerHeight + props.offset) >=
+          Math.round(scrollHeight)
+        ) {
           trigger()
         }
-      }
-      else if (Math.round(scrollPosition) <= props.offset) {
+      } else if (Math.round(scrollPosition) <= props.offset) {
         trigger()
       }
     }
 
-    function trigger () {
-      if (props.disable === true || isFetching.value === true || isWorking.value === false) {
+    function trigger() {
+      if (props.disable || isFetching.value || !isWorking.value) {
         return
       }
 
@@ -79,35 +99,36 @@ export default createComponent({
       const heightBefore = getScrollHeight(localScrollTarget)
 
       emit('load', index, isDone => {
-        if (isWorking.value === true) {
+        if (isWorking.value) {
           isFetching.value = false
           nextTick(() => {
-            if (props.reverse === true) {
-              const
-                heightAfter = getScrollHeight(localScrollTarget),
+            if (props.reverse) {
+              const heightAfter = getScrollHeight(localScrollTarget),
                 scrollPosition = getVerticalScrollPosition(localScrollTarget),
                 heightDifference = heightAfter - heightBefore
 
-              setVerticalScrollPosition(localScrollTarget, scrollPosition + heightDifference)
+              setVerticalScrollPosition(
+                localScrollTarget,
+                scrollPosition + heightDifference
+              )
             }
 
             if (isDone === true) {
               stop()
-            }
-            else if (rootRef.value) {
-              rootRef.value.closest('body') && poll()
+            } else if (rootRef.value?.closest('body')) {
+              poll()
             }
           })
         }
       })
     }
 
-    function reset () {
+    function reset() {
       index = 0
     }
 
-    function resume () {
-      if (isWorking.value === false) {
+    function resume() {
+      if (!isWorking.value) {
         isWorking.value = true
         localScrollTarget.addEventListener('scroll', poll, passive)
       }
@@ -115,48 +136,54 @@ export default createComponent({
       immediatePoll()
     }
 
-    function stop () {
-      if (isWorking.value === true) {
+    function stop() {
+      if (isWorking.value) {
         isWorking.value = false
         isFetching.value = false
         localScrollTarget.removeEventListener('scroll', poll, passive)
-        poll !== void 0 && poll.cancel()
+        poll?.cancel?.()
       }
     }
 
-    function updateScrollTarget () {
-      if (localScrollTarget && isWorking.value === true) {
+    function updateScrollTarget() {
+      if (localScrollTarget && isWorking.value) {
         localScrollTarget.removeEventListener('scroll', poll, passive)
       }
 
       localScrollTarget = getScrollTarget(rootRef.value, props.scrollTarget)
 
-      if (isWorking.value === true) {
+      if (isWorking.value) {
         localScrollTarget.addEventListener('scroll', poll, passive)
+
+        if (props.reverse) {
+          const scrollHeight = getScrollHeight(localScrollTarget),
+            containerHeight = height(localScrollTarget)
+
+          setVerticalScrollPosition(
+            localScrollTarget,
+            scrollHeight - containerHeight
+          )
+        }
+
+        immediatePoll()
       }
     }
 
-    function setIndex (newIndex) {
+    function setIndex(newIndex) {
       index = newIndex
     }
 
-    // expose public methods
-    const vm = getCurrentInstance()
-    Object.assign(vm.proxy, {
-      poll: () => { poll !== void 0 && poll() },
-      trigger, stop, reset, resume, setIndex
-    })
-
-    function setDebounce (val) {
-      val = parseInt(val, 10)
+    function setDebounce(val) {
+      val = Number.parseInt(val, 10)
 
       const oldPoll = poll
 
-      poll = val <= 0
-        ? immediatePoll
-        : debounce(immediatePoll, isNaN(val) === true ? 100 : val)
+      poll =
+        val <= 0
+          ? immediatePoll
+          : debounce(immediatePoll, Number.isNaN(val) ? 100 : val)
 
-      if (localScrollTarget && isWorking.value === true) {
+      if (localScrollTarget && isWorking.value) {
         if (oldPoll !== void 0) {
           localScrollTarget.removeEventListener('scroll', oldPoll, passive)
         }
@@ -165,16 +192,48 @@ export default createComponent({
       }
     }
 
-    watch(() => props.disable, val => {
-      if (val === true) { stop() }
-      else { resume() }
+    function updateSvgAnimations(isRetry) {
+      if (renderLoadingSlot.value) {
+        if (loadingRef.value === null) {
+          if (!isRetry) {
+            nextTick(() => {
+              updateSvgAnimations(true)
+            })
+          }
+          return
+        }
+
+        // we need to pause svg animations (if any) when hiding
+        // otherwise the browser will keep on recalculating the style
+        const action = `${isFetching.value ? 'un' : ''}pauseAnimations`
+        ;[...loadingRef.value.getElementsByTagName('svg')].forEach(el => {
+          el[action]()
+        })
+      }
+    }
+
+    const renderLoadingSlot = computed(() => !props.disable && isWorking.value)
+
+    watch([isFetching, renderLoadingSlot], () => {
+      updateSvgAnimations()
     })
 
-    watch(() => props.reverse, val => {
-      if (isFetching.value === false && isWorking.value === true) {
-        immediatePoll()
+    watch(
+      () => props.disable,
+      val => {
+        if (val) stop()
+        else resume()
       }
-    })
+    )
+
+    watch(
+      () => props.reverse,
+      () => {
+        if (!isFetching.value && isWorking.value) {
+          immediatePoll()
+        }
+      }
+    )
 
     watch(() => props.scrollTarget, updateScrollTarget)
     watch(() => props.debounce, setDebounce)
@@ -194,40 +253,53 @@ export default createComponent({
     })
 
     onBeforeUnmount(() => {
-      if (isWorking.value === true) {
+      if (isWorking.value) {
         localScrollTarget.removeEventListener('scroll', poll, passive)
       }
     })
 
     onMounted(() => {
       setDebounce(props.debounce)
-
       updateScrollTarget()
 
-      if (props.reverse === true) {
-        const
-          scrollHeight = getScrollHeight(localScrollTarget),
-          containerHeight = height(localScrollTarget)
+      if (!isFetching.value) updateSvgAnimations()
+    })
 
-        setVerticalScrollPosition(localScrollTarget, scrollHeight - containerHeight)
-      }
-
-      immediatePoll()
+    // expose public methods
+    const vm = getCurrentInstance()
+    Object.assign(vm.proxy, {
+      poll: () => {
+        poll?.()
+      },
+      trigger,
+      stop,
+      reset,
+      resume,
+      setIndex,
+      updateScrollTarget
     })
 
     return () => {
       const child = hUniqueSlot(slots.default, [])
 
-      if (props.disable !== true && isWorking.value === true) {
-        child[ props.reverse === false ? 'push' : 'unshift' ](
-          h('div', { class: classes.value }, hSlot(slots.loading))
+      if (renderLoadingSlot.value) {
+        child[props.reverse ? 'unshift' : 'push'](
+          h(
+            'div',
+            { ref: loadingRef, class: classes.value },
+            hSlot(slots.loading)
+          )
         )
       }
 
-      return h('div', {
-        class: 'q-infinite-scroll',
-        ref: rootRef
-      }, child)
+      return h(
+        'div',
+        {
+          class: 'q-infinite-scroll',
+          ref: rootRef
+        },
+        child
+      )
     }
   }
 })

@@ -1,5 +1,8 @@
 <template>
-  <div class="q-pa-md relative-position" style="height: 280px; max-height: 80vh">
+  <div
+    class="q-pa-md relative-position"
+    style="height: 280px; max-height: 80vh"
+  >
     <q-btn
       v-morph:btn:mygroup:300.resize="morphGroupModel"
       class="absolute-bottom-left q-ma-md"
@@ -15,9 +18,7 @@
       class="absolute-bottom-left q-ma-md bg-primary text-white"
       style="width: 300px; border-bottom-left-radius: 2em"
     >
-      <q-card-section class="text-h6">
-        New user
-      </q-card-section>
+      <q-card-section class="text-h6"> New user </q-card-section>
 
       <q-card-section class="text-subtitle1">
         Please fill the details for a new user.
@@ -33,9 +34,7 @@
       class="absolute-bottom-left q-ma-md bg-primary text-white"
       style="width: 300px; border-bottom-left-radius: 2em"
     >
-      <q-card-section class="text-h6">
-        Finalize registration
-      </q-card-section>
+      <q-card-section class="text-h6"> Finalize registration </q-card-section>
 
       <q-card-section class="q-py-xl text-center text-subtitle2">
         Thank you for registering.
@@ -48,7 +47,7 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 
 const nextMorphStep = {
@@ -57,16 +56,9 @@ const nextMorphStep = {
   card2: 'btn'
 }
 
-export default {
-  setup () {
-    const morphGroupModel = ref('btn')
+const morphGroupModel = ref('btn')
 
-    return {
-      morphGroupModel,
-      nextMorph () {
-        morphGroupModel.value = nextMorphStep[ morphGroupModel.value ]
-      }
-    }
-  }
+function nextMorph() {
+  morphGroupModel.value = nextMorphStep[morphGroupModel.value]
 }
 </script>
