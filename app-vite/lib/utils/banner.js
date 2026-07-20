@@ -5,7 +5,10 @@ import { cliPkg } from '../utils/cli-runtime.js'
 import { getIPs } from '../utils/net.js'
 
 function getPackager(argv, cmd) {
-  if (argv.ide || (argv.mode === 'capacitor' && cmd === 'dev')) {
+  if (
+    argv.ide ||
+    (cmd === 'dev' && ['capacitor', 'cordova'].includes(argv.mode))
+  ) {
     return 'IDE (manual)'
   }
 
@@ -34,10 +37,6 @@ export async function displayBanner({ argv, ctx, cmd, details }) {
  Pkg vite............... ${green('v' + ctx.pkg.vitePkg.version)}
  Debugging.............. ${cmd === 'dev' || argv.debug ? green('enabled') : gray('no')}`
 
-  if (cmd === 'build') {
-    banner += `\n Publishing............. ${argv.publish !== void 0 ? green('yes') : gray('no')}`
-  }
-
   if (['cordova', 'capacitor'].includes(argv.mode)) {
     const packaging = argv['skip-pkg']
       ? gray('skip')
@@ -51,7 +50,7 @@ export async function displayBanner({ argv, ctx, cmd, details }) {
 
   if (details?.target) {
     banner += `\n Browser target......... ${getCompilationTarget(details.target.browser)}`
-    if (['electron', 'ssr'].includes(argv.mode)) {
+    if (['electron', 'ssr', 'ssg'].includes(argv.mode)) {
       banner += `\n Node target............ ${getCompilationTarget(details.target.node)}`
     }
   }
@@ -111,6 +110,17 @@ export async function displayBanner({ argv, ctx, cmd, details }) {
       be added for deployment environments.
       If you're using Vue Router "history" mode, don't forget to
       specify the "--history" parameter: "quasar serve --history"`
+    } else if (argv.mode === 'ssg') {
+      banner += `
+
+ Tip: Built files are meant to be served over an HTTP server
+      Opening index.html over file:// won't work
+
+ Tip: You can use "quasar serve" command to create a web server,
+      both for testing or production. Type "quasar serve -h" for
+      parameters.
+      Vue Router is set to "history" mode, so don't forget to
+      specify the "--history" parameter: "quasar serve --history"`
     }
   }
 
@@ -154,13 +164,13 @@ export function printDevRunningBanner(quasarConf) {
   }
 
   banner.push(
-    ` ${greenBanner} Dev mode............... ${green(ctx.modeName + (ctx.mode.ssr && ctx.mode.pwa ? ' + pwa' : ''))}`,
+    ` ${greenBanner} Dev mode............... ${green(ctx.modeName + ((ctx.mode.ssr || ctx.mode.ssg) && ctx.mode.pwa ? ' + pwa' : ''))}`,
     ` ${greenBanner} Pkg quasar............. ${green('v' + ctx.pkg.quasarPkg.version)}`,
     ` ${greenBanner} Pkg @quasar/app-vite... ${green('v' + cliPkg.version)}`,
     ` ${greenBanner} Browser target......... ${getCompilationTarget(quasarConf.build.target.browser)}`
   )
 
-  if (['electron', 'ssr'].includes(ctx.modeName)) {
+  if (['electron', 'ssr', 'ssg'].includes(ctx.modeName)) {
     banner.push(
       ` ${greenBanner} Node target............ ${getCompilationTarget(quasarConf.build.target.node)}`
     )

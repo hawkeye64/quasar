@@ -11,6 +11,7 @@ import { error, fatal, log, tip, warn } from './utils/logger.js'
 import { appFilesValidations } from './utils/app-files-validations.js'
 import { getPackageMajorVersion } from './utils/get-package-major-version.js'
 import { resolveExtension } from './utils/resolve-extension.js'
+import { getPackagePath } from './utils/get-package-path.js'
 import { ensureElectronArgv } from './utils/ensure-argv.js'
 import { quasarRolldownVueShimPlugin } from './plugins/rolldown.vue-shim.js'
 import {
@@ -36,8 +37,40 @@ const quasarModesList = [
   'electron',
   'pwa',
   'spa',
-  'ssr'
+  'ssr',
+  'ssg'
 ]
+
+const sharedSsrSsgConfigProps = [
+  'clientSideRenderingRoutes',
+  'noPreloadTagRoutes',
+  'pwaOfflineHtmlFilename',
+  'manualStoreSerialization',
+  'manualStoreSsrContextInjection',
+  'manualStoreHydration',
+  'manualPostHydrationTrigger'
+]
+
+function inheritSsrSsgConfig({ ctx, userCfg, rawQuasarConf }) {
+  const targetMode = ctx.mode.ssr === true ? 'ssr' : 'ssg'
+  const sourceMode = targetMode === 'ssr' ? 'ssg' : 'ssr'
+  const targetConfig = userCfg[targetMode]
+  const sourceConfig = userCfg[sourceMode]
+
+  if (sourceConfig === void 0) return
+
+  sharedSsrSsgConfigProps.forEach(prop => {
+    if (targetConfig?.[prop] === void 0 && sourceConfig[prop] !== void 0) {
+      const value = sourceConfig[prop]
+
+      // Use the raw user config so mode defaults never become inherited values.
+      // Clone arrays so App Extensions can independently modify either mode.
+      rawQuasarConf[targetMode][prop] = Array.isArray(value)
+        ? [...value]
+        : value
+    }
+  })
+}
 
 const urlRegex = /^http(s)?:\/\//i
 const defaultPortMapping = {
@@ -47,7 +80,8 @@ const defaultPortMapping = {
   electron: 9300,
   cordova: 9400,
   capacitor: 9500,
-  bex: 9600
+  bex: 9600,
+  ssg: 9700 // 9750 for SSG + PWA
 }
 
 const quasarComponentRE = /^(Q[A-Z]|q-)/
@@ -118,6 +152,66 @@ function parseAssetProperty(prefix) {
             : `${prefix}/${asset.path}`
           : asset.path
     }
+  }
+}
+
+const appExtensionAssetPaths = [['css'], ['boot'], ['ssr', 'middlewares']]
+
+function getAssetList(cfg, path) {
+  return path.reduce((value, key) => value?.[key], cfg)
+}
+
+function getTildeAssetPath(asset) {
+  const path = typeof asset === 'string' ? asset : asset?.path
+  return typeof path === 'string' && path[0] === '~' ? path : void 0
+}
+
+function getTildeAssetCounts(cfg) {
+  const assetCounts = new Map()
+
+  for (const path of appExtensionAssetPaths) {
+    const list = getAssetList(cfg, path)
+    if (!Array.isArray(list)) continue
+
+    const counts = new Map()
+    assetCounts.set(path, counts)
+
+    for (const asset of list) {
+      const assetPath = getTildeAssetPath(asset)
+      if (assetPath !== void 0) {
+        counts.set(assetPath, (counts.get(assetPath) || 0) + 1)
+      }
+    }
+  }
+
+  return assetCounts
+}
+
+function resolveAppExtensionAssets(cfg, previousAssetCounts, packageDir) {
+  for (const path of appExtensionAssetPaths) {
+    const list = getAssetList(cfg, path)
+    if (!Array.isArray(list)) continue
+
+    const previousCounts = previousAssetCounts.get(path) || new Map()
+
+    list.forEach((asset, index) => {
+      const assetPath = getTildeAssetPath(asset)
+      if (assetPath === void 0) return
+
+      const previousCount = previousCounts.get(assetPath) || 0
+      if (previousCount !== 0) {
+        previousCounts.set(assetPath, previousCount - 1)
+        return
+      }
+
+      const resolvedPath = getPackagePath(assetPath.slice(1), packageDir)
+      if (resolvedPath === void 0) return
+
+      list[index] =
+        typeof asset === 'string'
+          ? `~${resolvedPath}`
+          : { ...asset, path: `~${resolvedPath}` }
+    })
   }
 }
 
@@ -741,7 +835,13 @@ export class QuasarConfigFile {
         },
 
         ssr: {
-          middlewares: []
+          middlewares: [],
+          clientSideRenderingRoutes: [],
+          noPreloadTagRoutes: []
+        },
+        ssg: {
+          clientSideRenderingRoutes: [],
+          noPreloadTagRoutes: []
         },
         pwa: {},
         electron: {
@@ -760,6 +860,14 @@ export class QuasarConfigFile {
       },
       userCfg
     )
+
+    if (this.#ctx.mode.ssr || this.#ctx.mode.ssg) {
+      inheritSsrSsgConfig({
+        ctx: this.#ctx,
+        userCfg,
+        rawQuasarConf
+      })
+    }
 
     const metaConf = {
       debugging: Boolean(this.#ctx.dev || this.#ctx.debug),
@@ -780,10 +888,16 @@ export class QuasarConfigFile {
         'extendQuasarConf',
         async hook => {
           hook.api.logger.log('Extending quasar.config file configuration...')
+          const tildeAssetCounts = getTildeAssetCounts(rawQuasarConf)
           const overrides = await hook.fn(rawQuasarConf, hook.api)
           if (Object(overrides) === overrides) {
             rawQuasarConf = merge(rawQuasarConf, overrides)
           }
+          resolveAppExtensionAssets(
+            rawQuasarConf,
+            tildeAssetCounts,
+            hook.packageDir
+          )
         }
       )
     } catch (err) {
@@ -816,6 +930,42 @@ export class QuasarConfigFile {
         },
         cfg.ssr
       )
+    } else if (this.#ctx.mode.ssg) {
+      cfg.ssg = merge(
+        {
+          onSsgRendererError: 'abort',
+          ssgRendererConcurrency: 1,
+          ssgRendererRetryCount: 0,
+          ssgRendererRetryDelay: 1000,
+          ssgRendererDirectoryIndexes: true,
+          pwa: false,
+          error404HtmlFilename: '404.html',
+          pwaOfflineHtmlFilename: 'offline.html',
+          manualStoreHydration: false,
+          manualPostHydrationTrigger: false
+        },
+        cfg.ssg
+      )
+
+      if (cfg.ssg.clientSideRenderingHtmlFilename === void 0) {
+        cfg.ssg.clientSideRenderingHtmlFilename =
+          cfg.ssg.clientSideRenderingRoutes.length !== 0 ? 'csr.html' : false
+      }
+
+      const ssgRendererConcurrency = Number(cfg.ssg.ssgRendererConcurrency)
+      cfg.ssg.ssgRendererConcurrency = Number.isFinite(ssgRendererConcurrency)
+        ? Math.max(1, Math.floor(ssgRendererConcurrency))
+        : 1
+
+      const ssgRendererRetryCount = Number(cfg.ssg.ssgRendererRetryCount)
+      cfg.ssg.ssgRendererRetryCount = Number.isFinite(ssgRendererRetryCount)
+        ? Math.max(0, Math.floor(ssgRendererRetryCount))
+        : 0
+
+      const ssgRendererRetryDelay = Number(cfg.ssg.ssgRendererRetryDelay)
+      cfg.ssg.ssgRendererRetryDelay = Number.isFinite(ssgRendererRetryDelay)
+        ? Math.max(0, ssgRendererRetryDelay)
+        : 1000
     }
 
     if (this.#ctx.dev) {
@@ -833,7 +983,8 @@ export class QuasarConfigFile {
       } else if (!cfg.devServer.port) {
         cfg.devServer.port =
           defaultPortMapping[this.#ctx.modeName] +
-          (this.#ctx.mode.ssr && cfg.ssr.pwa ? 50 : 0)
+          (this.#ctx.mode.ssr && cfg.ssr.pwa ? 50 : 0) +
+          (this.#ctx.mode.ssg && cfg.ssg.pwa ? 50 : 0)
       } else {
         tip(
           'You (or an AE) specified an explicit quasar.config file > devServer > port. It is recommended to use' +
@@ -1093,7 +1244,7 @@ export class QuasarConfigFile {
           : defaultOptions
     }
 
-    if (this.#ctx.mode.ssr) {
+    if (this.#ctx.mode.ssr || this.#ctx.mode.ssg) {
       cfg.build.vueRouterMode = 'history'
     } else if (
       this.#ctx.mode.cordova ||
@@ -1128,7 +1279,8 @@ export class QuasarConfigFile {
     }
 
     cfg.build.publicPath =
-      cfg.build.publicPath && ['spa', 'pwa', 'ssr'].includes(this.#ctx.modeName)
+      cfg.build.publicPath &&
+      ['spa', 'pwa', 'ssr', 'ssg'].includes(this.#ctx.modeName)
         ? formatPublicPath(cfg.build.publicPath)
         : ['capacitor', 'cordova', 'electron', 'bex'].includes(
               this.#ctx.modeName
@@ -1181,8 +1333,8 @@ export class QuasarConfigFile {
     cfg.preFetch ||= false
 
     if (
-      this.#ctx.mode.capacitor &
-      (cfg.capacitor.capacitorCliPreparationParams.length === 0)
+      this.#ctx.mode.capacitor &&
+      cfg.capacitor.capacitorCliPreparationParams.length === 0
     ) {
       cfg.capacitor.capacitorCliPreparationParams = [
         'sync',
@@ -1211,6 +1363,18 @@ export class QuasarConfigFile {
       }
 
       this.#ctx.mode.pwa = cfg.ctx.mode.pwa = Boolean(cfg.ssr.pwa)
+    } else if (this.#ctx.mode.ssg) {
+      if (cfg.ssg.manualPostHydrationTrigger !== true) {
+        cfg.metaConf.needsAppMountHook = true
+      }
+
+      if (cfg.ssg.pwa) {
+        // install pwa mode if it's missing
+        const { addMode } = await import('../lib/modes/pwa/pwa-installation.js')
+        await addMode({ ctx: this.#ctx, silent: true })
+      }
+
+      this.#ctx.mode.pwa = cfg.ctx.mode.pwa = Boolean(cfg.ssg.pwa)
     }
 
     if (this.#ctx.dev) {

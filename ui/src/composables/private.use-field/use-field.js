@@ -367,7 +367,7 @@ export default function useField(state) {
       }
 
       then?.()
-    })
+    }, 0)
   }
 
   function clearValue(e) {
@@ -387,6 +387,8 @@ export default function useField(state) {
       // appear for another selection
       state.inputRef.value.value = null
     }
+
+    state.onClear?.()
 
     emit('update:modelValue', null)
     if (state.changeEvent) emit('change', null)

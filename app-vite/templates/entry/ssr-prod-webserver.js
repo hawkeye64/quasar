@@ -8,7 +8,7 @@ import { join, basename, isAbsolute } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { renderToString } from 'vue/server-renderer'
 <% if (quasarConf.metaConf.hasStore && quasarConf.ssr.manualStoreSerialization !== true) { %>
-import serialize from 'serialize-javascript'
+import serialize from '#q-serialize-javascript'
 <% } %>
 
 import renderTemplate from './render-template.js'
@@ -20,15 +20,76 @@ import injectMiddlewares from './ssr-middlewares'
 
 const port = process.env.PORT || <%= quasarConf.ssr.prodPort %>
 
-const doubleSlashRE = /\/\//g
+const multiSlashRE = /\/{2,}/g
 const publicPath = `<%= quasarConf.build.publicPath %>`
 const resolveUrlPath = publicPath === '/'
   ? url => url || '/'
-  : url => url ? (publicPath + url).replace(doubleSlashRE, '/') : publicPath
+  : url => url ? (publicPath + url).replace(multiSlashRE, '/') : publicPath
 
 const rootFolder = import.meta.dirname
 const publicFolder = join(rootFolder, 'client')
 const serverAssetsFolder = join(rootFolder, 'server-assets')
+
+<% if (quasarConf.ssr.clientSideRenderingRoutes.length !== 0 || quasarConf.ssr.noPreloadTagRoutes.length !== 0) { %>
+import picomatch from '#q-picomatch'
+
+const trailingSlashRE = /\/+$/
+
+function fastExtractPath(url) {
+  let endIdx = url.length
+
+  const hashIdx = url.indexOf('#')
+  if (hashIdx !== -1) endIdx = hashIdx
+  const queryIdx = url.indexOf('?')
+  if (queryIdx !== -1 && queryIdx < endIdx) endIdx = queryIdx
+
+  const cleanInput = url.slice(0, endIdx)
+
+  if (cleanInput.startsWith('http://') || cleanInput.startsWith('https://')) {
+    const protocolEnd = cleanInput.indexOf('://') + 3
+    const pathStart = cleanInput.indexOf('/', protocolEnd)
+    return pathStart === -1 ? '/' : cleanInput.slice(pathStart)
+  }
+
+  if (cleanInput.startsWith('//')) {
+    const pathStart = cleanInput.indexOf('/', 2)
+    return pathStart === -1 ? '/' : cleanInput.slice(pathStart)
+  }
+
+  return cleanInput.startsWith('/') ? cleanInput : '/' + cleanInput
+}
+<% } %>
+
+<% if (quasarConf.ssr.clientSideRenderingRoutes.length !== 0) { %>
+const csrHtml = readFileSync(
+  join(
+    import.meta.dirname,
+    '<%= quasarConf.ssr.pwa ? `./client/${quasarConf.ssr.pwaOfflineHtmlFilename}` : './server/csr.html' %>'
+  ),
+  'utf8'
+)
+const isCsrRoute = picomatch(<%= JSON.stringify(quasarConf.ssr.clientSideRenderingRoutes) %>)
+
+function isCsrRouteMatch(route) {
+  return isCsrRoute(route) || (
+    route.length > 1
+    && route.endsWith('/')
+    && isCsrRoute(route.replace(trailingSlashRE, ''))
+  )
+}
+<% } %>
+
+<% if (quasarConf.ssr.noPreloadTagRoutes.length !== 0) { %>
+const isNoPreloadMatcher = picomatch(<%= JSON.stringify(quasarConf.ssr.noPreloadTagRoutes) %>)
+
+function isNoPreloadRouteMatch(route) {
+  return isNoPreloadMatcher(route) || (
+    route.length > 1
+    && route.endsWith('/')
+    && isNoPreloadMatcher(route.replace(trailingSlashRE, ''))
+  )
+}
+<% } %>
 
 function renderModulesPreload (modules, opts) {
   let links = ''
@@ -74,6 +135,14 @@ function renderStoreState (ssrContext) {
 <% } %>
 
 async function render (ssrContext) {
+<% if (quasarConf.ssr.clientSideRenderingRoutes.length !== 0 || quasarConf.ssr.noPreloadTagRoutes.length !== 0) { %>
+  const reqRoute = fastExtractPath(ssrContext.url || ssrContext.req.url)<% if (quasarConf.build.publicPath !== '/') { %>.replace(publicPath, '/')<% } %>
+<% } %>
+
+<% if (quasarConf.ssr.clientSideRenderingRoutes.length !== 0) { %>
+  if (isCsrRouteMatch(reqRoute)) return csrHtml
+<% } %>
+
   const onRenderedList = []
 
   Object.assign(ssrContext, {
@@ -92,16 +161,22 @@ async function render (ssrContext) {
 
   ssrContext._meta.runtimePageContent = runtimePageContent
 
-  <% if (quasarConf.metaConf.hasStore && quasarConf.ssr.manualStoreSerialization !== true) { %>
-    if (ssrContext.state !== void 0) {
-      ssrContext._meta.headTags = renderStoreState(ssrContext) + ssrContext._meta.headTags
-    }
-  <% } %>
+<% if (quasarConf.metaConf.hasStore && quasarConf.ssr.manualStoreSerialization !== true) { %>
+  if (ssrContext.state !== void 0) {
+    ssrContext._meta.headTags = renderStoreState(ssrContext) + ssrContext._meta.headTags
+  }
+<% } %>
 
-  // @vitejs/plugin-vue injects code into a component's setup() that registers
-  // itself on ctx.modules. After the render, ctx.modules would contain all the
-  // components that have been instantiated during this render call.
-  ssrContext._meta.endingHeadTags += renderModulesPreload(ssrContext.modules, { ssrContext })
+<% if (quasarConf.ssr.noPreloadTagRoutes.length !== 0) { %>
+  if (!isNoPreloadRouteMatch(reqRoute)) {
+<% } %>
+    // @vitejs/plugin-vue injects code into a component's setup() that registers
+    // itself on ctx.modules. After the render, ctx.modules would contain all the
+    // components that have been instantiated during this render call.
+    ssrContext._meta.endingHeadTags += renderModulesPreload(ssrContext.modules, { ssrContext })
+<% if (quasarConf.ssr.noPreloadTagRoutes.length !== 0) { %>
+  }
+<% } %>
 
   return renderTemplate(ssrContext)
 }

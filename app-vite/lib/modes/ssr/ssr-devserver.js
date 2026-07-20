@@ -8,11 +8,14 @@ import { green } from 'kolorist'
 
 import { AppDevserver } from '../../app-devserver.js'
 import { getPackage } from '../../utils/get-package.js'
+import { getRouteMatcher } from '../../utils/get-route-matcher.js'
 import { openBrowser } from '../../utils/open-browser.js'
 import { dot, info, log, progress, warn } from '../../utils/logger.js'
 import { debounce } from '../../utils/rate-limit.js'
 import {
+  attachMarkup,
   entryPointMarkup,
+  fastExtractPath,
   getDevSsrTemplateFn,
   updateHtmlVariables
 } from '../../plugins/vite.html.js'
@@ -20,7 +23,7 @@ import {
 import { buildPwaServiceWorker, injectPwaManifest } from '../pwa/pwa-utils.js'
 import { quasarSsrConfig } from './ssr-config.js'
 
-const doubleSlashRE = /\/\//g
+const multiSlashRE = /\/{2,}/g
 const autoRemove = 'document.currentScript.remove()'
 
 function logServerMessage(title, msg, additional) {
@@ -47,8 +50,10 @@ export class QuasarModeDevserver extends AppDevserver {
   #webserver = null
   /** @type {import('vite').ViteDevServer|null} */
   #viteWatcherList = []
-  #webserverWatcher = null
+  #isCsrRoute = null
+  #csrTemplate = null
   #renderTemplate = null
+  #webserverWatcher = null
 
   /**
    * @type {{
@@ -60,7 +65,7 @@ export class QuasarModeDevserver extends AppDevserver {
    */
   #appOptions = {}
 
-  // also update pwa-devserver.js when changing here
+  // also update pwa-devserver.js & ssg-devserver.js when changing here
   #pwaManifestWatcher = null
   #pwaServiceWorkerWatcher = null
 
@@ -95,6 +100,12 @@ export class QuasarModeDevserver extends AppDevserver {
       ...diffMap.rolldown(quasarConf)
     ])
 
+    // also update the diff for ssg-devserver.js when changing here
+    this.registerDiff('csrRouteList', quasarConf => [
+      quasarConf.build.publicPath,
+      quasarConf.ssr.clientSideRenderingRoutes
+    ])
+
     this.registerDiff('viteSSR', (quasarConf, diffMap) => [
       quasarConf.ssr.pwa,
       quasarConf.metaConf.backendEnvDefineList,
@@ -108,17 +119,23 @@ export class QuasarModeDevserver extends AppDevserver {
     const { diff, queue } = super.run(quasarConf, __isRetry)
 
     if (quasarConf.ssr.pwa) {
-      // also update pwa-devserver.js when changing here
+      // also update pwa-devserver.js & ssg-devserver.js when changing here
       if (diff('pwaManifest', quasarConf)) {
         this.clientNeedsReload = false
         return queue(() => this.#compilePwaManifest(quasarConf))
       }
 
-      // also update pwa-devserver.js when changing here
+      // also update pwa-devserver.js & ssg-devserver.js when changing here
       if (diff('pwaServiceWorker', quasarConf)) {
         this.clientNeedsReload = false
         return queue(() => this.#compilePwaServiceWorker(quasarConf, queue))
       }
+    }
+
+    // also update ssg-devserver.js when changing here
+    if (diff('csrRouteList', quasarConf)) {
+      this.clientNeedsReload = true
+      this.#registerCSRMatch(quasarConf)
     }
 
     if (diff('htmlTemplate', quasarConf)) {
@@ -132,7 +149,7 @@ export class QuasarModeDevserver extends AppDevserver {
       return queue(() => this.#compileWebserver(quasarConf, queue))
     }
 
-    // also update pwa-devserver.js when changing here
+    // also update pwa-devserver.js & ssg-devserver.js when changing here
     if (diff('viteSSR', quasarConf)) {
       this.clientNeedsReload = false
       return queue(() => this.#runVite(quasarConf, diff('viteUrl', quasarConf)))
@@ -141,9 +158,34 @@ export class QuasarModeDevserver extends AppDevserver {
     if (this.clientNeedsReload) this.reloadClient()
   }
 
+  #registerCSRMatch(quasarConf) {
+    const { clientSideRenderingRoutes } = quasarConf.ssr
+    if (clientSideRenderingRoutes.length === 0) {
+      this.#isCsrRoute = null
+      return
+    }
+
+    const isMatch = getRouteMatcher(clientSideRenderingRoutes)
+    const { publicPath } = quasarConf.build
+
+    this.#isCsrRoute =
+      publicPath === '/'
+        ? url => {
+            const route = fastExtractPath(url)
+            return isMatch(route)
+          }
+        : url => {
+            const route = fastExtractPath(url).replace(publicPath, '/')
+            return isMatch(route)
+          }
+  }
+
   #updateTemplate(htmlStore, quasarConf) {
+    const template = readFileSync(this.#pathMap.templatePath, 'utf8')
+
+    this.#csrTemplate = template
     this.#renderTemplate = getDevSsrTemplateFn(
-      readFileSync(this.#pathMap.templatePath, 'utf8'),
+      template,
       htmlStore.htmlVariables,
       quasarConf
     )
@@ -197,7 +239,7 @@ export class QuasarModeDevserver extends AppDevserver {
       publicPath === '/'
         ? url => url || '/'
         : url =>
-            url ? (publicPath + url).replace(doubleSlashRE, '/') : publicPath
+            url ? (publicPath + url).replace(multiSlashRE, '/') : publicPath
 
     const viteClient = (this.clientServer = await createServer(
       await quasarSsrConfig.viteClient(quasarConf)
@@ -230,6 +272,15 @@ export class QuasarModeDevserver extends AppDevserver {
     )
 
     this.#appOptions.render = async ssrContext => {
+      const url = ssrContext.url || ssrContext.req.url
+      const originalUrl = ssrContext.originalUrl || ssrContext.req.originalUrl
+
+      if (this.#isCsrRoute?.(url)) {
+        let html = this.#csrTemplate
+        html = await viteClient.transformIndexHtml(url, html, originalUrl)
+        return html.replace(entryPointMarkup, attachMarkup)
+      }
+
       const startTime = Date.now()
       const onRenderedList = []
 
@@ -266,8 +317,6 @@ export class QuasarModeDevserver extends AppDevserver {
 
         let html = this.#renderTemplate(ssrContext)
 
-        const url = ssrContext.url || ssrContext.req.url
-        const originalUrl = ssrContext.originalUrl || ssrContext.req.originalUrl
         html = await viteClient.transformIndexHtml(url, html, originalUrl)
         html = html.replace(
           entryPointMarkup,
@@ -392,7 +441,7 @@ export class QuasarModeDevserver extends AppDevserver {
     this.printBanner(quasarConf)
   }
 
-  // also update pwa-devserver.js when changing here
+  // also update pwa-devserver.js & ssg-devserver.js when changing here
   async #compilePwaManifest(quasarConf) {
     if (this.#pwaManifestWatcher !== null) {
       const watcher = this.#pwaManifestWatcher
@@ -431,7 +480,7 @@ export class QuasarModeDevserver extends AppDevserver {
     await inject()
   }
 
-  // also update pwa-devserver.js when changing here
+  // also update pwa-devserver.js & ssg-devserver.js when changing here
   async #compilePwaServiceWorker(quasarConf, queue) {
     if (this.#pwaServiceWorkerWatcher !== null) {
       const watcher = this.#pwaServiceWorkerWatcher
@@ -447,7 +496,11 @@ export class QuasarModeDevserver extends AppDevserver {
         'InjectManifest Custom SW',
         rolldownConfig,
         () => {
-          queue(() => buildPwaServiceWorker(quasarConf, workboxConfig))
+          queue(() =>
+            buildPwaServiceWorker(quasarConf, workboxConfig).then(() =>
+              this.reloadClient()
+            )
+          )
         }
       ).then(watcher => {
         this.#pwaServiceWorkerWatcher = watcher

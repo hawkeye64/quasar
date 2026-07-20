@@ -809,7 +809,7 @@ export default [
             path: 'build-commands'
           },
           {
-            name: 'Deploying',
+            name: 'Deploying SPA',
             path: 'deploying'
           }
         ]
@@ -859,6 +859,11 @@ export default [
             path: 'handling-404-and-500-errors'
           },
           {
+            name: 'Hybrid SSR + partial CSR',
+            path: 'hybrid-ssr-with-partial-csr',
+            badge: 'new'
+          },
+          {
             name: 'SSR with TypeScript',
             path: 'ssr-with-typescript'
           },
@@ -887,7 +892,69 @@ export default [
             path: 'ssr-frequently-asked-questions'
           },
           {
-            name: 'Deploying',
+            name: 'Deploying SSR',
+            path: 'deploying'
+          }
+        ]
+      },
+      {
+        name: 'SSG Mode',
+        path: 'developing-ssg',
+        children: [
+          {
+            name: 'Introduction',
+            path: 'introduction'
+          },
+          {
+            name: 'Preparation',
+            path: 'preparation'
+          },
+          {
+            name: 'Installing SSG Deps',
+            path: 'installing-ssg-dependencies'
+          },
+          {
+            name: 'Build Commands',
+            path: 'build-commands'
+          },
+          {
+            name: 'Configuring SSG',
+            path: 'configuring-ssg'
+          },
+          {
+            name: 'SSG Code Caveats',
+            path: 'ssg-code-caveats'
+          },
+          {
+            name: 'SSG Renderer',
+            path: 'ssg-renderer'
+          },
+          {
+            name: 'SSG 404 Error Page',
+            path: 'ssg-404-error-page'
+          },
+          {
+            name: 'Hybrid SSG + partial CSR',
+            path: 'hybrid-ssg-with-partial-csr'
+          },
+          {
+            name: 'SSG with PWA',
+            path: 'ssg-with-pwa'
+          },
+          {
+            name: 'SSG with TypeScript',
+            path: 'ssg-with-typescript'
+          },
+          {
+            name: 'App Icons for SSG',
+            path: 'app-icons-ssg'
+          },
+          {
+            name: 'SEO for SSG',
+            path: 'seo-for-ssg'
+          },
+          {
+            name: 'Deploying SSG',
             path: 'deploying'
           }
         ]

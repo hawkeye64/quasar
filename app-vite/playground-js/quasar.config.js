@@ -103,26 +103,46 @@ export default defineConfig((/* ctx */) => ({
 
   // https://v2.quasar.dev/quasar-cli-vite/developing-ssr/configuring-ssr
   ssr: {
-    prodPort: 3000, // The default port that the production server should use
-    // (gets superseded if process.env.PORT is specified at runtime)
-
+    pwa: false,
+    /**
+     * The default port that the production server should use
+     * (gets superseded if process.env.PORT is specified at runtime)
+     */
+    prodPort: 3000,
     middlewares: [
       'render' // keep this as last one
-    ],
+    ]
 
     // extendSSRPackageJson (pkgJson) {},
+    // extendSSRManifestJson (json) {},
     // extendSSRWebserverConf (rolldownConf) {},
 
     // manualStoreSerialization: true,
     // manualStoreSsrContextInjection: true,
     // manualStoreHydration: true,
     // manualPostHydrationTrigger: true,
+    // clientSideRenderingRoutes: [],
 
-    pwa: false
     // pwaOfflineHtmlFilename: 'offline.html', // do NOT use index.html as name!
-
     // extendSSRGenerateSWOptions (cfg) {},
     // extendSSRInjectManifestOptions (cfg) {}
+  },
+
+  // https://v2.quasar.dev/quasar-cli-vite/developing-ssg/configuring-ssg
+  ssg: {
+    // pwa: true
+    // extendSSGManifestJson (json) {},
+    // extendSSGRendererConf (rolldownConf) {},
+    // manualStoreSerialization: true,
+    // manualStoreSsrContextInjection: true,
+    // manualStoreHydration: true,
+    // manualPostHydrationTrigger: true,
+    // error404HtmlFilename: '404.html'
+    // pwaOfflineHtmlFilename: 'offline.html',
+    // clientSideRenderingHtmlFilename: 'csr.html',
+    // clientSideRenderingRoutes: [],
+    // extendSSGGenerateSWOptions (cfg) {},
+    // extendSSGInjectManifestOptions (cfg) {},
   },
 
   // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa

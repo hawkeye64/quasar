@@ -303,7 +303,7 @@ function writeFeatureFlags(quasarConf, fsUtils) {
   }
 
   // spa does not have a feature flag, so we skip it
-  const modes = ['pwa', 'ssr', 'cordova', 'capacitor', 'electron', 'bex']
+  const modes = ['pwa', 'ssr', 'ssg', 'cordova', 'capacitor', 'electron', 'bex']
   for (const modeName of modes) {
     if (isModeInstalled(appPaths, modeName)) {
       featureFlags.add(modeName)
@@ -357,12 +357,13 @@ declare module 'pinia' {
 `
 
 const validDeclareConstKeyRE = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
+const numericLiteralRE = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/
 function getStrDefineType(value) {
   if (value === 'true' || value === 'false') return 'boolean'
   if (value === 'null') return 'null'
 
   const trimmed = value.trim()
-  return trimmed !== '' && !Number.isNaN(Number(trimmed)) ? 'number' : 'string'
+  return numericLiteralRE.test(trimmed) ? 'number' : 'string'
 }
 
 function getImportMetaEnvDeclaration(quasarConf) {

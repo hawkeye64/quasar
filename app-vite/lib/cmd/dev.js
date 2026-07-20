@@ -11,7 +11,6 @@ const argv = getArgv({
   port: { type: 'string', short: 'p' },
   hostname: { type: 'string', short: 'H' },
   devtools: { type: 'boolean', short: 'd' },
-  ide: { type: 'boolean', short: 'i' },
   'no-color': { type: 'boolean' },
   help: { type: 'boolean', short: 'h' }
 })
@@ -36,13 +35,13 @@ if (argv.help) {
     # passing extra parameters and/or options to
     # underlying "cordova" or "electron" executables:
     $ quasar dev -m cordova -T ios -- some params --and options --here
-    $ quasar dev -m electron -- --no-sandbox --disable-setuid-sandbox
+    $ quasar dev -m electron -- --force-device-scale-factor=1
     # when on Windows and using Powershell:
     $ quasar dev -m cordova -T ios '--' some params --and options --here
-    $ quasar dev -m electron '--' --no-sandbox --disable-setuid-sandbox
+    $ quasar dev -m electron '--' --force-device-scale-factor=1
 
   Options
-    --mode, -m       App mode [spa|ssr|pwa|cordova|capacitor|electron|bex] (default: spa)
+    --mode, -m       App mode [spa|ssr|ssg|pwa|cordova|capacitor|electron|bex] (default: spa)
     --port, -p       A port number on which to start the application
     --hostname, -H   A hostname to use for serving the application
     --target, -T     App target
@@ -51,9 +50,6 @@ if (argv.help) {
     --devtools, -d   Open remote Vue Devtools
     --no-color       Disable colored output
     --help, -h       Displays this message
-
-    Only for Capacitor & Cordova modes:
-    --ide, -i        (prod only) Open IDE to build the app instead of using CLI tools
 
   `)
 

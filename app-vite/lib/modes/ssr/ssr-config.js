@@ -8,7 +8,8 @@ import {
   extendViteConfig
 } from '../../config-tools.js'
 
-import { cliPkg } from '../../utils/cli-runtime.js'
+import { cliDir, cliPkg } from '../../utils/cli-runtime.js'
+import { getPackagePath } from '../../utils/get-package-path.js'
 
 import { quasarPwaConfig } from '../pwa/pwa-config.js'
 import { quasarVitePluginPwaResources } from '../pwa/pwa-utils.js'
@@ -51,7 +52,7 @@ export const quasarSsrConfig = {
       }
     })
 
-    // also update pwa-config.js when changing here
+    // also update pwa-config.js & ssg-config.js when changing here
     if (quasarConf.ssr.pwa) {
       cfg.plugins.push(quasarVitePluginPwaResources(quasarConf))
     }
@@ -147,6 +148,20 @@ export const quasarSsrConfig = {
         './quasar.manifest.json',
         './server/server-entry.js'
       )
+
+      if (quasarConf.ssr.clientSideRenderingRoutes.length !== 0) {
+        cfg.resolve.alias['#q-picomatch'] = getPackagePath('picomatch', cliDir)
+      }
+
+      if (
+        quasarConf.metaConf.hasStore &&
+        quasarConf.ssr.manualStoreSerialization !== true
+      ) {
+        cfg.resolve.alias['#q-serialize-javascript'] = getPackagePath(
+          'serialize-javascript',
+          cliDir
+        )
+      }
     }
 
     cfg.resolve.modules = ['node_modules', appPaths.resolve.ssr('node_modules')]

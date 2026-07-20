@@ -200,8 +200,9 @@ async function transformHtml(template, htmlVariables, quasarConf) {
 
   html = html.replace(
     entryPointMarkup,
-    (quasarConf.ctx.mode.ssr ? entryPointMarkup : attachMarkup) +
-      quasarConf.metaConf.entryScript.tag
+    (quasarConf.ctx.mode.ssr || quasarConf.ctx.mode.ssg
+      ? entryPointMarkup
+      : attachMarkup) + quasarConf.metaConf.entryScript.tag
   )
 
   // publicPath will be handled by Vite middleware
@@ -210,7 +211,11 @@ async function transformHtml(template, htmlVariables, quasarConf) {
     html = injectPublicPath(html, '/')
   }
 
-  if (!quasarConf.ctx.mode.ssr && quasarConf.build.minify) {
+  if (
+    !quasarConf.ctx.mode.ssr &&
+    !quasarConf.ctx.mode.ssg &&
+    quasarConf.build.minify
+  ) {
     html = await minify(html, quasarConf.build.htmlMinifyOptions)
   }
 
@@ -218,10 +223,10 @@ async function transformHtml(template, htmlVariables, quasarConf) {
 }
 
 /**
- * Used by production SSR only.
+ * Used by production SSR+PWA and Hybrid SSG+CSR only.
  * Gets index.html generated content as param.
  */
-export async function transformProdSsrPwaOfflineHtml(html, quasarConf) {
+export async function transformProdHtmlShell(html, quasarConf) {
   html = html.replace(entryPointMarkup, attachMarkup)
 
   if (quasarConf.build.minify !== false) {
@@ -296,4 +301,28 @@ export async function getProdSsrRenderTemplateFileContent(
   }
 
   return compileTemplateToFile(html, ssrTemplateCompileOpts)
+}
+
+export function fastExtractPath(url) {
+  let endIdx = url.length
+
+  const hashIdx = url.indexOf('#')
+  const queryIdx = url.indexOf('?')
+  if (hashIdx !== -1) endIdx = hashIdx
+  if (queryIdx !== -1 && queryIdx < endIdx) endIdx = queryIdx
+
+  const cleanInput = url.slice(0, endIdx)
+
+  if (cleanInput.startsWith('http://') || cleanInput.startsWith('https://')) {
+    const protocolEnd = cleanInput.indexOf('://') + 3
+    const pathStart = cleanInput.indexOf('/', protocolEnd)
+    return pathStart === -1 ? '/' : cleanInput.slice(pathStart)
+  }
+
+  if (cleanInput.startsWith('//')) {
+    const pathStart = cleanInput.indexOf('/', 2)
+    return pathStart === -1 ? '/' : cleanInput.slice(pathStart)
+  }
+
+  return cleanInput.startsWith('/') ? cleanInput : '/' + cleanInput
 }

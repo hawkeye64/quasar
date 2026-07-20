@@ -1,6 +1,6 @@
 {
   "name": "@quasar/cli",
-  "version": "5.0.2",
+  "version": "5.0.3",
   "description": "Quasar Framework - the Global CLI",
   "keywords": [
     "cli",
@@ -38,18 +38,19 @@
     "lib"
   ],
   "type": "module",
+  "main": "bin/quasar.js",
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "@clack/prompts": "^1.6.0",
-    "@hono/node-server": "^2.0.6",
+    "@clack/prompts": "^1.7.0",
+    "@hono/node-server": "^2.0.9",
     "@quasar/art": "workspace:^",
     "@quasar/ssl-certificate": "workspace:^",
     "ci-info": "^4.4.0",
     "cross-spawn": "^7.0.6",
     "fs-extra": "^11.3.6",
-    "hono": "^4.12.27",
+    "hono": "^4.12.30",
     "kolorist": "^1.8.0",
     "open": "^11.0.0",
     "update-notifier": "^7.3.1"

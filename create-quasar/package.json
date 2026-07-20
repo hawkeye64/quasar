@@ -1,6 +1,6 @@
 {
   "name": "create-quasar",
-  "version": "4.0.7",
+  "version": "5.0.1",
   "description": "Scaffolds Quasar Apps & App Extensions",
   "homepage": "https://quasar.dev",
   "bugs": "https://github.com/quasarframework/quasar/issues",
@@ -27,7 +27,7 @@
     "test": "node bin/create-quasar.js"
   },
   "dependencies": {
-    "@clack/prompts": "^1.6.0",
+    "@clack/prompts": "^1.7.0",
     "@quasar/art": "workspace:^",
     "ci-info": "^4.4.0",
     "cross-spawn": "^7.0.6",

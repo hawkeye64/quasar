@@ -108,11 +108,15 @@ export default function usePanel() {
   ])
 
   const transitionPrev = computed(
-    () => props.transitionPrev || `slide-${props.vertical ? 'down' : 'right'}`
+    () =>
+      props.transitionPrev ||
+      `slide-${props.vertical ? 'down' : proxy.$q.lang.rtl ? 'left' : 'right'}`
   )
 
   const transitionNext = computed(
-    () => props.transitionNext || `slide-${props.vertical ? 'up' : 'left'}`
+    () =>
+      props.transitionNext ||
+      `slide-${props.vertical ? 'up' : proxy.$q.lang.rtl ? 'right' : 'left'}`
   )
 
   const transitionStyle = computed(
@@ -212,7 +216,7 @@ export default function usePanel() {
         // oxlint-disable-next-line no-loop-func
         setTimeout(() => {
           forcedPanelTransition = false
-        })
+        }, 0)
 
         return
       }
