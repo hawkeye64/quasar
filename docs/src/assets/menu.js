@@ -88,6 +88,11 @@ export default [
       {
         name: 'Transitions',
         path: 'transitions'
+      },
+      {
+        name: 'Teleport Target',
+        path: 'teleport-target',
+        badge: 'new'
       }
     ]
   },
