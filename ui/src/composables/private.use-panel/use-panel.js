@@ -90,7 +90,8 @@ export default function usePanel() {
   function onSwipe(evt) {
     const dir = props.vertical ? 'up' : 'left'
     goToPanelByOffset(
-      (proxy.$q.lang.rtl ? -1 : 1) * (evt.direction === dir ? 1 : -1)
+      (!props.vertical && proxy.$q.lang.rtl ? -1 : 1) *
+        (evt.direction === dir ? 1 : -1)
     )
   }
 
@@ -201,7 +202,7 @@ export default function usePanel() {
   function goToPanelByOffset(direction, startIndex = panelIndex.value) {
     let index = startIndex + direction
 
-    while (index !== -1 && index < panels.length) {
+    while (index >= 0 && index < panels.length) {
       const opt = panels[index]
 
       if (

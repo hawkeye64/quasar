@@ -406,7 +406,7 @@ export function __splitDate(str, mask, dateLocale, calendar, defaultModel) {
 
   if (map.X !== void 0 || map.x !== void 0) {
     const stamp = Number.parseInt(match[map.X ?? map.x], 10)
-    if (Number.isNaN(stamp) || stamp < 0) return date
+    if (Number.isNaN(stamp)) return date
 
     const d = new Date(stamp * (map.X !== void 0 ? 1000 : 1))
 
@@ -545,7 +545,7 @@ export function isBetweenDates(date, from, to, opts = {}) {
     d2 = getDateIdentifier(to, opts.onlyDate),
     cur = getDateIdentifier(date, opts.onlyDate)
 
-  return (
+  return Boolean(
     (cur > d1 || (opts.inclusiveFrom && cur === d1)) &&
     (cur < d2 || (opts.inclusiveTo && cur === d2))
   )
@@ -1051,7 +1051,7 @@ export function formatDate(
 
   const date = new Date(val)
 
-  if (Number.isNaN(date)) return
+  if (Number.isNaN(date.getTime())) return
 
   if (mask === void 0) {
     mask = defaultMask
