@@ -25,7 +25,7 @@
     <% if (scope.preset.i18n) { %>"vue-i18n": "^11.3.0",<% } %>
     <% if (scope.preset.pinia) { %>"pinia": "^4.0.2",<% } %>
     "@quasar/extras": "^2.0.0",
-    "quasar": "^2.21.4",
+    "quasar": "^2.23.1",
     "vue": "^3.5.22",
     "vue-router": "^5.0.6"
   },
@@ -33,7 +33,7 @@
     <% if (scope.linter === 'oxlint') { %>
     "oxfmt": "^0.x",
     "oxlint": "^1.x",
-    "oxlint-tsgolint": "^0.x",
+    "oxlint-tsgolint": "^7.0.2001",
     <% } else if (scope.linter === 'eslint') { %>
     "@eslint/js": "^9.39.4",
     "eslint": "^9.39.4",
@@ -48,7 +48,7 @@
     "vue-tsc": "^3.3.3",
     "@types/node": "^22.19.11",
     <% if (scope.preset.i18n) { %>"@intlify/unplugin-vue-i18n": "^11.0.0",<% } %>
-    "@quasar/app-vite": "^3.0.0",
+    "@quasar/app-vite": "^3.2.0",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
     "typescript": "^6.0.0"

@@ -3,14 +3,12 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createServer, createServerModuleRunner } from 'vite'
 import { watch as chokidarWatch } from 'chokidar'
-import serialize from 'serialize-javascript'
-import { green } from 'kolorist'
 
 import { AppDevserver } from '../../app-devserver.js'
 import { getPackage } from '../../utils/get-package.js'
 import { getRouteMatcher } from '../../utils/get-route-matcher.js'
 import { openBrowser } from '../../utils/open-browser.js'
-import { dot, info, log, progress, warn } from '../../utils/logger.js'
+import { log, progress, warn } from '../../utils/logger.js'
 import { debounce } from '../../utils/rate-limit.js'
 import {
   attachMarkup,
@@ -20,31 +18,20 @@ import {
   updateHtmlVariables
 } from '../../plugins/vite.html.js'
 
+import {
+  getNonceAttr,
+  injectCriticalCssPath,
+  logServerMessage,
+  renderStoreState
+} from './ssr-utils.js'
 import { buildPwaServiceWorker, injectPwaManifest } from '../pwa/pwa-utils.js'
 import { quasarSsrConfig } from './ssr-config.js'
 
 const multiSlashRE = /\/{2,}/g
-const autoRemove = 'document.currentScript.remove()'
-
-function logServerMessage(title, msg, additional) {
-  log()
-  info(
-    `${msg}${additional !== void 0 ? ` ${green(dot)} ${additional}` : ''}`,
-    title
-  )
-}
 
 /** @type {import('@quasar/render-ssr-error').default} */
 let renderSSRError = null
 let vueRenderToString = null
-
-function renderStoreState(ssrContext) {
-  const nonce =
-    ssrContext.nonce !== void 0 ? ` nonce="${ssrContext.nonce}"` : ''
-
-  const state = serialize(ssrContext.state, { isJSON: true })
-  return `<script${nonce}>window.__INITIAL_STATE__=${state};${autoRemove}</script>`
-}
 
 export class QuasarModeDevserver extends AppDevserver {
   #webserver = null
@@ -298,6 +285,15 @@ export class QuasarModeDevserver extends AppDevserver {
 
         const app = await renderApp.default(ssrContext)
         const runtimePageContent = await vueRenderToString(app, ssrContext)
+        const nonce = getNonceAttr(ssrContext)
+
+        injectCriticalCssPath({
+          viteServer,
+          serverEntryFile: this.#pathMap.serverEntryFile,
+          rootFolder: this.#pathMap.rootFolder,
+          nonce,
+          ssrContext
+        })
 
         onRenderedList.forEach(fn => {
           fn()
@@ -312,7 +308,7 @@ export class QuasarModeDevserver extends AppDevserver {
           quasarConf.ssr.manualStoreSerialization !== true
         ) {
           ssrContext._meta.headTags =
-            renderStoreState(ssrContext) + ssrContext._meta.headTags
+            renderStoreState(ssrContext, nonce) + ssrContext._meta.headTags
         }
 
         let html = this.#renderTemplate(ssrContext)

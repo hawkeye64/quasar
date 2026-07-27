@@ -170,12 +170,13 @@ return {
 
 And you can also configure:
 
-```js /quasar.config file
+```ts /quasar.config file
 return {
   framework: {
     config: {
       capacitor: {
-        iosStatusBarPadding: true / false // add the dynamic top padding on iOS mobile devices
+        iosStatusBarPadding?: boolean, // add the dynamic top padding on iOS mobile devices
+        androidStatusBarPadding?: boolean // account for Android safe areas (default: true)
       }
     }
   }

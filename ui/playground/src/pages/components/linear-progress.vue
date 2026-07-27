@@ -193,17 +193,15 @@
           stripe
           color="warning"
         />
+        <div>Reverse:</div>
+        <q-linear-progress
+          :dark="dark"
+          class="q-my-sm"
+          :value="progress"
+          stripe
+          reverse
+        />
       </div>
-
-      <h5>Stripe and Animate</h5>
-      <q-linear-progress
-        :dark="dark"
-        class="q-my-sm"
-        :value="progress"
-        stripe
-        animate
-        color="secondary"
-      />
 
       <h5>Buffering</h5>
       <div class="group">
@@ -228,7 +226,6 @@
           class="q-my-sm"
           :value="progressBuffer"
           stripe
-          animate
           color="secondary"
           :buffer="buffer"
         />
@@ -253,7 +250,6 @@
           class="q-my-sm"
           :value="progressBuffer"
           stripe
-          animate
           color="secondary"
           :buffer="buffer"
           fill-color="yellow"
@@ -286,7 +282,6 @@
           class="q-my-sm"
           :value="progressBuffer"
           stripe
-          animate
           color="secondary"
           :buffer="buffer"
         />
@@ -314,7 +309,6 @@
           class="q-my-sm"
           :value="progressBuffer"
           stripe
-          animate
           color="secondary"
           :buffer="buffer"
           fill-color="yellow"
@@ -349,6 +343,14 @@
           indeterminate
           color="dark"
         />
+        <div>Reverse:</div>
+        <q-linear-progress
+          :dark="dark"
+          class="q-my-sm"
+          indeterminate
+          color="positive"
+          reverse
+        />
       </div>
 
       <h5>Query State</h5>
@@ -368,6 +370,14 @@
           color="negative"
         />
         <q-linear-progress :dark="dark" class="q-my-sm" query color="dark" />
+        <div>Reverse:</div>
+        <q-linear-progress
+          :dark="dark"
+          class="q-my-sm"
+          query
+          color="positive"
+          reverse
+        />
       </div>
 
       <h5>Specific Height</h5>
@@ -377,7 +387,6 @@
           class="q-my-sm"
           :value="progress"
           stripe
-          animate
           size="45px"
         />
       </div>

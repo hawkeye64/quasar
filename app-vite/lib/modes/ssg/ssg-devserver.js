@@ -1,14 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { createServer, createServerModuleRunner } from 'vite'
 import { watch as chokidarWatch } from 'chokidar'
-import serialize from 'serialize-javascript'
-import { green } from 'kolorist'
 
 import { AppDevserver } from '../../app-devserver.js'
 import { getPackage } from '../../utils/get-package.js'
 import { getRouteMatcher } from '../../utils/get-route-matcher.js'
 import { openBrowser } from '../../utils/open-browser.js'
-import { dot, info, log, warn } from '../../utils/logger.js'
+import { log, warn } from '../../utils/logger.js'
 import { debounce } from '../../utils/rate-limit.js'
 import {
   attachMarkup,
@@ -18,30 +16,18 @@ import {
   updateHtmlVariables
 } from '../../plugins/vite.html.js'
 
+import {
+  getNonceAttr,
+  injectCriticalCssPath,
+  logServerMessage,
+  renderStoreState
+} from '../ssr/ssr-utils.js'
 import { buildPwaServiceWorker, injectPwaManifest } from '../pwa/pwa-utils.js'
 import { quasarSsgConfig } from './ssg-config.js'
-
-const autoRemove = 'document.currentScript.remove()'
-
-function logServerMessage(title, msg, additional) {
-  log()
-  info(
-    `${msg}${additional !== void 0 ? ` ${green(dot)} ${additional}` : ''}`,
-    title
-  )
-}
 
 /** @type {import('@quasar/render-ssr-error').default} */
 let renderSSRError = null
 let vueRenderToString = null
-
-function renderStoreState(ssrContext) {
-  const nonce =
-    ssrContext.nonce !== void 0 ? ` nonce="${ssrContext.nonce}"` : ''
-
-  const state = serialize(ssrContext.state, { isJSON: true })
-  return `<script${nonce}>window.__INITIAL_STATE__=${state};${autoRemove}</script>`
-}
 
 export class QuasarModeDevserver extends AppDevserver {
   /** @type {import('vite').ViteDevServer|null} */
@@ -179,10 +165,12 @@ export class QuasarModeDevserver extends AppDevserver {
       viteServer.environments.ssr
     )
 
+    const { rootFolder, templatePath, serverEntryFile } = this.#pathMap
+
     this.#viteWatcherList.push(
       viteServer,
       viteModuleRunner,
-      chokidarWatch(this.#pathMap.templatePath, {
+      chokidarWatch(templatePath, {
         ignoreInitial: true
       }).on('change', () => {
         const htmlStore = updateHtmlVariables(quasarConf)
@@ -212,12 +200,19 @@ export class QuasarModeDevserver extends AppDevserver {
       })
 
       try {
-        const renderApp = await viteModuleRunner.import(
-          this.#pathMap.serverEntryFile
-        )
+        const renderApp = await viteModuleRunner.import(serverEntryFile)
 
         const app = await renderApp.default(ssrContext)
         const runtimePageContent = await vueRenderToString(app, ssrContext)
+        const nonce = getNonceAttr(ssrContext)
+
+        injectCriticalCssPath({
+          viteServer,
+          serverEntryFile,
+          rootFolder,
+          nonce,
+          ssrContext
+        })
 
         onRenderedList.forEach(fn => {
           fn()
@@ -232,7 +227,7 @@ export class QuasarModeDevserver extends AppDevserver {
           quasarConf.ssg.manualStoreSerialization !== true
         ) {
           ssrContext._meta.headTags =
-            renderStoreState(ssrContext) + ssrContext._meta.headTags
+            renderStoreState(ssrContext, nonce) + ssrContext._meta.headTags
         }
 
         let html = this.#renderTemplate(ssrContext)
@@ -253,7 +248,6 @@ export class QuasarModeDevserver extends AppDevserver {
     }
 
     const viteClientConfig = await quasarSsgConfig.viteClient(quasarConf)
-    const { rootFolder } = this.#pathMap
 
     viteClientConfig.plugins.push({
       name: 'quasar:ssg',
