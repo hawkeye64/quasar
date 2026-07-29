@@ -1,6 +1,6 @@
 {
   "name": "create-quasar",
-  "version": "5.0.6",
+  "version": "5.0.7",
   "description": "Scaffolds Quasar Apps & App Extensions",
   "homepage": "https://quasar.dev",
   "bugs": "https://github.com/quasarframework/quasar/issues",
@@ -31,7 +31,7 @@
     "@quasar/art": "workspace:^",
     "ci-info": "^4.4.0",
     "cross-spawn": "^7.0.6",
-    "fs-extra": "^11.3.6",
+    "fs-extra": "^11.4.0",
     "kolorist": "^1.8.0",
     "tinyglobby": "^0.2.17",
     "update-notifier": "^7.3.1"

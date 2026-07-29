@@ -14,6 +14,7 @@ import serialize from '#q-serialize-javascript'
 import renderTemplate from './render-template.js'
 import serverEntry from './server/server-entry.js'
 import clientManifest from './quasar.manifest.json' with { type: 'json' }
+import { injectNonceAttr } from './ssr-nonce.js'
 
 import { create, listen, renderPreloadTag, serveStaticContent } from '@/../src-ssr/server'
 import injectMiddlewares from './ssr-middlewares'
@@ -91,11 +92,11 @@ function isNoPreloadRouteMatch(route) {
 }
 <% } %>
 
-function renderModulesPreload (modules, opts) {
+function renderModulesPreload (opts) {
   let links = ''
   const seen = new Set()
 
-  modules.forEach(id => {
+  opts.ssrContext.modules.forEach(id => {
     const files = clientManifest[id]
     if (files === void 0) return
 
@@ -125,12 +126,8 @@ function renderModulesPreload (modules, opts) {
 const autoRemove = 'document.currentScript.remove()'
 
 function renderStoreState (ssrContext) {
-  const nonce = ssrContext.nonce !== void 0
-    ? ' nonce="' + ssrContext.nonce + '"'
-    : ''
-
   const state = serialize(ssrContext.state, { isJSON: true })
-  return '<script' + nonce + '>window.__INITIAL_STATE__=' + state + ';' + autoRemove + '</script>'
+  return '<script' + ssrContext.__quasarNonceAttr + '>window.__INITIAL_STATE__=' + state + ';' + autoRemove + '</script>'
 }
 <% } %>
 
@@ -153,6 +150,7 @@ async function render (ssrContext) {
   const renderFn = await serverEntry(ssrContext)
   const runtimePageContent = await renderToString(renderFn, ssrContext)
 
+  injectNonceAttr(ssrContext)
   onRenderedList.forEach(fn => { fn() })
 
   // maintain compatibility with some well-known Vue plugins
@@ -173,7 +171,7 @@ async function render (ssrContext) {
     // @vitejs/plugin-vue injects code into a component's setup() that registers
     // itself on ctx.modules. After the render, ctx.modules would contain all the
     // components that have been instantiated during this render call.
-    ssrContext._meta.endingHeadTags += renderModulesPreload(ssrContext.modules, { ssrContext })
+    ssrContext._meta.endingHeadTags += renderModulesPreload({ ssrContext })
 <% if (quasarConf.ssr.noPreloadTagRoutes.length !== 0) { %>
   }
 <% } %>

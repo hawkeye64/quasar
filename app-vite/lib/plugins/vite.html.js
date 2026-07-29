@@ -143,14 +143,6 @@ function injectSsrRuntimeInterpolation(html) {
     })
 }
 
-function injectVueDevtools(html, { host, port }, nonce = '') {
-  const scripts =
-    `<script${nonce}>window.__VUE_DEVTOOLS_HOST__='${host}';window.__VUE_DEVTOOLS_PORT__='${port}';</script>` +
-    `\n<script src="http://${host}:${port}"></script>`
-
-  return html.replace(headEndRE, (_, tag) => `${scripts}${tag}`)
-}
-
 const templareErrorHtmlPage = `
   <!doctype html>
   <html>
@@ -193,16 +185,12 @@ async function transformHtml(template, htmlVariables, quasarConf) {
     return handleTemplateError(quasarConf.ctx.prod)
   }
 
-  // should be dev only
-  if (quasarConf.metaConf.vueDevtools) {
-    html = injectVueDevtools(html, quasarConf.metaConf.vueDevtools)
-  }
+  const isNonSSR = !quasarConf.ctx.mode.ssr && !quasarConf.ctx.mode.ssg
 
   html = html.replace(
     entryPointMarkup,
-    (quasarConf.ctx.mode.ssr || quasarConf.ctx.mode.ssg
-      ? entryPointMarkup
-      : attachMarkup) + quasarConf.metaConf.entryScript.tag
+    (isNonSSR ? attachMarkup : entryPointMarkup) +
+      quasarConf.metaConf.entryScript.tag
   )
 
   // publicPath will be handled by Vite middleware
@@ -211,11 +199,7 @@ async function transformHtml(template, htmlVariables, quasarConf) {
     html = injectPublicPath(html, '/')
   }
 
-  if (
-    !quasarConf.ctx.mode.ssr &&
-    !quasarConf.ctx.mode.ssg &&
-    quasarConf.build.minify
-  ) {
+  if (isNonSSR && quasarConf.build.minify) {
     html = await minify(html, quasarConf.build.htmlMinifyOptions)
   }
 
@@ -229,7 +213,7 @@ async function transformHtml(template, htmlVariables, quasarConf) {
 export async function transformProdHtmlShell(html, quasarConf) {
   html = html.replace(entryPointMarkup, attachMarkup)
 
-  if (quasarConf.build.minify !== false) {
+  if (quasarConf.build.minify) {
     html = await minify(html, quasarConf.build.htmlMinifyOptions)
   }
 
@@ -244,7 +228,7 @@ export async function transformProdHtmlShell(html, quasarConf) {
  * html = await vite.transformIndexHtml(html)
  * html = html.replace('<!-- quasar:entry-point -->', '<div id="q-app">...</div>')
  */
-export function getDevSsrTemplateFn(template, htmlVariables, quasarConf) {
+export function getDevSsrTemplateFn(template, htmlVariables) {
   let html = renderTemplate(template, htmlVariables, templateCompileOpts)
   if (html === templateRenderError) {
     return () => handleTemplateError(false)
@@ -255,15 +239,10 @@ export function getDevSsrTemplateFn(template, htmlVariables, quasarConf) {
   html = injectPublicPath(html, '/')
   html = injectSsrRuntimeInterpolation(html)
 
-  if (quasarConf.metaConf.vueDevtools) {
-    html = injectVueDevtools(
-      html,
-      quasarConf.metaConf.vueDevtools,
-      "{{ ssrContext.nonce ? ' nonce=\"' + ssrContext.nonce + '\"' : '' }}"
-    )
-  }
-
-  return compileTemplateToFn(html, ssrTemplateCompileOpts)
+  const renderTemplateFn = compileTemplateToFn(html, ssrTemplateCompileOpts)
+  return renderTemplateFn === templateRenderError
+    ? () => handleTemplateError(false)
+    : renderTemplateFn
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "name": "@quasar/app-vite",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Quasar Framework App CLI with Vite",
   "keywords": [
     "cli",
@@ -114,11 +114,11 @@
     "ci-info": "^4.4.0",
     "confbox": "^0.2.4",
     "cross-spawn": "^7.0.6",
-    "dot-prop": "10.1.0",
+    "dot-prop": "10.2.0",
     "dotenv-expand": "^13.0.0",
     "elementtree": "0.1.7",
     "fflate": "^0.8.2",
-    "fs-extra": "^11.3.6",
+    "fs-extra": "^11.4.0",
     "html-minifier-terser": "^7.2.0",
     "jiti": "^2.7.0",
     "kolorist": "^1.8.0",
@@ -140,6 +140,7 @@
     "@quasar/extras": "workspace:*",
     "pinia": "^4.0.2",
     "quasar": "workspace:^",
+    "vite-plugin-vue-devtools": "^8.2.1",
     "vue": "^3.5.40",
     "vue-router": "^5.2.0"
   },
@@ -151,6 +152,7 @@
     "pinia": "^2.0.0 || ^3.0.0 || ^4.0.0",
     "quasar": "^2.21.3",
     "typescript": ">= 5",
+    "vite-plugin-vue-devtools": ">= 8",
     "vue": "^3.2.29",
     "vue-router": ">= 5",
     "workbox-build": ">= 7"
@@ -175,6 +177,9 @@
       "optional": true
     },
     "workbox-build": {
+      "optional": true
+    },
+    "vite-plugin-vue-devtools": {
       "optional": true
     }
   },

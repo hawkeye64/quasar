@@ -8,6 +8,18 @@ import 'quasar/src/css/index.sass'
 
 import quasarVuePlugin from 'quasar/src/vue-plugin.js'
 
+const originalConsoleError = console.error
+console.error = (...args) => {
+  originalConsoleError(...args)
+  throw new Error(`Test failed due to console.error: ${args.join(' ')}`)
+}
+
+const originalConsoleWarn = console.warn
+console.warn = (...args) => {
+  originalConsoleWarn(...args)
+  throw new Error(`Test failed due to console.warn: ${args.join(' ')}`)
+}
+
 config.global.plugins.push(quasarVuePlugin)
 
 config.plugins.DOMWrapper.install(wrapper => ({
@@ -43,6 +55,99 @@ function $any(received, expectedList) {
       `expected ${this.utils.printReceived(
         received
       )} to${this.isNot ? ' not' : ''} be any of: ${this.utils.printExpected(expectedList)}`
+  }
+}
+
+const vuePropOptionKeys = new Set(['type', 'required', 'default', 'validator'])
+
+function isVuePropType(value, allowTrue = false) {
+  return (
+    value === null ||
+    typeof value === 'function' ||
+    (allowTrue === true && value === true) ||
+    (Array.isArray(value) &&
+      value.every(type => type === null || typeof type === 'function'))
+  )
+}
+
+function isVuePropDefinition(value) {
+  if (isVuePropType(value)) {
+    return true
+  }
+
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+
+  const keys = Object.keys(value)
+
+  return (
+    keys.every(key => vuePropOptionKeys.has(key)) &&
+    (value.type === void 0 || isVuePropType(value.type, true)) &&
+    (value.required === void 0 || typeof value.required === 'boolean') &&
+    (value.validator === void 0 || typeof value.validator === 'function')
+  )
+}
+
+/**
+ * Examples:
+ *   expect(component.props).$props()
+ *   expect(composableProps).$props()
+ */
+export function $props(received) {
+  const isObject =
+    received !== null &&
+    typeof received === 'object' &&
+    Array.isArray(received) === false
+  const invalidKeys = isObject
+    ? Object.keys(received).filter(
+        key =>
+          key.startsWith('$') || isVuePropDefinition(received[key]) === false
+      )
+    : []
+  const pass = isObject && invalidKeys.length === 0
+
+  return {
+    pass,
+    message: () =>
+      `expected ${this.utils.printReceived(
+        received
+      )} to${this.isNot ? ' not' : ''} be an object containing valid Vue prop definitions${
+        invalidKeys.length !== 0
+          ? `; invalid prop keys: ${this.utils.printReceived(invalidKeys)}`
+          : ''
+      }`
+  }
+}
+
+function isVueEmitsDefinition(value) {
+  if (Array.isArray(value)) {
+    return value.every(eventName => typeof eventName === 'string')
+  }
+
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    Object.values(value).every(
+      validator => validator === null || typeof validator === 'function'
+    )
+  )
+}
+
+/**
+ * Examples:
+ *   expect(component.emits).$emits()
+ *   expect(composableEmits).$emits()
+ */
+export function $emits(received) {
+  const pass = isVueEmitsDefinition(received)
+
+  return {
+    pass,
+    message: () =>
+      `expected ${this.utils.printReceived(
+        received
+      )} to${this.isNot ? ' not' : ''} be a valid Vue emits definition`
   }
 }
 
@@ -136,6 +241,8 @@ export function $reactive(received, expected) {
 
 expect.extend({
   $any,
+  $emits,
+  $props,
   $objectValues,
   $arrayValues,
   $ref,
