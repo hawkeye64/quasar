@@ -31,7 +31,7 @@ import {
 } from '../../utils/private.focus/focus-manager.js'
 import { injectProp } from '../../utils/private.inject-obj-prop/inject-obj-prop.js'
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QInput',
 
   inheritAttrs: false,
@@ -97,7 +97,18 @@ export default createComponent({
     const formDomProps = useFileFormDomProps(props, /* type guard */ true)
     const hasValue = computed(() => fieldValueIsFilled(innerValue.value))
 
-    const onComposition = useKeyComposition(onInput)
+    const onKeyComposition = useKeyComposition(onInput)
+
+    function onComposition(e) {
+      if (hasMask.value && e.type === 'compositionstart') {
+        // A mask must not rewrite the value while an IME owns the composition.
+        // Keep unmasked controls on the shared detection path for keyboard compatibility.
+        e.target.qComposing = true
+        return
+      }
+
+      onKeyComposition(e)
+    }
 
     const state = useFieldState({ changeEvent: true })
 

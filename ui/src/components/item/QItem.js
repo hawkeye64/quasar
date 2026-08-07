@@ -12,7 +12,7 @@ import { hUniqueSlot } from '../../utils/private.render/render.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
 import { isKeyCode } from '../../utils/private.keyboard/key-composition.js'
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QItem',
 
   props: {
@@ -92,9 +92,9 @@ export default createComponent({
       if (isClickable.value) {
         if (blurTargetRef.value !== null && !e.qAvoidFocus) {
           if (!e.qKeyEvent && document.activeElement === rootRef.value) {
-            blurTargetRef.value.focus()
+            blurTargetRef.value.focus({ preventScroll: true })
           } else if (document.activeElement === blurTargetRef.value) {
-            rootRef.value.focus()
+            rootRef.value.focus({ preventScroll: true })
           }
         }
 

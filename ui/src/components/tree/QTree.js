@@ -43,7 +43,7 @@ function getNodeMedia(node) {
   }
 }
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QTree',
 
   props: {
@@ -514,7 +514,11 @@ export default createComponent({
           )
         : target.filter(k => !keys.includes(k))
 
-      if (shouldEmit) emit('update:ticked', target)
+      if (shouldEmit) {
+        emit('update:ticked', target)
+      } else {
+        innerTicked.value = target
+      }
     }
 
     function getSlotScope(node, localMeta, key) {
@@ -772,7 +776,7 @@ export default createComponent({
     }
 
     function blur(key) {
-      blurTargets[key]?.focus()
+      blurTargets[key]?.focus({ preventScroll: true })
     }
 
     function focusNode(key) {

@@ -51,7 +51,7 @@ function getShortDate(date) {
   return { year: date.year, month: date.month, day: date.day }
 }
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QDate',
 
   props: {
@@ -61,6 +61,7 @@ export default createComponent({
 
     modelValue: {
       required: true,
+      default: null,
       validator: val =>
         typeof val === 'string' ||
         Array.isArray(val) ||
@@ -593,7 +594,15 @@ export default createComponent({
 
         for (let i = 1; i <= daysInMonth.value; i++) {
           const dayHash = viewMonthHash.value + '/' + pad(i)
-          map[i] = fn(dayHash) && evtColor.value(dayHash)
+
+          if (fn(dayHash)) {
+            // the color is optional (the CSS supplies a default one),
+            // so we store the resulting class instead of the color
+            const color = evtColor.value(dayHash)
+            map[i] = 'q-date__event' + (color ? ` bg-${color}` : '')
+          } else {
+            map[i] = false
+          }
         }
       }
 
@@ -801,7 +810,7 @@ export default createComponent({
         blurTargetRef.value !== null &&
         proxy.$el.contains(document.activeElement)
       ) {
-        blurTargetRef.value.focus()
+        blurTargetRef.value.focus({ preventScroll: true })
       }
     })
 
@@ -1463,10 +1472,7 @@ export default createComponent({
                                   })
                                 },
                                 day.event
-                                  ? () =>
-                                      h('div', {
-                                        class: 'q-date__event bg-' + day.event
-                                      })
+                                  ? () => h('div', { class: day.event })
                                   : null
                               )
                             : h('div', String(day.i))

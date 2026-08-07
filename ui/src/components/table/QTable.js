@@ -61,7 +61,7 @@ function getCellValue(col, row) {
   return col.format !== void 0 ? col.format(val, row) : val
 }
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QTable',
 
   props: {
@@ -412,7 +412,9 @@ export default createComponent({
         return
       }
 
-      toIndex = Number.parseInt(toIndex, 10)
+      // sanitize the same way as the virtual scroll branch does
+      // (a NaN would make an invalid selector below, which throws)
+      toIndex = Math.max(0, Number.parseInt(toIndex, 10) || 0)
       const rowEl = rootRef.value.querySelector(
         `tbody tr:nth-of-type(${toIndex + 1})`
       )
@@ -421,7 +423,10 @@ export default createComponent({
         const scrollTarget = rootRef.value.querySelector(
           '.q-table__middle.scroll'
         )
-        const offsetTop = rowEl.offsetTop - props.virtualScrollStickySizeStart
+        // the passthrough prop declaration has no default (so that the
+        // virtual scroll branch can detect a missing value), hence the fallback
+        const offsetTop =
+          rowEl.offsetTop - (props.virtualScrollStickySizeStart || 0)
         const direction =
           offsetTop < scrollTarget.scrollTop ? 'decrease' : 'increase'
 

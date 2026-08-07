@@ -81,7 +81,7 @@ function getValidValues(start, count, testFn) {
   }
 }
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QTime',
 
   props: {
@@ -91,6 +91,7 @@ export default createComponent({
 
     modelValue: {
       required: true,
+      default: null,
       validator: val => typeof val === 'string' || val === null
     },
 

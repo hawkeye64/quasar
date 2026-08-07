@@ -1,6 +1,6 @@
 {
   "name": "quasar",
-  "version": "2.23.3",
+  "version": "2.24.0",
   "description": "Build high-performance Vue.js user interfaces (SPA, PWA, SSR, SSG, Mobile and Desktop) in record time",
   "keywords": [
     "desktop",
@@ -35,12 +35,20 @@
   },
   "files": [
     "dist",
+    "!dist/build-stamp.json",
     "lang",
     "icon-set",
     "src",
+    "!src/**/*.test.js",
+    "!src/**/test",
     "wrappers"
   ],
   "type": "module",
+  "sideEffects": [
+    "*.css",
+    "*.sass",
+    "./src/flags.dev.js"
+  ],
   "module": "dist/quasar.client.js",
   "typings": "dist/types/index.d.ts",
   "unpkg": "dist/quasar.umd.prod.js",
@@ -71,7 +79,8 @@
     "test:watch": "pnpm --filter quasar-ui-test test:watch",
     "test:watch:ui": "pnpm --filter quasar-ui-test test:watch:ui",
     "test:specs": "node ./testing/specs/script.js",
-    "test:specs:ci": "node ./testing/specs/script.js --ci"
+    "test:specs:ci": "node ./testing/specs/script.js --ci",
+    "prepublishOnly": "pnpm build && pnpm test:specs:ci && pnpm test"
   },
   "devDependencies": {
     "@quasar/extras": "workspace:*",
@@ -83,9 +92,9 @@
     "kolorist": "^1.8.0",
     "lightningcss": "^1.33.0",
     "open": "^11.0.0",
-    "postcss": "^8.5.23",
+    "postcss": "^8.5.25",
     "postcss-rtlcss": "^6.0.0",
-    "rolldown": "^1.2.0",
+    "rolldown": "^1.2.2",
     "sass-embedded": "^1.100.0",
     "table": "^6.8.2",
     "tinyglobby": "^0.2.17",

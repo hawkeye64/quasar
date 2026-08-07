@@ -45,6 +45,7 @@ import {
   removeClickOutside
 } from '../../utils/private.click-outside/click-outside.js'
 import { addFocusFn } from '../../utils/private.focus/focus-manager.js'
+import { focusIsInDetachedFullscreen } from '../../utils/private.focus/detached-fullscreen.js'
 
 import {
   parsePosition,
@@ -53,7 +54,7 @@ import {
   validatePosition
 } from '../../utils/private.position-engine/position-engine.js'
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QMenu',
 
   inheritAttrs: false,
@@ -305,7 +306,7 @@ export default createComponent({
 
         refocusTarget = null
         addFocusFn(() => {
-          if (target.isConnected) target.focus()
+          if (target.isConnected) target.focus({ preventScroll: true })
         })
       }
 
@@ -366,7 +367,8 @@ export default createComponent({
       if (
         handlesFocus.value &&
         !props.noFocus &&
-        !childHasFocus(innerRef.value, evt.target)
+        !childHasFocus(innerRef.value, evt.target) &&
+        !focusIsInDetachedFullscreen(innerRef.value, evt.target)
       ) {
         focus()
       }

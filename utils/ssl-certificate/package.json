@@ -18,6 +18,10 @@
     "type": "github",
     "url": "https://donate.quasar.dev"
   },
+  "files": [
+    "src",
+    "!src/**/*.test.js"
+  ],
   "type": "module",
   "main": "src/index.js",
   "module": "src/index.js",
@@ -25,11 +29,15 @@
     "access": "public"
   },
   "scripts": {
-    "test": "node --test test/index.test.js"
+    "test": "vitest run",
+    "prepublishOnly": "pnpm test"
   },
   "dependencies": {
     "fs-extra": "^11.4.0",
     "selfsigned": "^5.5.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">= 16"

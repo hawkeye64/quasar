@@ -10,7 +10,7 @@ function preventSpace(e) {
   if (e.keyCode === 32) stopAndPrevent(e)
 }
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'StepHeader',
 
   props: {
@@ -134,7 +134,7 @@ export default createComponent({
     const ripple = computed(() => props.stepper.headerNav && headerNav.value)
 
     function onActivate() {
-      blurRef.value?.focus()
+      blurRef.value?.focus({ preventScroll: true })
       if (!isActive.value) props.goToPanel(props.step.name)
     }
 

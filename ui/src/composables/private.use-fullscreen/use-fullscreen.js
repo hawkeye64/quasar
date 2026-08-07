@@ -17,6 +17,10 @@ import {
   getHorizontalScrollPosition,
   getVerticalScrollPosition
 } from '../../utils/scroll/scroll.js'
+import {
+  addDetachedFullscreen,
+  removeDetachedFullscreen
+} from '../../utils/private.focus/detached-fullscreen.js'
 
 let counter = 0
 let restoreState = null
@@ -85,6 +89,7 @@ export default function useFullscreen() {
     inFullscreen.value = true
     proxy.$el.replaceWith(fullscreenFillerNode)
     document.body.append(proxy.$el)
+    addDetachedFullscreen(fullscreenFillerNode, proxy)
 
     counter++
     if (counter === 1) {
@@ -104,6 +109,8 @@ export default function useFullscreen() {
       History.remove(historyEntry)
       historyEntry = void 0
     }
+
+    removeDetachedFullscreen(fullscreenFillerNode)
 
     if (shouldRestoreElement === true) {
       fullscreenFillerNode.replaceWith(proxy.$el)

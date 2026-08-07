@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { defineComponent } from 'vue'
+import { defineComponent, h, withDirectives } from 'vue'
 
 import { getMainEvent } from 'testing/runtime/directive.js'
 
@@ -27,11 +27,13 @@ afterEach(() => {
 })
 
 function mountTouchPan(modifiers = 'mouse', handler = vi.fn(() => true)) {
+  const modifierMap = Object.fromEntries(
+    modifiers.split('.').map(mod => [mod, true])
+  )
   const TestComponent = defineComponent({
-    template: `<div v-touch-pan.${modifiers}="handler" />`,
-    directives: { TouchPan },
     setup() {
-      return { handler }
+      return () =>
+        withDirectives(h('div'), [[TouchPan, handler, void 0, modifierMap]])
     }
   })
 
@@ -95,8 +97,12 @@ describe('[TouchPan API]', () => {
 
     test('as undefined', () => {
       const TestComponent = defineComponent({
-        template: '<div v-touch-pan.mouse />',
-        directives: { TouchPan }
+        setup() {
+          return () =>
+            withDirectives(h('div'), [
+              [TouchPan, void 0, void 0, { mouse: true }]
+            ])
+        }
       })
       const wrapper = mount(TestComponent)
 
@@ -168,6 +174,48 @@ describe('[TouchPan API]', () => {
         expect(getMainEvent(wrapper.element.__qtouchpan, 'mousedown')[3]).toBe(
           'passive'
         )
+      })
+
+      test('shields the page from pointer events only while panning', () => {
+        const { wrapper } = mountTouchPan()
+        const el = wrapper.element
+
+        el.dispatchEvent(
+          new MouseEvent('mousedown', {
+            bubbles: true,
+            button: 0,
+            cancelable: true,
+            clientX: 0,
+            clientY: 0
+          })
+        )
+        document.dispatchEvent(
+          new MouseEvent('mousemove', {
+            bubbles: true,
+            cancelable: true,
+            clientX: 40,
+            clientY: 5
+          })
+        )
+
+        expect(
+          document.body.classList.contains('no-pointer-events--children')
+        ).toBe(true)
+
+        document.dispatchEvent(
+          new MouseEvent('mouseup', {
+            bubbles: true,
+            clientX: 40,
+            clientY: 5
+          })
+        )
+
+        // the page must become hit-testable again as soon as the pan ended,
+        // otherwise a mousedown that follows shortly after resolves to the
+        // document element instead of its real target (#18496)
+        expect(
+          document.body.classList.contains('no-pointer-events--children')
+        ).toBe(false)
       })
     })
 

@@ -6,6 +6,7 @@ import useFullscreen, {
   useFullscreenEmits,
   useFullscreenProps
 } from './use-fullscreen.js'
+import { focusIsInDetachedFullscreen } from '../../utils/private.focus/detached-fullscreen.js'
 
 let wrapper, mountTarget
 
@@ -40,6 +41,19 @@ const OtherComponent = defineComponent({
   setup: () => () => h('section', { 'data-test': 'other-component' })
 })
 
+const NestedFullscreenComponent = defineComponent({
+  name: 'NestedFullscreenComponent',
+  props: useFullscreenProps,
+  emits: useFullscreenEmits,
+
+  setup() {
+    useFullscreen()
+
+    return () =>
+      h('section', null, [h(FullscreenComponent, { fullscreen: true })])
+  }
+})
+
 describe('[useFullscreen API]', () => {
   describe('[Variables]', () => {
     describe('[(variable)useFullscreenProps]', () => {
@@ -57,6 +71,78 @@ describe('[useFullscreen API]', () => {
 
   describe('[Functions]', () => {
     describe('[(function)default]', () => {
+      test('registers the detached element for its original position', async () => {
+        mountTarget = document.createElement('div')
+        document.body.append(mountTarget)
+
+        wrapper = mount(FullscreenComponent, {
+          props: { fullscreen: true },
+          attachTo: mountTarget
+        })
+
+        await flushPromises()
+
+        const el = document.body.querySelector(
+          '[data-test="fullscreen-component"]'
+        )
+
+        expect(el.parentElement).toBe(document.body)
+        expect(focusIsInDetachedFullscreen(mountTarget, el)).toBe(true)
+        expect(
+          focusIsInDetachedFullscreen(document.createElement('div'), el)
+        ).toBe(false)
+
+        await wrapper.setProps({ fullscreen: false })
+        await flushPromises()
+
+        expect(focusIsInDetachedFullscreen(mountTarget, el)).toBe(false)
+      })
+
+      test('unregisters the detached element when unmounted while fullscreen', async () => {
+        mountTarget = document.createElement('div')
+        document.body.append(mountTarget)
+
+        wrapper = mount(FullscreenComponent, {
+          props: { fullscreen: true },
+          attachTo: mountTarget
+        })
+
+        await flushPromises()
+
+        const el = document.body.querySelector(
+          '[data-test="fullscreen-component"]'
+        )
+
+        expect(focusIsInDetachedFullscreen(mountTarget, el)).toBe(true)
+
+        wrapper.unmount()
+        wrapper = void 0
+
+        await flushPromises()
+
+        expect(focusIsInDetachedFullscreen(mountTarget, el)).toBe(false)
+      })
+
+      test('registers a chain of nested fullscreen elements', async () => {
+        mountTarget = document.createElement('div')
+        document.body.append(mountTarget)
+
+        wrapper = mount(NestedFullscreenComponent, {
+          props: { fullscreen: true },
+          attachTo: mountTarget
+        })
+
+        await flushPromises()
+
+        const el = document.body.querySelector(
+          '[data-test="fullscreen-component"]'
+        )
+
+        expect(mountTarget.contains(el)).toBe(false)
+        expect(wrapper.vm.$el.contains(el)).toBe(false)
+        expect(focusIsInDetachedFullscreen(mountTarget, el)).toBe(true)
+      })
+
       test('does not move a deactivated root back into the live DOM', async () => {
         const showFullscreen = ref(true)
 

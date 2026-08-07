@@ -29,7 +29,7 @@ import extend from '../../utils/extend/extend.js'
 import { shouldIgnoreKey } from '../../utils/private.keyboard/key-composition.js'
 import { addFocusFn } from '../../utils/private.focus/focus-manager.js'
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QEditor',
 
   props: {
@@ -417,7 +417,11 @@ export default createComponent({
               fixedIcon: token.fixedIcon,
               highlight: token.highlight,
               list: token.list,
-              options: token.options.map(item => def[item])
+              // an unknown option is ignored, the same way that
+              // an unknown plain token is
+              options: token.options
+                .map(item => def[item])
+                .filter(item => item !== void 0)
             }
           }
 

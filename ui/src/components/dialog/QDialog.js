@@ -33,6 +33,7 @@ import {
   removeFocusout
 } from '../../utils/private.focus/focusout.js'
 import { addFocusFn } from '../../utils/private.focus/focus-manager.js'
+import { focusIsInDetachedFullscreen } from '../../utils/private.focus/detached-fullscreen.js'
 
 let maximizedModals = 0
 
@@ -52,7 +53,7 @@ const defaultTransitions = {
   left: ['slide-right', 'slide-left']
 }
 
-export default createComponent({
+export default /*#__PURE__*/ createComponent({
   name: 'QDialog',
 
   inheritAttrs: false,
@@ -261,7 +262,7 @@ export default createComponent({
 
         refocusTarget = null
         addFocusFn(() => {
-          if (target.isConnected) target.focus()
+          if (target.isConnected) target.focus({ preventScroll: true })
         })
       }
 
@@ -406,7 +407,8 @@ export default createComponent({
       if (
         !props.allowFocusOutside &&
         portalIsAccessible.value &&
-        !childHasFocus(innerRef.value, evt.target)
+        !childHasFocus(innerRef.value, evt.target) &&
+        !focusIsInDetachedFullscreen(innerRef.value, evt.target)
       ) {
         focus('[tabindex]:not([tabindex="-1"])')
       }

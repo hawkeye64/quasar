@@ -651,7 +651,9 @@ export function useVirtualScroll({
   }
 
   function onBlurRefocusFn() {
-    contentRef.value?.focus()
+    // the content el is taller than the scrollport, so a plain focus()
+    // would align its top edge with the scrollport's one
+    contentRef.value?.focus({ preventScroll: true })
   }
 
   function localResetVirtualScroll(toIndex, fullReset) {
