@@ -1363,4 +1363,52 @@ describe('[QFile API]', () => {
       })
     })
   })
+
+  describe('[Accessibility]', () => {
+    test('marks the native control invalid while in error state', () => {
+      const wrapper = mountFile({ error: true })
+
+      expect(getInput(wrapper).attributes('aria-invalid')).toBe('true')
+
+      const noError = mountFile()
+
+      expect(getInput(noError).attributes('aria-invalid')).toBeUndefined()
+    })
+
+    test('links the native control to the error message', () => {
+      const wrapper = mountFile({
+        error: true,
+        errorMessage: 'Please attach a file'
+      })
+
+      const input = getInput(wrapper)
+      const messageId = wrapper.get('.q-field__messages').attributes('id')
+
+      expect(messageId).toBeTruthy()
+      expect(input.attributes('aria-errormessage')).toBe(messageId)
+      expect(input.attributes('aria-describedby')).toBe(messageId)
+    })
+
+    test('preserves externally supplied ARIA references', () => {
+      const wrapper = mountFile(
+        { error: true, errorMessage: 'Please attach a file' },
+        {
+          attrs: {
+            'aria-describedby': 'external-help',
+            // ARIA defines aria-errormessage as a single id reference,
+            // so an explicit value is kept instead of being concatenated
+            'aria-errormessage': 'external-error'
+          }
+        }
+      )
+
+      const input = getInput(wrapper)
+      const messageId = wrapper.get('.q-field__messages').attributes('id')
+
+      expect(input.attributes('aria-errormessage')).toBe('external-error')
+      expect(input.attributes('aria-describedby')).toBe(
+        `external-help ${messageId}`
+      )
+    })
+  })
 })

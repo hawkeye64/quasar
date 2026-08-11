@@ -759,7 +759,7 @@ export default /*#__PURE__*/ createComponent({
     function onTargetKeydown(e) {
       emit('keydown', e)
 
-      if (shouldIgnoreKey(e)) return
+      if (shouldIgnoreKey(e) || e.defaultPrevented) return
 
       const newValueModeValid =
         inputValue.value.length !== 0 &&
@@ -1085,6 +1085,10 @@ export default /*#__PURE__*/ createComponent({
         disabled: props.disable,
         readonly: props.readonly,
         ...inputControlEvents.value
+      }
+
+      if (isTarget) {
+        Object.assign(data, state.getErrorAriaAttrs(data))
       }
 
       if (!fromDialog && hasDialog) {
@@ -1644,22 +1648,31 @@ export default /*#__PURE__*/ createComponent({
         else if (state.editable.value) {
           const attrs = isTarget ? comboboxAttrs.value : void 0
 
-          child.push(
-            h('input', {
-              ref: isTarget ? targetRef : void 0,
-              key: 'd_t',
-              class: 'q-select__focus-target',
-              id: isTarget ? state.targetUid.value : void 0,
-              value: ariaCurrentValue.value,
-              readonly: true,
-              'data-autofocus':
-                fromDialog === true || props.autofocus || void 0,
-              ...attrs,
-              onKeydown: onTargetKeydown,
-              onKeyup: onTargetKeyup,
-              onKeypress: onTargetKeypress
-            })
-          )
+          const data = {
+            ref: isTarget ? targetRef : void 0,
+            key: 'd_t',
+            class: 'q-select__focus-target',
+            id: isTarget ? state.targetUid.value : void 0,
+            value: ariaCurrentValue.value,
+            readonly: true,
+            'data-autofocus': fromDialog === true || props.autofocus || void 0,
+            ...attrs,
+            onKeydown: onTargetKeydown,
+            onKeyup: onTargetKeyup,
+            onKeypress: onTargetKeypress
+          }
+
+          if (isTarget) {
+            Object.assign(
+              data,
+              state.getErrorAriaAttrs({
+                ...state.splitAttrs.attributes.value,
+                ...data
+              })
+            )
+          }
+
+          child.push(h('input', data))
 
           if (
             isTarget &&

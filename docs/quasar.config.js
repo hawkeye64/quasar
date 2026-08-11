@@ -6,7 +6,13 @@ import { quasarApiVitePlugin } from './build/quasar-api.js'
 import { codeSplitting, examplesVitePlugin } from './build/prod-chunks.js'
 
 export default defineConfig(ctx => ({
-  boot: [{ path: 'gdpr', server: false }],
+  boot: [
+    { path: 'gdpr', server: false },
+    // the e2e sweep's hydration-complete signal; never shipped
+    ...(ctx.dev && ctx.mode.ssr
+      ? [{ path: 'ssr-hydrated', server: false }]
+      : [])
+  ],
 
   css: ['app.sass' /* '~virtual:shiki-tokens.css' */],
 
@@ -50,9 +56,13 @@ export default defineConfig(ctx => ({
 
   devServer: {
     port: 9090,
-    open: {
-      app: { name: 'google chrome' }
-    }
+    // the e2e-ssr sweep boots this app headlessly and opts out
+    open:
+      process.env.QUASAR_DOCS_NO_OPEN === '1'
+        ? false
+        : {
+            app: { name: 'google chrome' }
+          }
   },
 
   framework: {

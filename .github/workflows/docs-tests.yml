@@ -4,6 +4,19 @@ on:
   workflow_dispatch:
   # the release-tests workflow reruns this suite at the released tag
   workflow_call:
+  # direct pushes are the norm in this repo — they get the same
+  # path-scoped coverage as PRs (rapid push trains collapse through the
+  # per-ref concurrency group)
+  push:
+    branches:
+      - 'dev'
+    paths:
+      - '.github/workflows/docs-tests.yml'
+      - 'docs/**'
+      # root dependency changes affect every package
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
   pull_request:
     types: [opened, synchronize]
     branches:
@@ -27,8 +40,14 @@ jobs:
   tests:
     permissions:
       contents: read # to fetch code (actions/checkout)
+      actions: read # to correctly identify workflow run
 
     runs-on: ubuntu-latest
+
+    # the in-test deadlines are far shorter; this only catches hangs
+    # (the e2e-ssr suite boots a dev server; test:build does a full
+    # SSG build)
+    timeout-minutes: 45
 
     name: Tests for quasar.dev
     steps:
@@ -62,5 +81,34 @@ jobs:
         if: steps.ui-build-cache.outputs.cache-hit != 'true'
         run: pnpm --filter quasar build
 
+      # Playwright validates browser revisions by directory, so restoring
+      # a stale cache just triggers a fresh download of the right one
+      - name: Setup Playwright browser cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      - name: Install Playwright browser
+        run: pnpm --filter quasar.dev exec playwright install --with-deps chromium
+
       - name: Run tests
         run: pnpm --filter quasar.dev test
+
+      # Upload required artifacts to be used in tests-report.yml
+
+      - name: Upload test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: docs/test-results
+
+      - name: Upload GitHub Actions event data
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: event-data
+          path: ${{ github.event_path }}
+          overwrite: true

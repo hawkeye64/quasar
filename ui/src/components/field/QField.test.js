@@ -770,7 +770,11 @@ describe('[QField API]', () => {
           focused: false,
           floatingLabel: true,
           modelValue: 'some-value',
-          emitValue: expect.any(Function)
+          emitValue: expect.any(Function),
+          // populated only while the field is in error state
+          ariaInvalid: void 0,
+          ariaDescribedby: void 0,
+          ariaErrormessage: void 0
         })
 
         // the field element is resolved on access, so it points at the root
@@ -939,6 +943,30 @@ describe('[QField API]', () => {
 
         expect(wrapper.vm.hasError).toBe(true)
       })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('exposes the error ARIA values to the control slot', () => {
+      let slotScope
+      const wrapper = mountField(
+        { error: true, errorMessage: 'Choose a value' },
+        {
+          slots: {
+            control: scope => {
+              slotScope = scope
+              return 'some-slot-content'
+            }
+          }
+        }
+      )
+
+      const messageId = wrapper.get('.q-field__messages').attributes('id')
+
+      expect(messageId).toBeTruthy()
+      expect(slotScope.ariaInvalid).toBe('true')
+      expect(slotScope.ariaDescribedby).toBe(messageId)
+      expect(slotScope.ariaErrormessage).toBe(messageId)
     })
   })
 })

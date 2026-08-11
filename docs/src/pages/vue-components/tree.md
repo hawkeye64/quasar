@@ -19,11 +19,11 @@ Quasar Tree represents a highly configurable component that displays hierarchica
 
 When a tree node has focus:
 
-- `Arrow Up` and `Arrow Down` move focus through the visible nodes.
-- `Arrow Right` expands a collapsed parent or moves focus to its first visible child.
-- `Arrow Left` collapses an expanded parent or moves focus to its parent.
-- `Home` and `End` move focus to the first and last visible nodes.
-- `Enter` performs the node's default action; `Space` toggles its expansion.
+- <kbd>Arrow Up</kbd> and <kbd>Arrow Down</kbd> move focus through the visible nodes.
+- <kbd>Arrow Right</kbd> expands a collapsed parent or moves focus to its first visible child.
+- <kbd>Arrow Left</kbd> collapses an expanded parent or moves focus to its parent.
+- <kbd>Home</kbd> and <kbd>End</kbd> move focus to the first and last visible nodes.
+- <kbd>Enter</kbd> performs the node's default action; <kbd>Space</kbd> toggles its expansion — or its checkbox, on tickable nodes (when using a `tick-strategy`).
 
 ### No connector lines
 
@@ -37,13 +37,31 @@ When a tree node has focus:
 
 <DocExample title="Force dark mode" file="Dark" />
 
-### Perf considerations <q-badge label="v2.9.2+" />
+### Perf considerations <q-badge label="v2.25+" />
 
-When using relatively large data, for performance we recommend using the `no-transition` Boolean prop which will account for a significant runtime speed improvement.
+Starting with Quasar v2.25, QTree only pays for what is on screen: a collapsed node's children are not rendered until the node gets expanded for the first time (afterwards they are kept in the DOM — hidden — so that collapsing/expanding can still animate), and a state change (expanding, ticking, selecting, filtering, keyboard navigation) re-renders only the affected nodes. Rendering cost thus scales with the number of _visible_ nodes, not with the total tree size — most trees need no tuning at all. If your code queried the DOM for the children of never-expanded nodes, it needs to expand those nodes first.
+
+When a lot of nodes are visible at the same time, the sheer amount of DOM becomes the bottleneck. There are two remedies, in increasing order of effect:
+
+1. The `no-transition` Boolean prop turns off the expand/collapse animation, which also allows QTree to drop collapsed subtrees from the DOM instead of keeping them alive for animating (on older Quasar versions it is the only way to avoid rendering collapsed content altogether). Recommended when using relatively large data.
 
 ```html
 <q-tree no-transition ...
 ```
+
+2. The `virtual-scroll` Boolean prop (see the Virtual scroll section below) keeps only the rows around the scrolling viewport in the DOM. This is the mode for really big trees: mounting, expanding all nodes and filtering stay at a constant cost no matter how much of the tree is expanded.
+
+### Virtual scroll <q-badge label="v2.25+" />
+
+The `virtual-scroll` Boolean prop renders the visible nodes as a flat virtualized list: only the rows around the scrolling viewport (plus a configurable buffer — see the `virtual-scroll-*` props) exist in the DOM, so rendering cost stays constant regardless of how many nodes are expanded. The example below runs a fully expanded tree of 4,680 nodes; even the largest trees mount, expand-all and filter in milliseconds in this mode.
+
+Things to be aware of in this mode:
+
+- The tree itself becomes the scrolling container, so give it a height (through CSS) — or point `virtual-scroll-target` to a scrolling ancestor instead.
+- Expanding and collapsing are instant: there is no slide transition, so the `duration` and `no-transition` props and the `@after-show`/`@after-hide` events do not apply.
+- The `scrollTo` method scrolls any visible node's row into view; keyboard navigation does this automatically.
+
+<DocExample title="Virtual scroll" file="VirtualScroll" />
 
 ### Integrated example
 

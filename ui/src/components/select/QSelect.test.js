@@ -1391,6 +1391,39 @@ describe('[QSelect API]', () => {
         expect(input.attributes('aria-autocomplete')).toBe('list')
         expect(input.attributes('readonly')).toBeUndefined()
       })
+
+      test('preventing keydown cancels the internal keyboard handling', async () => {
+        const defaultWrapper = mountSelect({ useInput: true })
+
+        await defaultWrapper.get('input').trigger('keydown', { keyCode: 13 })
+        await flushPromises()
+
+        expect(defaultWrapper.get('input').attributes('aria-expanded')).toBe(
+          'true'
+        )
+
+        const wrapper = mountSelect({
+          useInput: true,
+          onKeydown: evt => evt.preventDefault()
+        })
+
+        await wrapper.get('input').trigger('keydown', { keyCode: 13 })
+        await flushPromises()
+
+        expect(wrapper.emitted('keydown')).toHaveLength(1)
+        expect(wrapper.get('input').attributes('aria-expanded')).toBe('false')
+
+        wrapper.vm.showPopup()
+        await flushPromises()
+        wrapper.vm.setOptionIndex(1)
+
+        await wrapper.get('input').trigger('keydown', { keyCode: 13 })
+        await flushPromises()
+
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+        expect(wrapper.vm.getOptionIndex()).toBe(1)
+        expect(wrapper.get('input').attributes('aria-expanded')).toBe('true')
+      })
     })
 
     describe('[(prop)maxlength]', () => {
@@ -2794,6 +2827,65 @@ describe('[QSelect API]', () => {
 
         expect(withRules.vm.hasError).toBe(true)
       })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test.each([
+      ['focus target', false],
+      ['use-input control', true]
+    ])('marks the %s invalid while in error state', (_, useInput) => {
+      const wrapper = mountSelect({ useInput, error: true })
+
+      expect(
+        wrapper.get('input[role="combobox"]').attributes('aria-invalid')
+      ).toBe('true')
+
+      const noError = mountSelect({ useInput })
+
+      expect(
+        noError.get('input[role="combobox"]').attributes('aria-invalid')
+      ).toBeUndefined()
+    })
+
+    test.each([
+      ['focus target', false],
+      ['use-input control', true]
+    ])('links the %s to the error message', (_, useInput) => {
+      const wrapper = mountSelect({
+        useInput,
+        error: true,
+        errorMessage: 'Please select a car'
+      })
+
+      const input = wrapper.get('input[role="combobox"]')
+      const messageId = wrapper.get('.q-field__messages').attributes('id')
+
+      expect(messageId).toBeTruthy()
+      expect(input.attributes('aria-errormessage')).toBe(messageId)
+      expect(input.attributes('aria-describedby')).toBe(messageId)
+    })
+
+    test('preserves externally supplied ARIA references', () => {
+      const wrapper = mountSelect(
+        { error: true, errorMessage: 'Please select a car' },
+        {
+          attrs: {
+            'aria-describedby': 'external-help',
+            // ARIA defines aria-errormessage as a single id reference,
+            // so an explicit value is kept instead of being concatenated
+            'aria-errormessage': 'external-error'
+          }
+        }
+      )
+
+      const input = wrapper.get('input[role="combobox"]')
+      const messageId = wrapper.get('.q-field__messages').attributes('id')
+
+      expect(input.attributes('aria-errormessage')).toBe('external-error')
+      expect(input.attributes('aria-describedby')).toBe(
+        `external-help ${messageId}`
+      )
     })
   })
 })

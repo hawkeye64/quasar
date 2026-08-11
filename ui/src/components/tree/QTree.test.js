@@ -37,8 +37,9 @@ function getNodeHeaders(wrapper) {
 }
 
 /**
- * The children of a collapsed node stay in the DOM (hidden through
- * v-show), so only the visible ones are of interest here.
+ * The children of a collapsed node that was expanded before stay in
+ * the DOM (hidden through v-show), so only the visible ones are of
+ * interest here.
  *
  * The inline display is all that needs looking at, and it avoids
  * getComputedStyle, which is painfully slow with the whole stylesheet.
@@ -65,12 +66,59 @@ function getHeaderByLabel(wrapper, label) {
   return getNodeHeaders(wrapper).find(header => header.text() === label)
 }
 
+// parent headers also contain the arrow icon's ligature text,
+// so an exact header.text() match only works for leaves
+function getHeader(wrapper, label) {
+  return getNodeHeaders(wrapper).find(
+    header => header.get('.q-tree__node-header-content').text() === label
+  )
+}
+
 function getArrow(wrapper) {
   return wrapper.get('.q-tree__arrow')
 }
 
 function getTickboxes(wrapper) {
   return wrapper.findAll('.q-tree__tickbox')
+}
+
+function getBigNodes(count = 60) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `n${index}`,
+    label: `Node ${index}`
+  }))
+}
+
+// virtual scroll needs real layout: an attached wrapper whose root is a
+// fixed-height scrolling container
+function mountVirtualTree(props, options) {
+  props ||= {}
+  options ||= {}
+
+  return mount(QTree, {
+    attachTo: document.body,
+    props: {
+      nodes: getBigNodes(),
+      nodeKey: 'id',
+      virtualScroll: true,
+      ...props
+    },
+    attrs: { style: 'height: 210px' },
+    ...options
+  })
+}
+
+function getRows(wrapper) {
+  return wrapper.findAll('.q-tree__vnode')
+}
+
+// the virtual slice settles through a debounced scroll handler plus a
+// requestAnimationFrame chain
+async function settleVirtualScroll() {
+  await new Promise(resolve => {
+    setTimeout(resolve, 80)
+  })
+  await flushPromises()
 }
 
 describe('[QTree API]', () => {
@@ -545,6 +593,329 @@ describe('[QTree API]', () => {
         expect(wrapper.text()).toBe(propVal)
       })
     })
+
+    describe('[(prop)virtual-scroll]', () => {
+      test('type Boolean has effect', async () => {
+        const nodes = getBigNodes()
+        const wrapper = mountVirtualTree({ nodes, virtualScroll: false })
+
+        // without it every node renders in the nested layout
+        expect(getNodeHeaders(wrapper)).toHaveLength(nodes.length)
+        expect(getRows(wrapper)).toHaveLength(0)
+        expect(wrapper.find('.q-virtual-scroll__padding').exists()).toBe(false)
+
+        await wrapper.setProps({ virtualScroll: true })
+        await settleVirtualScroll()
+
+        // with it only the rows around the viewport render as flat
+        // siblings, the rest is padding
+        expect(wrapper.classes()).toContain('q-tree--virtual')
+        const rows = getRows(wrapper)
+        expect(rows.length).toBeGreaterThan(0)
+        expect(rows.length).toBeLessThan(nodes.length)
+        expect(wrapper.findAll('.q-virtual-scroll__padding')).toHaveLength(2)
+
+        wrapper.unmount()
+      })
+    })
+
+    describe('[(prop)virtual-scroll-target]', () => {
+      test('type Element has effect', async () => {
+        const container = document.createElement('div')
+        container.style.cssText = 'height: 210px; overflow: auto'
+        document.body.append(container)
+
+        const wrapper = mountVirtualTree(
+          { virtualScrollTarget: container },
+          { attachTo: container, attrs: {} }
+        )
+        await flushPromises()
+
+        // the tree itself is no longer the scrolling element
+        expect(wrapper.classes()).not.toContain('scroll')
+
+        const firstLabel = getLabels(wrapper)[0]
+
+        container.scrollTop = container.scrollHeight
+        container.dispatchEvent(new Event('scroll'))
+        await settleVirtualScroll()
+
+        // scrolling the target moved the rendered slice
+        expect(getLabels(wrapper)[0]).not.toBe(firstLabel)
+
+        wrapper.unmount()
+        container.remove()
+      })
+
+      test('type String has effect', async () => {
+        const container = document.createElement('div')
+        container.id = 'tree-scroll-target'
+        container.style.cssText = 'height: 210px; overflow: auto'
+        document.body.append(container)
+
+        const wrapper = mountVirtualTree(
+          { virtualScrollTarget: '#tree-scroll-target' },
+          { attachTo: container, attrs: {} }
+        )
+        await flushPromises()
+
+        expect(wrapper.classes()).not.toContain('scroll')
+
+        const firstLabel = getLabels(wrapper)[0]
+
+        container.scrollTop = container.scrollHeight
+        container.dispatchEvent(new Event('scroll'))
+        await settleVirtualScroll()
+
+        expect(getLabels(wrapper)[0]).not.toBe(firstLabel)
+
+        wrapper.unmount()
+        container.remove()
+      })
+    })
+
+    describe('[(prop)virtual-scroll-item-size]', () => {
+      test('type Number has effect', async () => {
+        // a bigger estimated row size means fewer rows are needed to
+        // cover the viewport
+        const propVal = 105
+        const wrapper = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(wrapper).length
+
+        await wrapper.setProps({ virtualScrollItemSize: propVal })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeLessThan(defaultCount)
+
+        wrapper.unmount()
+      })
+
+      test('type String has effect', async () => {
+        const propVal = '105'
+        const wrapper = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(wrapper).length
+
+        await wrapper.setProps({ virtualScrollItemSize: propVal })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeLessThan(defaultCount)
+
+        wrapper.unmount()
+      })
+    })
+
+    describe('[(prop)virtual-scroll-slice-size]', () => {
+      test('type Number has effect', async () => {
+        const propVal = 30
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({ virtualScrollSliceSize: propVal })
+        await settleVirtualScroll()
+
+        // the minimum slice guarantees at least this many rendered rows
+        expect(getRows(wrapper).length).toBeGreaterThanOrEqual(propVal)
+        expect(getRows(wrapper).length).toBeGreaterThan(defaultCount)
+
+        wrapper.unmount()
+      })
+
+      test('type String has effect', async () => {
+        const propVal = '30'
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({ virtualScrollSliceSize: propVal })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeGreaterThanOrEqual(Number(propVal))
+        expect(getRows(wrapper).length).toBeGreaterThan(defaultCount)
+
+        wrapper.unmount()
+      })
+
+      test('type null has effect', async () => {
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({ virtualScrollSliceSize: null })
+        await settleVirtualScroll()
+
+        // null keeps the built-in minimum
+        expect(getRows(wrapper).length).toBe(defaultCount)
+
+        wrapper.unmount()
+      })
+    })
+
+    describe('[(prop)virtual-scroll-slice-ratio-before]', () => {
+      test('type Number has effect', async () => {
+        const propVal = 5
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({
+          virtualScrollSliceRatioBefore: propVal
+        })
+        await settleVirtualScroll()
+
+        // a bigger before-buffer means more rendered rows
+        expect(getRows(wrapper).length).toBeGreaterThan(defaultCount)
+
+        wrapper.unmount()
+      })
+
+      test('type String has effect', async () => {
+        const propVal = '5'
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({
+          virtualScrollSliceRatioBefore: propVal
+        })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeGreaterThan(defaultCount)
+
+        wrapper.unmount()
+      })
+    })
+
+    describe('[(prop)virtual-scroll-slice-ratio-after]', () => {
+      test('type Number has effect', async () => {
+        const propVal = 5
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({
+          virtualScrollSliceRatioAfter: propVal
+        })
+        await settleVirtualScroll()
+
+        // a bigger after-buffer means more rendered rows
+        expect(getRows(wrapper).length).toBeGreaterThan(defaultCount)
+
+        wrapper.unmount()
+      })
+
+      test('type String has effect', async () => {
+        const propVal = '5'
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({
+          virtualScrollSliceRatioAfter: propVal
+        })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeGreaterThan(defaultCount)
+
+        wrapper.unmount()
+      })
+    })
+
+    describe('[(prop)virtual-scroll-sticky-size-start]', () => {
+      test('type Number has effect', async () => {
+        // sticky space shrinks the effective viewport, so fewer rows
+        // are needed to cover it
+        const propVal = 140
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({
+          virtualScrollStickySizeStart: propVal
+        })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeLessThan(defaultCount)
+
+        wrapper.unmount()
+      })
+
+      test('type String has effect', async () => {
+        const propVal = '140'
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({
+          virtualScrollStickySizeStart: propVal
+        })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeLessThan(defaultCount)
+
+        wrapper.unmount()
+      })
+    })
+
+    describe('[(prop)virtual-scroll-sticky-size-end]', () => {
+      test('type Number has effect', async () => {
+        const propVal = 140
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({
+          virtualScrollStickySizeEnd: propVal
+        })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeLessThan(defaultCount)
+
+        wrapper.unmount()
+      })
+
+      test('type String has effect', async () => {
+        const propVal = '140'
+        const base = mountVirtualTree()
+        await settleVirtualScroll()
+
+        const defaultCount = getRows(base).length
+        base.unmount()
+
+        const wrapper = mountVirtualTree({
+          virtualScrollStickySizeEnd: propVal
+        })
+        await settleVirtualScroll()
+
+        expect(getRows(wrapper).length).toBeLessThan(defaultCount)
+
+        wrapper.unmount()
+      })
+    })
   })
 
   describe('[Slots]', () => {
@@ -787,6 +1158,33 @@ describe('[QTree API]', () => {
         expect(eventList.afterHide[0]).toHaveLength(0)
       })
     })
+
+    describe('[(event)virtual-scroll]', () => {
+      test('is emitting', async () => {
+        const wrapper = mountVirtualTree({ onVirtualScroll: () => {} })
+        await settleVirtualScroll()
+
+        wrapper.element.scrollTop = wrapper.element.scrollHeight
+        wrapper.element.dispatchEvent(new Event('scroll'))
+        await settleVirtualScroll()
+
+        const eventList = wrapper.emitted()
+        expect(eventList).toHaveProperty('virtualScroll')
+
+        const [details] = eventList.virtualScroll.at(-1)
+        expect(details).toStrictEqual({
+          index: expect.any(Number),
+          from: expect.any(Number),
+          to: expect.any(Number),
+          direction: expect.$any(['increase', 'decrease']),
+          ref: expect.any(Object)
+        })
+        // the scroll to the end reached the last row
+        expect(details.to).toBe(getBigNodes().length - 1)
+
+        wrapper.unmount()
+      })
+    })
   })
 
   describe('[Methods]', () => {
@@ -912,6 +1310,881 @@ describe('[QTree API]', () => {
           'banana'
         ])
       })
+    })
+
+    describe('[(method)scrollTo]', () => {
+      test('should be callable', async () => {
+        const nodes = getBigNodes()
+        const lastNode = nodes.at(-1)
+        const wrapper = mountVirtualTree({ nodes })
+        await settleVirtualScroll()
+
+        // the last row is way outside the rendered slice
+        expect(getHeader(wrapper, lastNode.label)).toBeUndefined()
+
+        expect(wrapper.vm.scrollTo(lastNode.id, 'start')).toBeUndefined()
+        await settleVirtualScroll()
+
+        expect(wrapper.element.scrollTop).toBeGreaterThan(0)
+        expect(getHeader(wrapper, lastNode.label)).toBeDefined()
+
+        wrapper.unmount()
+      })
+    })
+  })
+
+  describe('[Generic]', () => {
+    test('renders a collapsed subtree only after its first expansion', async () => {
+      const wrapper = mountTree()
+
+      // never-expanded nodes have no collapsible content in the DOM
+      expect(wrapper.find('.q-tree__node-collapsible').exists()).toBe(false)
+
+      wrapper.vm.setExpanded('fruits', true)
+      await nextTick()
+
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+
+      wrapper.vm.setExpanded('fruits', false)
+      await nextTick()
+
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
+      // once revealed it is kept alive (v-show) so collapsing can animate
+      expect(wrapper.findAll('.q-tree__node-collapsible')).toHaveLength(1)
+    })
+
+    test('re-renders only the nodes a state change affects', async () => {
+      const renders = {}
+
+      const wrapper = mountTree(
+        {
+          tickStrategy: 'leaf',
+          ticked: [],
+          'onUpdate:ticked': () => {},
+          defaultExpandAll: true
+        },
+        {
+          slots: {
+            // the header slot runs once per node render
+            'default-header': scope => {
+              renders[scope.key] = (renders[scope.key] || 0) + 1
+              return scope.node.label
+            }
+          }
+        }
+      )
+
+      expect(renders).toStrictEqual({
+        fruits: 1,
+        apple: 1,
+        banana: 1,
+        bread: 1
+      })
+
+      await wrapper.setProps({ ticked: ['apple'] })
+
+      // apple got ticked and fruits became indeterminate;
+      // banana and bread must not have re-rendered
+      expect(renders).toStrictEqual({
+        fruits: 2,
+        apple: 2,
+        banana: 1,
+        bread: 1
+      })
+    })
+
+    test('survives swapping the nodes model back and forth', async () => {
+      const wrapper = mountTree({
+        tickStrategy: 'strict',
+        ticked: ['apple'],
+        'onUpdate:ticked': () => {},
+        defaultExpandAll: true
+      })
+
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+
+      await wrapper.setProps({ nodes: [{ id: 'swap', label: 'Swap' }] })
+      await nextTick()
+
+      expect(getLabels(wrapper)).toStrictEqual(['Swap'])
+
+      await wrapper.setProps({ nodes: getNodes() })
+      await nextTick()
+
+      wrapper.vm.setExpanded('fruits', true)
+      await nextTick()
+
+      // per-key state got dropped with the old model and must be
+      // re-derived correctly for the returning keys
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+      expect(wrapper.vm.isTicked('apple')).toBe(true)
+      expect(wrapper.vm.isTicked('banana')).toBe(false)
+      expect(
+        getHeaderByLabel(wrapper, 'Apple').attributes('aria-checked')
+      ).toBe('true')
+    })
+
+    test('re-renders only the nodes a selection or expansion affects', async () => {
+      const renders = {}
+
+      const wrapper = mountTree(
+        {
+          selected: null,
+          'onUpdate:selected': () => {},
+          defaultExpandAll: true
+        },
+        {
+          slots: {
+            'default-header': scope => {
+              renders[scope.key] = (renders[scope.key] || 0) + 1
+              return scope.node.label
+            }
+          }
+        }
+      )
+
+      const reset = () => {
+        Object.keys(renders).forEach(key => {
+          renders[key] = 0
+        })
+      }
+
+      reset()
+      await wrapper.setProps({ selected: 'apple' })
+
+      expect(renders).toStrictEqual({
+        fruits: 0,
+        apple: 1,
+        banana: 0,
+        bread: 0
+      })
+
+      await wrapper.setProps({ selected: 'bread' })
+
+      expect(renders).toStrictEqual({
+        fruits: 0,
+        apple: 2,
+        banana: 0,
+        bread: 1
+      })
+
+      reset()
+      wrapper.vm.setExpanded('fruits', false)
+      await nextTick()
+
+      expect(renders).toStrictEqual({
+        fruits: 1,
+        apple: 0,
+        banana: 0,
+        bread: 0
+      })
+    })
+
+    test('reveals never-expanded subtrees through expandAll()', async () => {
+      const wrapper = mountTree()
+
+      expect(wrapper.find('.q-tree__node-collapsible').exists()).toBe(false)
+
+      wrapper.vm.expandAll()
+      await nextTick()
+
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+    })
+
+    test('recovers when a lazy load fails', async () => {
+      const wrapper = mountTree({
+        nodes: [{ id: 'lazy', label: 'Lazy', lazy: true }],
+        onLazyLoad: () => {}
+      })
+
+      wrapper.vm.setExpanded('lazy', true)
+      await nextTick()
+
+      const [details] = wrapper.emitted('lazyLoad')[0]
+      details.fail()
+      await flushPromises()
+
+      expect(wrapper.find('.q-tree__spinner').exists()).toBe(false)
+      expect(wrapper.vm.isExpanded('lazy')).toBe(false)
+      expect(getLabels(wrapper)).toStrictEqual(['Lazy'])
+
+      // the node can be tried again
+      wrapper.vm.setExpanded('lazy', true)
+      await nextTick()
+
+      expect(wrapper.emitted('lazyLoad')).toHaveLength(2)
+    })
+
+    test('honors a per-node tick strategy override', () => {
+      const nodes = getNodes()
+      nodes[0].tickStrategy = 'leaf'
+
+      const wrapper = mountTree({
+        nodes,
+        defaultExpandAll: true,
+        ticked: ['apple'],
+        'onUpdate:ticked': () => {}
+      })
+
+      // the overriding subtree gets (inherited) ticking, the rest does not
+      expect(getTickboxes(wrapper)).toHaveLength(3)
+      expect(
+        getHeader(wrapper, 'Bread').find('.q-tree__tickbox').exists()
+      ).toBe(false)
+      expect(getHeader(wrapper, 'Fruits').attributes('aria-checked')).toBe(
+        'mixed'
+      )
+    })
+
+    test('drives the leaf tick aggregation through a full cycle', async () => {
+      const wrapper = mountTree({
+        tickStrategy: 'leaf',
+        ticked: [],
+        'onUpdate:ticked': () => {},
+        defaultExpandAll: true
+      })
+
+      // ticking the parent ticks all of its leaves
+      await getHeader(wrapper, 'Fruits')
+        .get('.q-tree__tickbox')
+        .trigger('click')
+
+      expect(wrapper.emitted('update:ticked').at(-1)).toStrictEqual([
+        ['apple', 'banana']
+      ])
+
+      await wrapper.setProps({ ticked: ['apple', 'banana'] })
+
+      expect(getHeader(wrapper, 'Fruits').attributes('aria-checked')).toBe(
+        'true'
+      )
+
+      // unticking one leaf turns the parent indeterminate
+      await wrapper.setProps({ ticked: ['apple'] })
+
+      expect(getHeader(wrapper, 'Fruits').attributes('aria-checked')).toBe(
+        'mixed'
+      )
+
+      // ticking the indeterminate parent (with a leaf still ticked)
+      // unticks the whole subtree
+      await getHeader(wrapper, 'Fruits')
+        .get('.q-tree__tickbox')
+        .trigger('click')
+
+      expect(wrapper.emitted('update:ticked').at(-1)).toStrictEqual([[]])
+    })
+
+    test('locks the subtree of an untickable parent in leaf mode', () => {
+      const nodes = getNodes()
+      nodes[0].tickable = false
+
+      const wrapper = mountTree({
+        nodes,
+        tickStrategy: 'leaf',
+        defaultExpandAll: true
+      })
+
+      // the parent's lock cascades to its children; the outside leaf is free
+      expect(
+        wrapper
+          .findAllComponents({ name: 'QCheckbox' })
+          .map(box => box.props('disable'))
+      ).toStrictEqual([true, true, true, false])
+
+      // strict ticking is not gated by the parent
+      const strictWrapper = mountTree({
+        nodes,
+        tickStrategy: 'strict',
+        defaultExpandAll: true
+      })
+
+      expect(
+        strictWrapper
+          .findAllComponents({ name: 'QCheckbox' })
+          .map(box => box.props('disable'))
+      ).toStrictEqual([true, false, false, false])
+    })
+
+    test('hides the tickbox of a parent whose children are all no-tick', () => {
+      const nodes = getNodes()
+      nodes[0].children.forEach(child => {
+        child.noTick = true
+      })
+
+      const wrapper = mountTree({
+        nodes,
+        tickStrategy: 'leaf',
+        defaultExpandAll: true
+      })
+
+      // fruits aggregates to no-tick; only the outside leaf keeps a tickbox
+      expect(getTickboxes(wrapper)).toHaveLength(1)
+      expect(
+        getHeader(wrapper, 'Bread').find('.q-tree__tickbox').exists()
+      ).toBe(true)
+    })
+
+    test('drops the collapsible of collapsed nodes with no-transition', async () => {
+      const wrapper = mountTree({ noTransition: true })
+
+      wrapper.vm.setExpanded('fruits', true)
+      await nextTick()
+
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+
+      wrapper.vm.setExpanded('fruits', false)
+      await nextTick()
+
+      expect(wrapper.find('.q-tree__node-collapsible').exists()).toBe(false)
+    })
+
+    test('virtual scroll renders the visible nodes as flat rows', async () => {
+      const wrapper = mountVirtualTree({
+        nodes: getNodes(),
+        expanded: ['fruits']
+      })
+      await flushPromises()
+
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+
+      // rows are siblings inside the virtual list, nothing is nested
+      const rows = getRows(wrapper)
+      expect(rows).toHaveLength(4)
+      expect(wrapper.find('.q-tree__children').exists()).toBe(false)
+
+      // child rows draw guide spacers: the connector line continues
+      // while siblings follow and ends on the last one
+      const appleGuides = rows[1].findAll('.q-tree__vguide')
+      const bananaGuides = rows[2].findAll('.q-tree__vguide')
+
+      expect(rows[0].findAll('.q-tree__vguide')).toHaveLength(0)
+      expect(appleGuides).toHaveLength(1)
+      expect(appleGuides[0].classes()).toContain('q-tree__vguide--connector')
+      expect(appleGuides[0].classes()).toContain('q-tree__vguide--line')
+      expect(bananaGuides[0].classes()).toContain('q-tree__vguide--connector')
+      expect(bananaGuides[0].classes()).not.toContain('q-tree__vguide--line')
+
+      wrapper.unmount()
+    })
+
+    test('virtual scroll toggles expansion with no transition', async () => {
+      const wrapper = mountVirtualTree({ nodes: getNodes() })
+      await settleVirtualScroll()
+
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
+      expect(wrapper.findComponent({ name: 'QSlideTransition' }).exists()).toBe(
+        false
+      )
+
+      wrapper.vm.setExpanded('fruits', true)
+      await settleVirtualScroll()
+
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+
+      wrapper.vm.setExpanded('fruits', false)
+      await settleVirtualScroll()
+
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
+
+      wrapper.unmount()
+    })
+
+    test('virtual scroll lazy-loads children on expansion', async () => {
+      const wrapper = mountVirtualTree({
+        nodes: [{ id: 'root', label: 'Root', lazy: true }],
+        onLazyLoad: ({ done }) => {
+          done([{ id: 'kid', label: 'Kid' }])
+        }
+      })
+      await settleVirtualScroll()
+
+      // the unloaded lazy node presents as an expandable parent row
+      expect(getHeader(wrapper, 'Root').attributes('aria-expanded')).toBe(
+        'false'
+      )
+
+      wrapper.vm.setExpanded('root', true)
+      await settleVirtualScroll()
+
+      expect(getLabels(wrapper)).toStrictEqual(['Root', 'Kid'])
+      expect(getHeader(wrapper, 'Root').attributes('aria-expanded')).toBe(
+        'true'
+      )
+
+      wrapper.unmount()
+    })
+
+    test('virtual scroll keeps accordion mode working', async () => {
+      const wrapper = mountVirtualTree({
+        nodes: [
+          { id: 'a', label: 'A', children: [{ id: 'a1', label: 'A1' }] },
+          { id: 'b', label: 'B', children: [{ id: 'b1', label: 'B1' }] }
+        ],
+        accordion: true
+      })
+      await settleVirtualScroll()
+
+      wrapper.vm.setExpanded('a', true)
+      await settleVirtualScroll()
+
+      expect(getLabels(wrapper)).toStrictEqual(['A', 'A1', 'B'])
+
+      // expanding a sibling collapses the previously expanded one
+      wrapper.vm.setExpanded('b', true)
+      await settleVirtualScroll()
+
+      expect(getLabels(wrapper)).toStrictEqual(['A', 'B', 'B1'])
+
+      wrapper.unmount()
+    })
+
+    test('virtual scroll applies filtering to the rows', async () => {
+      const wrapper = mountVirtualTree({
+        nodes: getNodes(),
+        expanded: ['fruits'],
+        filter: 'apple'
+      })
+      await flushPromises()
+
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Apple'])
+
+      await wrapper.setProps({ filter: 'nothing-matches-this' })
+      await flushPromises()
+
+      expect(wrapper.text()).toBe('No matching nodes found')
+
+      wrapper.unmount()
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    // binding a selection makes leaf nodes focusable "links" too,
+    // like in real keyboard-accessible usage
+    function mountNavTree(props) {
+      return mountTree({ selected: null, ...props })
+    }
+
+    function keydown(header, keyCode) {
+      return header.trigger('keydown', { keyCode })
+    }
+
+    test('keeps a single roving Tab stop', async () => {
+      const wrapper = mountNavTree()
+
+      const fruits = getHeader(wrapper, 'Fruits')
+      const bread = getHeader(wrapper, 'Bread')
+
+      expect(fruits.attributes('tabindex')).toBe('0')
+      expect(bread.attributes('tabindex')).toBe('-1')
+
+      await bread.trigger('focus')
+
+      expect(fruits.attributes('tabindex')).toBe('-1')
+      expect(bread.attributes('tabindex')).toBe('0')
+    })
+
+    test('steps through the nodes with ArrowDown/ArrowUp', async () => {
+      const wrapper = mountNavTree({ defaultExpandAll: true })
+
+      await keydown(getHeader(wrapper, 'Fruits'), 40)
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Apple').element)
+
+      await keydown(getHeader(wrapper, 'Apple'), 40)
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Banana').element)
+
+      await keydown(getHeader(wrapper, 'Banana'), 38)
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Apple').element)
+    })
+
+    test('skips the children of collapsed nodes', async () => {
+      const wrapper = mountNavTree()
+
+      await keydown(getHeader(wrapper, 'Fruits'), 40)
+
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Bread').element)
+    })
+
+    test('jumps to the boundary nodes with Home/End', async () => {
+      const wrapper = mountNavTree({ defaultExpandAll: true })
+
+      await keydown(getHeader(wrapper, 'Apple'), 35)
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Bread').element)
+
+      await keydown(getHeader(wrapper, 'Bread'), 36)
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Fruits').element)
+    })
+
+    test('expands a collapsed parent node with ArrowRight', async () => {
+      const wrapper = mountNavTree()
+
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
+
+      const fruits = getHeader(wrapper, 'Fruits')
+      fruits.element.focus()
+      await keydown(fruits, 39)
+
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+      // focus stays put; a second ArrowRight moves into the children
+      expect(document.activeElement).toBe(fruits.element)
+    })
+
+    test('moves into an expanded parent node with ArrowRight', async () => {
+      const wrapper = mountNavTree({ defaultExpandAll: true })
+
+      await keydown(getHeader(wrapper, 'Fruits'), 39)
+
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Apple').element)
+    })
+
+    test('leaves leaf nodes unaffected by ArrowRight', async () => {
+      const wrapper = mountNavTree()
+
+      const bread = getHeader(wrapper, 'Bread')
+      bread.element.focus()
+      await keydown(bread, 39)
+
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
+      expect(document.activeElement).toBe(bread.element)
+    })
+
+    test('collapses an expanded parent node with ArrowLeft', async () => {
+      const wrapper = mountNavTree({ defaultExpandAll: true })
+
+      await keydown(getHeader(wrapper, 'Fruits'), 37)
+
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
+    })
+
+    test('moves to the parent node with ArrowLeft on a child', async () => {
+      const wrapper = mountNavTree({ defaultExpandAll: true })
+
+      await keydown(getHeader(wrapper, 'Apple'), 37)
+
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Fruits').element)
+      // the parent is left expanded; another ArrowLeft collapses it
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+    })
+
+    test('starts the Tab stop on the selected node', () => {
+      const wrapper = mountNavTree({ selected: 'bread' })
+
+      expect(getHeader(wrapper, 'Bread').attributes('tabindex')).toBe('0')
+      expect(getHeader(wrapper, 'Fruits').attributes('tabindex')).toBe('-1')
+    })
+
+    test('moves the Tab stop off a node that becomes unreachable', async () => {
+      const wrapper = mountNavTree({ defaultExpandAll: true })
+
+      const apple = getHeader(wrapper, 'Apple')
+      await apple.trigger('focus')
+
+      expect(apple.attributes('tabindex')).toBe('0')
+
+      wrapper.vm.setExpanded('fruits', false)
+      await nextTick()
+
+      // the hidden node loses the Tab stop, a reachable one takes it
+      expect(apple.attributes('tabindex')).toBe('-1')
+      expect(getHeader(wrapper, 'Fruits').attributes('tabindex')).toBe('0')
+
+      wrapper.vm.setExpanded('fruits', true)
+      await nextTick()
+
+      // there is never more than one Tab stop
+      const stops = getNodeHeaders(wrapper).filter(
+        header => header.attributes('tabindex') === '0'
+      )
+      expect(stops).toHaveLength(1)
+    })
+
+    test('skips disabled nodes entirely', async () => {
+      const nodes = getNodes()
+      nodes[0].children[0].disabled = true
+
+      const wrapper = mountNavTree({ nodes, defaultExpandAll: true })
+
+      const apple = getHeader(wrapper, 'Apple')
+      expect(apple.attributes('aria-disabled')).toBe('true')
+      expect(apple.attributes('tabindex')).toBe('-1')
+
+      await keydown(getHeader(wrapper, 'Fruits'), 40)
+
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Banana').element)
+    })
+
+    test('navigates only through the filtered nodes', async () => {
+      const wrapper = mountNavTree({ defaultExpandAll: true, filter: 'an' })
+
+      // only Banana matches; Fruits stays visible as its ancestor
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Banana'])
+
+      await keydown(getHeader(wrapper, 'Fruits'), 40)
+
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Banana').element)
+    })
+
+    test('selects a node with Enter', async () => {
+      const wrapper = mountNavTree()
+
+      await keydown(getHeader(wrapper, 'Bread'), 13)
+
+      expect(wrapper.emitted('update:selected')).toStrictEqual([['bread']])
+    })
+
+    test('falls back to expansion on Space when the tickbox is disabled', async () => {
+      const nodes = getNodes()
+      nodes[0].tickable = false
+
+      const wrapper = mountNavTree({
+        nodes,
+        tickStrategy: 'strict',
+        ticked: [],
+        'onUpdate:ticked': () => {}
+      })
+
+      await keydown(getHeader(wrapper, 'Fruits'), 32)
+
+      expect(wrapper.emitted('update:ticked')).toBeUndefined()
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+    })
+
+    test('exposes the expansion state of an unloaded lazy node', () => {
+      const wrapper = mountNavTree({
+        nodes: [{ id: 'lazy', label: 'Lazy', lazy: true }]
+      })
+
+      expect(getHeader(wrapper, 'Lazy').attributes('aria-expanded')).toBe(
+        'false'
+      )
+    })
+
+    test('keeps the tickboxes out of the Tab order', () => {
+      const wrapper = mountNavTree({ tickStrategy: 'strict' })
+
+      for (const tickbox of getTickboxes(wrapper)) {
+        expect(tickbox.attributes('tabindex')).toBe('-1')
+        expect(tickbox.attributes('aria-hidden')).toBe('true')
+      }
+    })
+
+    test('does not trap Tab on a tickbox', () => {
+      const wrapper = mountNavTree({ tickStrategy: 'strict' })
+
+      const event = new KeyboardEvent('keydown', {
+        cancelable: true,
+        bubbles: true
+      })
+      Object.defineProperty(event, 'keyCode', { value: 9 })
+
+      getTickboxes(wrapper)[0].element.dispatchEvent(event)
+
+      expect(event.defaultPrevented).toBe(false)
+    })
+
+    test('toggles ticking with Space on a tickable node', async () => {
+      const wrapper = mountNavTree({
+        tickStrategy: 'strict',
+        ticked: [],
+        'onUpdate:ticked': () => {}
+      })
+
+      await keydown(getHeader(wrapper, 'Fruits'), 32)
+
+      expect(wrapper.emitted('update:ticked')).toStrictEqual([[['fruits']]])
+      // ticking replaces the expansion toggle
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
+    })
+
+    test('keeps Space as the expansion toggle on non-tickable nodes', async () => {
+      const wrapper = mountNavTree()
+
+      await keydown(getHeader(wrapper, 'Fruits'), 32)
+
+      expect(getLabels(wrapper)).toStrictEqual([
+        'Fruits',
+        'Apple',
+        'Banana',
+        'Bread'
+      ])
+    })
+
+    test('exposes the ticked state', async () => {
+      const wrapper = mountNavTree({
+        tickStrategy: 'leaf',
+        ticked: ['apple'],
+        'onUpdate:ticked': () => {},
+        defaultExpandAll: true
+      })
+
+      expect(getHeader(wrapper, 'Fruits').attributes('aria-checked')).toBe(
+        'mixed'
+      )
+      expect(getHeader(wrapper, 'Apple').attributes('aria-checked')).toBe(
+        'true'
+      )
+      expect(getHeader(wrapper, 'Banana').attributes('aria-checked')).toBe(
+        'false'
+      )
+
+      await wrapper.setProps({ ticked: ['apple', 'banana'] })
+
+      expect(getHeader(wrapper, 'Fruits').attributes('aria-checked')).toBe(
+        'true'
+      )
+    })
+
+    test('omits aria-checked without a tick strategy', () => {
+      const wrapper = mountNavTree()
+
+      expect(
+        getHeader(wrapper, 'Fruits').attributes('aria-checked')
+      ).toBeUndefined()
+    })
+
+    test('exposes the expansion and selection state', async () => {
+      const wrapper = mountNavTree()
+
+      const fruits = getHeader(wrapper, 'Fruits')
+      const bread = getHeader(wrapper, 'Bread')
+
+      expect(fruits.attributes('aria-expanded')).toBe('false')
+      expect(fruits.attributes('aria-selected')).toBe('false')
+      expect(bread.attributes('aria-expanded')).toBeUndefined()
+      expect(bread.attributes('aria-selected')).toBe('false')
+
+      await keydown(fruits, 39)
+
+      expect(fruits.attributes('aria-expanded')).toBe('true')
+    })
+
+    test('virtual scroll rows expose the aria hierarchy', async () => {
+      const wrapper = mountVirtualTree({
+        nodes: getNodes(),
+        expanded: ['fruits'],
+        selected: null
+      })
+      await flushPromises()
+
+      expect(wrapper.find('[role="tree"]').exists()).toBe(true)
+
+      const hierarchy = getNodeHeaders(wrapper).map(header => [
+        header.attributes('aria-level'),
+        header.attributes('aria-posinset'),
+        header.attributes('aria-setsize')
+      ])
+
+      expect(hierarchy).toStrictEqual([
+        ['1', '1', '2'], // Fruits
+        ['2', '1', '2'], // Apple
+        ['2', '2', '2'], // Banana
+        ['1', '2', '2'] // Bread
+      ])
+
+      wrapper.unmount()
+    })
+
+    test('virtual scroll keeps the single Tab stop inside the rendered slice', async () => {
+      const nodes = getBigNodes()
+      const wrapper = mountVirtualTree({ nodes, selected: null })
+      await settleVirtualScroll()
+
+      const getTabStops = () =>
+        getNodeHeaders(wrapper).filter(
+          header => header.attributes('tabindex') === '0'
+        )
+
+      const stops = getTabStops()
+      expect(stops).toHaveLength(1)
+      expect(stops[0].get('.q-tree__node-header-content').text()).toBe(
+        nodes[0].label
+      )
+
+      // once the preferred Tab stop row leaves the slice, the stop
+      // falls back to a rendered row and stays unique
+      wrapper.element.scrollTop = wrapper.element.scrollHeight
+      wrapper.element.dispatchEvent(new Event('scroll'))
+      await settleVirtualScroll()
+
+      const movedStops = getTabStops()
+      expect(movedStops).toHaveLength(1)
+      expect(movedStops[0].get('.q-tree__node-header-content').text()).not.toBe(
+        nodes[0].label
+      )
+
+      wrapper.unmount()
+    })
+
+    test('virtual scroll keyboard navigation reaches rows outside the slice', async () => {
+      const nodes = getBigNodes()
+      const lastNode = nodes.at(-1)
+      const wrapper = mountVirtualTree({ nodes, selected: null })
+      await settleVirtualScroll()
+
+      expect(getHeader(wrapper, lastNode.label)).toBeUndefined()
+
+      const first = getNodeHeaders(wrapper)[0]
+      first.element.focus()
+      await keydown(first, 35) // End
+
+      await settleVirtualScroll()
+      await settleVirtualScroll()
+
+      const last = getHeader(wrapper, lastNode.label)
+      expect(last).toBeDefined()
+      expect(document.activeElement).toBe(last.element)
+
+      wrapper.unmount()
     })
   })
 })

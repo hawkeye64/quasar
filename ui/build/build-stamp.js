@@ -24,8 +24,9 @@ const repoDir = join(uiDir, '..')
 // by default) and excluded from the published package via "files"
 export const stampFile = join(uiDir, 'dist/build-stamp.json')
 
-// MUST mirror the ui-dist cache key of the CI workflows
-// (the hashFiles(...) input list in .github/workflows) — keep in sync
+// MUST mirror the ui-dist cache key of the CI workflows (the
+// hashFiles(...) input list in .github/workflows) — enforced by
+// assertWorkflowsMirrorInputs() on every staleness check and build
 const inputGroups = {
   'ui/src': join(uiDir, 'src'),
   'ui/lang': join(uiDir, 'lang'),
@@ -67,7 +68,90 @@ function computeInputHashes() {
   return result
 }
 
+// The workflows' ui-dist cache keys and this stamp assert the same
+// freshness contract from the same input list; a one-sided edit means
+// either silent staleness or permanent cache misses, so the mirror is
+// enforced instead of trusted. Throws on drift — and when NO key is
+// found at all, so a key-format change cannot silently retire the
+// check itself.
+function assertWorkflowsMirrorInputs() {
+  const workflowsDir = join(repoDir, '.github/workflows')
+  if (!existsSync(workflowsDir)) return // outside the monorepo checkout
+
+  const expected = Object.keys(inputGroups).sort().join(', ')
+  const keyRE = /key: ui-dist-.*?hashFiles\(([^)]+)\)/g
+  let found = 0
+
+  for (const entry of readdirSync(workflowsDir)) {
+    if (!entry.endsWith('.yml')) continue
+
+    const content = readFileSync(join(workflowsDir, entry), 'utf8')
+    for (const match of content.matchAll(keyRE)) {
+      found++
+      const list = match[1]
+        .split(',')
+        .map(item =>
+          item
+            .trim()
+            .replaceAll("'", '')
+            .replace(/\/\*\*$/, '')
+        )
+        .sort()
+        .join(', ')
+
+      if (list !== expected) {
+        throw new Error(
+          `.github/workflows/${entry} hashes a different ui-dist input ` +
+            `list (${list}) than ui/build/build-stamp.js (${expected}) — ` +
+            'the freshness contract must stay mirrored on both sides'
+        )
+      }
+    }
+  }
+
+  if (found === 0) {
+    throw new Error(
+      'no ui-dist cache key found in .github/workflows — if the key ' +
+        'format changed, update assertWorkflowsMirrorInputs() in ' +
+        'ui/build/build-stamp.js to keep the mirror check alive'
+    )
+  }
+
+  // third copy of the contract: the cache-seed workflow's push paths
+  // ("exactly the inputs of the shared cache key"). Drift here is
+  // fail-safe (the seed just stops running -> PRs rebuild), but it
+  // silently degrades the cache, so it is enforced too.
+  const seedFile = join(workflowsDir, 'ui-build-cache.yml')
+  if (existsSync(seedFile)) {
+    const seedMatch = readFileSync(seedFile, 'utf8').match(
+      /paths:\n((?:\s+- '[^']+'\n)+)/
+    )
+    if (seedMatch === null) {
+      throw new Error(
+        'no push paths block found in ui-build-cache.yml — update ' +
+          'assertWorkflowsMirrorInputs() in ui/build/build-stamp.js to ' +
+          'keep the seed-trigger mirror check alive'
+      )
+    }
+
+    const seedList = [...seedMatch[1].matchAll(/- '([^']+)'/g)]
+      .map(match => match[1].replace(/\/\*\*$/, ''))
+      .sort()
+      .join(', ')
+
+    if (seedList !== expected) {
+      throw new Error(
+        `.github/workflows/ui-build-cache.yml triggers on a different ` +
+          `input list (${seedList}) than ui/build/build-stamp.js ` +
+          `(${expected}) — the cache seed must fire on exactly the ` +
+          'inputs the key hashes'
+      )
+    }
+  }
+}
+
 export function writeBuildStamp() {
+  assertWorkflowsMirrorInputs()
   writeFileSync(stampFile, JSON.stringify(computeInputHashes(), null, 2) + '\n')
 }
 
@@ -95,6 +179,8 @@ export function ensureFreshBuild() {
 // Returns null when dist matches the inputs it was built from,
 // otherwise a human-readable reason
 export function getBuildStaleness() {
+  assertWorkflowsMirrorInputs()
+
   if (!existsSync(stampFile)) {
     return 'ui/dist carries no build stamp (partial or pre-stamp build)'
   }

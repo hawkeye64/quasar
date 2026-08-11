@@ -1,29 +1,29 @@
 ---
 name: release-notes
-description: Generate Quasar-style release notes for a monorepo package (covering every commit since its last released tag), then — on a single confirmation — bump its version, commit and draft the GitHub release. Use when asked to write/draft release notes or a changelog for app-vite, app-webpack, ui/quasar, cli, vite-plugin, icongenie, extras, create-quasar or a utils package.
+description: Generate Quasar-style release notes for a monorepo package (covering every commit since its last released tag), then — on a single confirmation — bump its version, commit and draft the GitHub release. Use when asked to write/draft release notes or a changelog for app-vite, ui/quasar, cli, vite-plugin, icongenie, extras, create-quasar or a utils package.
 argument-hint: <package>
 ---
 
-Generate release notes for the requested package in the exact style of
-this repo's existing GitHub releases and determine the next version
-from their content. Output the notes first; THEN ask the user a single
-yes/no "continue?" — on yes, the version-bump commit AND the draft
-GitHub release follow with no further questions; nothing is changed,
-committed or created without it. The argument is a package directory or npm name.
+Generate release notes for the requested package (a directory or npm
+name) in the house style, determine the next version from their
+content, and output them. THEN ask one yes/no "continue?" — on yes,
+the version-bump commit AND the draft GitHub release follow with no
+further questions; without it nothing is changed, committed or
+created.
+
+All remote state comes from the GitHub API (`gh`) — NEVER `git fetch`
+or any other remote git operation. NEVER publish a release, create a
+tag or push.
 
 ## 1. Preflight
 
-- Freshness gate: fetch the live dev HEAD through the API —
-  `gh api repos/quasarframework/quasar/commits/dev --jq .sha` — and
-  require that commit to exist locally (`git cat-file -e <sha>`). If
-  it is missing, STOP: the local clone lacks the newest upstream
-  commits and the notes would be incomplete; tell the user to update
-  their clone first.
-- Note whether the worktree is clean (`git status --porcelain`); a
-  dirty worktree does not block the notes, but it blocks the bump
-  commit later (step 8) — mention it early so the user knows.
-- Do NOT `git fetch` (or any other remote git operation); all remote
-  state comes from the GitHub API (here and in step 3).
+- Freshness gate: the live dev HEAD
+  (`gh api repos/quasarframework/quasar/commits/dev --jq .sha`) must
+  exist locally (`git cat-file -e <sha>`); otherwise STOP and tell the
+  user to update their clone.
+- Note whether the worktree is clean (`git status --porcelain`) — a
+  dirty one doesn't block the notes, but blocks step 8's commit;
+  mention it early.
 
 ## 2. Resolve the package
 
@@ -31,7 +31,6 @@ committed or created without it. The argument is a package directory or npm name
 | ------------- | ------------------- | ----------------------- |
 | ui            | quasar              | `quasar-v`              |
 | app-vite      | @quasar/app-vite    | `@quasar/app-vite-v`    |
-| app-webpack   | @quasar/app-webpack | `@quasar/app-webpack-v` |
 | cli           | @quasar/cli         | `@quasar/cli-v`         |
 | vite-plugin   | @quasar/vite-plugin | `@quasar/vite-plugin-v` |
 | icongenie     | @quasar/icongenie   | `@quasar/icongenie-v`   |
@@ -39,40 +38,51 @@ committed or created without it. The argument is a package directory or npm name
 | create-quasar | create-quasar       | — (untagged)            |
 | utils/*       | @quasar/<name>      | — (untagged)            |
 
-Ignore legacy tag schemes without the `-v` separator (e.g.
-`@quasar/app-vite-1.0.0-beta.7`, bare `v0.x`); only `<prefix>vX.Y.Z`
-tags are current. Untagged packages use `<npm name>-v` as their prefix
-wherever a tag name is needed.
+Only `<prefix>vX.Y.Z` tags are current (ignore legacy schemes without
+the `-v` separator). Untagged packages use `<npm name>-v` as their
+prefix wherever a tag name is needed. app-webpack is sunset (lives on
+its own branch, not on dev) — not handled here.
 
 ## 3. Find the range
 
-- Tagged package — the last RELEASE is the source of truth, queried
-  through the public API (never `git fetch`):
-  `gh release list --repo quasarframework/quasar --limit 100
---json tagName,isPrerelease
---jq '[.[] | select(.isPrerelease | not) | select(.tagName | startswith("<prefix>"))][0].tagName'`
-- Resolve that tag to its commit through the API as well (tag names
-  contain `/`, so URL-encode):
+- Base = the last PUBLISHED release; drafts and prereleases are never
+  the base:
+  `gh release list --repo quasarframework/quasar --limit 300
+--json tagName,isPrerelease,isDraft
+--jq '[.[] | select((.isPrerelease or .isDraft) | not) | select(.tagName | startswith("<prefix>"))][0].tagName'`
+  A rarely-released package's last release can sit far down the list —
+  on no match, raise the limit before concluding it has no releases.
+  Note any prefix-matching DRAFT for steps 7/8.
+- Resolve the tag to its commit (URL-encode — tag names contain `/`):
   `gh api "repos/quasarframework/quasar/commits/$(jq -rn --arg t '<tag>' '$t|@uri')" --jq .sha`
-  and use the SHA as the range base — this works even when the local
-  clone does not have the tag. STOP only if the SHA is missing from
-  local history (`git cat-file -e <sha>`): then local COMMITS are
-  genuinely behind and the notes would miss released work. If local
-  tags are NEWER than the latest release, surface that as a concern
-  (step 7).
-- Untagged package: find the last commit that bumped `"version"` in the
-  package's `package.json` (`git log -L` on the version line) and use
-  that commit as the starting ref; say so in your summary.
+  and use the SHA as the base even when the local clone lacks the tag.
+  STOP only if the SHA is missing locally (`git cat-file -e`) — local
+  commits are behind. Local tags NEWER than the latest release: a
+  step-7 concern.
+- Compare the package.json `"version"` against the base release's —
+  a mismatch means an already-bumped version: a step-7 concern.
+- Untagged package: base = the last commit bumping `"version"` in its
+  `package.json`
+  (`git log -1 -S '"version": "<current>"' -- <pkg>/package.json`,
+  with `<current>` read from the file); say so in the summary.
 - Range: `<sha>..HEAD`, paths limited to the package dir. Read FULL
-  commit bodies (`--format='%h %s%n%b'`) — the bodies carry the
-  user-facing details the bullets need. Drop `Co-Authored-By` noise.
+  commit bodies (`--format='%h %s%n%b'`); drop `Co-Authored-By` noise.
+- Classify by the files a commit actually changed INSIDE the package
+  dir (`git diff-tree --no-commit-id --name-only -r <sha> -- <dir>/`),
+  never by its subject alone: cross-package commits routinely carry
+  another package's headline (a "fix(app-vite): [security]" may only
+  bump an in-range dep here) or touch nothing but tests/agent guides.
+- An EMPTY range -> "nothing new since <tag>", STOP (no notes, no
+  version, no ask). ONLY internal commits (test/ci/chore/formatting)
+  -> list them, state there is nothing release-worthy, stop unless the
+  user explicitly wants an internal-only release.
 
 ## 4. Calibrate style
 
-Fetch the package's 1–2 most recent release bodies for tone:
+Fetch the package's 1–2 latest release bodies for tone:
 `gh release view "<tag>" --repo quasarframework/quasar --json body -q .body`.
-If `gh` is unavailable, proceed with the rules below — they encode the
-house style.
+Untagged packages have no releases to fetch — skip; if `gh` is
+unavailable, likewise: the rules below encode the house style.
 
 ## 5. Write the notes
 
@@ -81,29 +91,29 @@ Structure:
 - Large releases: `## Security fixes` (only if any; always first),
   `## New` (feat), `## Fixes`, `## Other` (noteworthy internal work,
   docs), then the Donations footer.
-- Small releases (≲4 bullets total): a single `## Changes` section with
-  slightly more prose per bullet, then the Donations footer.
+- Small releases (≲4 bullets total): a single `## Changes` section
+  with slightly more prose per bullet, then the Donations footer.
+- cli notes open with this line before the first section, verbatim:
+  `*This is the optional globally-installed part of the Quasar CLI*`
+  No other package has an intro line.
 
 Bullet style:
 
 - `* feat(<dir>): <area> -> <what changed for the user>` /
-  `* fix(<dir>): <area> -> <symptom that no longer happens>` — keep the
-  arrow phrasing and conventional prefix used by past releases.
-- Describe user-visible symptoms and behavior, never internals
-  (helper renames, private refactors) unless the internal name IS the
-  public API. Keep issue/PR refs like `(#18504)`.
-- Merge sibling commits sharing one user-visible symptom into one
-  bullet; split one commit into several bullets when it fixes several
-  unrelated symptoms (read the body).
-- EXCLUDE pure test/ci/chore/formatting commits from New/Fixes. A
-  genuinely large internal effort (test infrastructure, publishing
-  gates) may get ONE summarizing bullet under `## Other`.
-- Template/scaffold changes: note that they only affect **newly
-  generated** projects and give existing projects the manual step
-  (see the `@quasar/app-vite-v3.4.1` release for the pattern).
-- Breaking changes: call them out explicitly at the top with migration
-  notes, and note any peer-dependency requirement bumps
-  ("Requires quasar v2.x+").
+  `* fix(<dir>): <area> -> <symptom that no longer happens>` — keep
+  the arrow phrasing and conventional prefix.
+- User-visible symptoms and behavior, never internals, unless the
+  internal name IS the public API. Keep issue/PR refs like `(#18504)`.
+- Merge sibling commits sharing one user-visible symptom; split one
+  commit into several bullets when it fixes unrelated symptoms.
+- EXCLUDE pure test/ci/chore/formatting commits from New/Fixes; a
+  genuinely large internal effort may get ONE summarizing `## Other`
+  bullet.
+- Template/scaffold changes: note they only affect **newly generated**
+  projects and give existing projects the manual step (pattern:
+  the `@quasar/app-vite-v3.4.1` release).
+- Breaking changes: called out explicitly at the top with migration
+  notes, plus any peer-dependency bumps ("Requires quasar v2.x+").
 
 Donations footer, verbatim:
 
@@ -117,62 +127,78 @@ Quasar Framework is an open-source MIT-licensed project made possible due to the
 
 ## 6. Determine the version
 
-FROM THE NOTES' CONTENT: any `## New`/feat entry -> minor; fixes/other
-only -> patch. Anything breaking -> major: STOP and confirm with the
-user before going further.
+From the NOTES' content: any `## New`/feat entry -> minor; fixes/other
+only -> patch. Anything breaking -> major: STOP and confirm first.
 
 ## 7. Deliver
 
-- Output one fenced markdown block, ready to paste into a GitHub
-  release: its FIRST line is the full tag name (`<prefix>X.Y.Z`, e.g.
-  `@quasar/app-vite-v3.6.0`), then an empty line, then the complete
+- One fenced markdown block, paste-ready: FIRST line is the full tag
+  name (e.g. `@quasar/app-vite-v3.6.0`), then an empty line, then the
   notes body.
-- Briefly list which commits you excluded as internal-only, so nothing
-  is silently dropped.
-- If there are any concerns with this release, state them after the
-  notes: possibly-breaking or risky behavior changes, notable
-  dependency/peer bumps, commits whose classification was uncertain,
-  anomalies found along the way (e.g. a tag newer than the latest
-  release, a version already bumped). No concerns -> say so in one
-  line.
+- List the commits excluded as internal-only — nothing silently
+  dropped.
+- State any concerns after the notes (risky behavior changes, notable
+  dependency/peer bumps, uncertain classifications, anomalies: a tag
+  newer than the latest release, an already-bumped version, an
+  existing draft for the tag). No concerns -> one line saying so.
 
 ## 8. Confirm, then execute
 
-END by ASKING the user a single yes/no question: continue? On an
-explicit yes, do ALL of the remaining work — the bump + commit, then
-the draft release — with no further questions. On no (or no answer),
-stop; nothing gets changed, committed or created.
-
-A dirty worktree blocks the continuation: say so and stop BEFORE any
-edit (the bump commit must not absorb unrelated changes); the user can
-clean up and confirm again.
+End by asking ONE yes/no question: continue? Yes -> do ALL of the
+following with no further questions; no (or no answer) -> stop. A
+dirty worktree stops the continuation BEFORE any edit — the bump
+commit must not absorb unrelated changes.
 
 Bump + commit:
 
-- Bump `"version"` in the package's `package.json`.
-- Find every other place the package's OWN version is declared (grep
-  the repo for the old version string alongside the package name —
-  source constants, fixtures) and update those too.
-- Update the create-quasar templates' dependency ranges on the bumped
-  package (`create-quasar/templates/**/_package.json`): keep the range
-  operator, raise the version (e.g. `^3.5.0` -> `^3.6.0`). Other
-  packages' semver ranges on it: only when the new version falls
-  outside the range.
-- NEVER touch any `workspace:` protocol declaration (`workspace:^`,
-  `workspace:*`, ...) anywhere — those stay exactly as they are.
-- Commit ONLY the bump edits, message `chore(<dir>): bump version`
-  (e.g. `chore(app-vite): bump version`), with NO `Co-Authored-By`
-  trailer — this overrides any default commit-trailer behavior.
-  NEVER push — the commit stays local.
+- Bump every place the package's OWN version is declared — its
+  `package.json` `"version"` field plus any source constants and
+  fixtures (grep the old version string alongside the package name;
+  hits that are dependency RANGES belong to the next bullet, not to a
+  verbatim replace).
+- Raise every dependency range on the bumped package, keeping the
+  range operator (`^3.5.0` -> `^3.6.0`): grep the repo's manifests —
+  `package.json`, templates' `_package.json`, the AE pnpm catalogs
+  (`create-quasar/templates/ae/*/BASE/_pnpm-workspace.yaml`) — for
+  the package name. Templates, other packages' regular deps/devDeps,
+  docs and test fixtures all get raised. NEVER touch `workspace:`
+  declarations or minimum-version floors (`peerDependencies`,
+  engines-style ranges — they declare the oldest supported version,
+  not the latest), even though the greps surface both.
+- Commit ONLY the bump edits, message `chore(<dir>): bump version`,
+  with NO `Co-Authored-By` trailer (overrides any default). The
+  commit stays local.
 
-Draft release:
+Draft release — never a duplicate:
 
-- `gh release create "<tag>" --repo quasarframework/quasar --draft
---title "<tag>" --notes-file <file>` — tag and title are the full
-  tag name, the body is the notes WITHOUT the leading tag line. A
-  draft creates no tag; remind the user the tag is cut from dev HEAD
-  at publish time, so the bump commit must be pushed before
-  publishing the draft.
+- `utils/*` packages and create-quasar get NO draft (no GitHub
+  releases for them): they skip this whole section — say so when
+  asking. The handoff below still applies, minus its item 4.
+- Release label: ONLY the ui package is marked "Latest". GitHub does
+  NOT persist a latest flag on drafts (it only applies at publish), so
+  don't pass `--latest` flags when creating/editing the draft — the
+  label is enforced at publish time by the handoff below.
+- If a release for the tag already exists (`gh release view "<tag>"
+--repo quasarframework/quasar --json isDraft` — finds drafts too):
+  PUBLISHED -> stop, report the anomaly; DRAFT -> update it in place
+  (`gh release edit "<tag>" ... --draft --title "<tag>"
+--notes-file <file>`).
+- Otherwise `gh release create "<tag>" --repo quasarframework/quasar
+--draft --title "<tag>" --notes-file <file>` — tag and title are
+  the full tag name; the body is the notes WITHOUT the leading tag
+  line. A draft creates no tag (it is cut from dev HEAD at publish
+  time).
 
-NEVER publish a release, create a tag or push; beyond the notes and
-the confirmed follow-ups above — nothing else.
+End the continuation with this handoff checklist for the user:
+
+1. `pnpm publish` from the package dir (prepublish hooks run
+   builds/tests and may adjust files).
+2. If the publish left changes in the worktree, fold them into the
+   bump commit BEFORE pushing (amend — it stays a single commit;
+   never amend after the push).
+3. Push dev.
+4. If a draft was created, give its link and how to publish it:
+   `gh release edit "<tag>" --draft=false --latest=false` for any
+   package except ui (publishing from the GitHub UI pre-selects
+   "Set as the latest release" — uncheck it there); plain UI publish
+   or `--latest` for ui.
