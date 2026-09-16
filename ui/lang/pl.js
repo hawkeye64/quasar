@@ -15,6 +15,11 @@ export default {
     search: 'Szukaj',
     filter: 'Filtruj',
     refresh: 'Odśwież',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Zakres',
+    noValue: 'Brak wartości',
+    resize: 'Zmień rozmiar',
     expand: label => (label ? `Rozwiń "${label}"` : 'Zwiększać'),
     collapse: label => (label ? `Zwiń "${label}"` : 'Upadek')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Poprzedni rok',
     nextYear: 'Następny rok',
     today: 'Dzisiaj',
-    prevRangeYears: range => `Poprzedni ${range} lata`,
-    nextRangeYears: range => `Następnie ${range} lata`
+    prevRangeYears: range => `Poprzednie ${range} lat`,
+    nextRangeYears: range => `Następne ${range} lat`,
+    hour: 'Godzina',
+    minute: 'Minuta',
+    second: 'Sekunda',
+    now: 'Bieżący czas'
   },
   table: {
     noData: 'Brak dostępnych danych',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Wierszy na stronę:',
     allRows: 'Wszystkie',
     pagination: (start, end, total) => start + '-' + end + ' z ' + total,
-    columns: 'Kolumny'
+    columns: 'Kolumny',
+    selectAllRows: 'Zaznacz wszystkie wiersze',
+    selectRow: 'Zaznacz wiersz'
   },
   pagination: {
+    label: 'Paginacja',
     first: 'Pierwsza strona',
     prev: 'Poprzednia strona',
     next: 'Następna strona',
     last: 'Ostatnia strona'
   },
+  carousel: {
+    prevSlide: 'Poprzedni slajd',
+    nextSlide: 'Następny slajd'
+  },
+  colorPicker: {
+    spectrum: 'Widmo',
+    tune: 'Dostrajanie',
+    palette: 'Paleta',
+    value: 'Wartość koloru',
+    hue: 'Odcień',
+    alpha: 'Krycie',
+    saturation: 'Nasycenie',
+    brightness: 'Jasność'
+  },
+  uploader: {
+    addFiles: 'Wybierz pliki',
+    upload: 'Wyślij pliki',
+    abort: 'Przerwij wysyłanie',
+    removeQueued: 'Usuń pliki z kolejki',
+    removeUploaded: 'Usuń wysłane pliki',
+    removeFile: 'Usuń plik'
+  },
   editor: {
+    toolbar: 'Pasek narzędzi edytora',
     url: 'URL',
     bold: 'Pogrubienie',
     italic: 'Kursywa',

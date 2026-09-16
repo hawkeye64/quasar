@@ -2,16 +2,15 @@
 title: useAnimationFrame composable
 desc: What is useAnimationFrame() composable and how you can use it
 keys: useAnimationFrame
-badge: Quasar v2.23+
+badge: v2.23+
 ---
 
 The `useAnimationFrame()` composable is similar in scope with the native `requestAnimationFrame()`, with some key differences. The composable takes care of "cancelling" the animation frame if your component gets destroyed or deactivated (keep-alive related) and you can also override the executing Function before the next animation frame arrives.
 
 In other words, if you want to schedule a function on the next animation frame but you might want to override it or even cancel it before the timeout happens, this is the composable for you.
 
-::: tip
-On the server-side of SSR or SSG modes, registering an animation frame is a no-op. Start server-side work explicitly outside the component rendering lifecycle rather than creating a timer during `setup()`.
-:::
+> [!TIP]
+> On the server-side of SSR or SSG modes, registering an animation frame is a no-op. Start server-side work explicitly outside the component rendering lifecycle rather than creating a timer during `setup()`.
 
 ## Syntax
 

@@ -21,7 +21,7 @@
               </q-item-section>
             </q-item>
 
-            <template v-slot:loading>
+            <template #loading>
               <div class="text-center q-my-md">
                 <q-spinner-dots color="primary" size="40px" />
               </div>
@@ -34,10 +34,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, useTemplateRef } from 'vue'
 
 const itemsMenu = ref([{}, {}, {}, {}, {}, {}, {}])
-const scrollTargetRef = ref(null)
+const scrollTargetRef = useTemplateRef('scrollTargetRef')
 
 function onLoadMenu(index, done) {
   if (index > 1) {

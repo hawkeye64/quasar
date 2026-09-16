@@ -32,7 +32,8 @@
     },
 
     "scroll-target": {
-      "extends": "scroll-target"
+      "extends": "scroll-target",
+      "desc": "CSS selector or DOM element to be used as the container box the scroll percentage is computed against, instead of the auto detected one; the scrolling itself is detected in any scrolling container"
     }
   },
 
@@ -65,6 +66,15 @@
           "desc": "Number between 0.0 and 1.0 defining the scrolled percentage of the component"
         }
       }
+    }
+  },
+
+  "methods": {
+    "refresh": {
+      "desc": "Re-evaluates what is settled at mount: the scrolling container and the way the media is moved along it, the media size and the position; call it after a change the component cannot observe on its own, like an ancestor changing its overflow, a media swap without a load event or a 'scroll-target' that appeared later",
+      "addedIn": "v2.32",
+      "params": null,
+      "returns": null
     }
   }
 }

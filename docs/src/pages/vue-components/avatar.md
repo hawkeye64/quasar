@@ -13,9 +13,8 @@ It is often used with other components in their slots.
 
 ## Usage
 
-::: tip
-The `size` property will determine the height and the width of the Avatar. The `font-size` property will set the size of the font used within the Avatar, which will have an effect on the size of letters and icons.
-:::
+> [!TIP]
+> The `size` property will determine the height and the width of the Avatar. The `font-size` property will set the size of the font used within the Avatar, which will have an effect on the size of letters and icons.
 
 <DocExample title="Basic" file="Basic" />
 
@@ -28,3 +27,7 @@ The `size` property will determine the height and the width of the Avatar. The `
 <DocExample title="With other components" file="Integrated" />
 
 <DocExample title="Overlapping avatars" file="Overlapping" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QAvatar is a purely presentational container and claims no ARIA of its own (an icon set through the `icon` prop is marked as decorative). When the avatar conveys identity rather than decoration, the content you place inside must carry that meaning itself — give an `<img>` in the default slot its own `alt`, or add an `aria-label` where letter initials alone would not be understood.

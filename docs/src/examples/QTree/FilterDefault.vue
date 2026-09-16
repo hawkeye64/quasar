@@ -1,7 +1,7 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <q-input ref="filterRef" filled v-model="filter" label="Filter">
-      <template v-slot:append>
+      <template #append>
         <q-icon
           v-if="filter !== ''"
           name="clear"
@@ -27,6 +27,7 @@ const filter = ref('')
 const filterRef = useTemplateRef('filterRef')
 
 const simple = [
+  // #region
   {
     label: 'Satisfied customers',
     children: [
@@ -52,6 +53,7 @@ const simple = [
       }
     ]
   }
+  // #endregion
 ]
 
 function resetFilter() {

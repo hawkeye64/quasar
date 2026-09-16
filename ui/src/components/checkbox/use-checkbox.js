@@ -1,18 +1,17 @@
-import { computed, getCurrentInstance, h, ref, toRaw } from 'vue'
+import { computed, getCurrentInstance, h, shallowRef, toRaw } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
-import useSize, {
-  useSizeProps
-} from '../../composables/private.use-size/use-size.js'
+import { useSizeProps } from '../../composables/private.use-size/use-size.js'
 import useRefocusTarget from '../../composables/private.use-refocus-target/use-refocus-target.js'
 import {
   useFormInject,
   useFormProps
 } from '../../composables/use-form/private.use-form.js'
 
-import optionSizes from '../../utils/private.option-sizes/option-sizes.js'
+import { getOptionSizeStyle } from '../../utils/private.option-sizes/option-sizes.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
 import { hMergeSlot, hSlot } from '../../utils/private.render/render.js'
 
@@ -62,13 +61,12 @@ function onKeydown(e) {
 
 export default function useCheckbox(type, getInner) {
   const { props, slots, emit, proxy } = getCurrentInstance()
-  const { $q } = proxy
+  const $q = useQuasar()
 
   const isDark = useDark(props, $q)
 
-  const rootRef = ref(null)
+  const rootRef = shallowRef(null)
   const { refocusTargetEl, refocusTarget } = useRefocusTarget(props, rootRef)
-  const sizeStyle = useSize(props, optionSizes)
 
   const modelIsArray = computed(
     () => props.val !== void 0 && Array.isArray(props.modelValue)
@@ -99,7 +97,7 @@ export default function useCheckbox(type, getInner) {
     () =>
       `q-${type} cursor-pointer no-outline row inline no-wrap items-center` +
       (props.disable ? ' disabled' : '') +
-      (isDark.value ? ` q-${type}--dark` : '') +
+      (isDark() ? ` q-${type}--dark` : '') +
       (props.dense ? ` q-${type}--dense` : '') +
       (props.leftLabel ? ' reverse' : '')
   )
@@ -116,7 +114,7 @@ export default function useCheckbox(type, getInner) {
     return `q-${type}__inner relative-position non-selectable q-${type}__inner--${state}${color}`
   })
 
-  const formAttrs = computed(() => {
+  const formAttrs = () => {
     const prop = { type: 'checkbox' }
 
     if (props.name !== void 0) {
@@ -130,7 +128,7 @@ export default function useCheckbox(type, getInner) {
     }
 
     return prop
-  })
+  }
 
   const injectFormInput = useFormInject(formAttrs)
 
@@ -139,8 +137,12 @@ export default function useCheckbox(type, getInner) {
       tabindex: tabindex.value,
       role: type === 'toggle' ? 'switch' : 'checkbox',
       'aria-label': props.label,
+      // the switch role does not allow "mixed"
+      // (AT would map it to "false" anyway)
       'aria-checked': isIndeterminate.value
-        ? 'mixed'
+        ? type === 'toggle'
+          ? 'false'
+          : 'mixed'
         : isTrue.value
           ? 'true'
           : 'false'
@@ -220,7 +222,7 @@ export default function useCheckbox(type, getInner) {
         'div',
         {
           class: innerClass.value,
-          style: sizeStyle.value,
+          style: getOptionSizeStyle(props.size),
           'aria-hidden': 'true'
         },
         inner

@@ -1,15 +1,14 @@
 ---
-title: Material Ripples
+title: v-ripple directive
 desc: Vue directive for easily adding material ripples to your components and DOM elements.
-keys: material-ripple
+keys: material-ripple,ripple,v-ripple
 examples: Ripple
 ---
 
 Material Ripple effect can easily be added to any DOM element (or component) through the `v-ripple` Quasar directive.
 
-::: danger
-Do not use this directive on components that already have material ripples baked in (example: `QBtn`). Rather configure the internal ripples through those component's `ripple` property.
-:::
+> [!CAUTION]
+> Do not use this directive on components that already have material ripples baked in: QBtn, QBtnDropdown, QBtnToggle, QChip, QPagination, QTab and QRouteTab. Rather configure the internal ripples through those components' `ripple` property.
 
 <DocApi file="Ripple" />
 
@@ -17,9 +16,8 @@ Do not use this directive on components that already have material ripples baked
 
 ## Usage
 
-::: warning
-Make sure that your DOM element or component has CSS `position: relative` or Quasar CSS helper class `relative-position` attached to it.
-:::
+> [!WARNING]
+> Make sure that your DOM element or component has CSS `position: relative` or Quasar CSS helper class `relative-position` attached to it.
 
 ### Basic
 
@@ -39,9 +37,9 @@ You can also configure if the ripple should always start from center or not, reg
 
 ### Triggering early
 
-By default, the Ripple directive is triggered on click or keyup. However, you can change that and make it trigger earlier, on the first user interaction (mousedown, touchstart, keydown). Please note that in most situations the event sets may overlap (small delay between first and last user interaction) and there is no difference in the user perception, but in certain conditions it may lead to misleading the user.
+By default, the Ripple directive is triggered on click or keyup. However, you can change that and make it trigger earlier, on the first user interaction (pointerdown, keydown). In most situations there is no difference in user perception (the delay between the first and last event of the interaction is small), but on press-and-hold or slow taps the early feedback feels closer to native Material behavior.
 
-This is especially noticeable on touchscreens where if a user accidentally moves their finger after the touchstart it can sometimes be interpreted as a very small scroll event instead of a click so the click event isn't triggered but there is still a ripple.
+Starting with v2.26, an early ripple knows when the interaction can no longer become a click and cancels itself: if the browser claims the gesture (the touchpoint moves and it becomes a scroll/pan) or the pressed pointer is dragged off the element, the ripple gracefully fades out. On touchscreens it also waits out the browser's tap-vs-scroll disambiguation for a few milliseconds before painting, so flick-scrolling across ripple-enabled elements does not flash ripples.
 
 <DocExample title="Triggering immediately" file="Early" />
 

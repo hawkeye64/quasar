@@ -1,8 +1,9 @@
 import { css, getElement } from '../dom/dom.js'
 
+// a Vue component instance stands for its root element (Object)
 export const scrollTargetProp = __QUASAR_SSR_SERVER__
   ? {} /* SSR/SSG does not know about Element */
-  : [Element, String]
+  : [Element, String, Object]
 
 const scrollTargets = __QUASAR_SSR_SERVER__
   ? []
@@ -16,6 +17,21 @@ const scrollTargets = __QUASAR_SSR_SERVER__
 
 export function getScrollTarget(el, targetEl) {
   let target = getElement(targetEl)
+
+  if (
+    target !== void 0 &&
+    target !== window &&
+    !(target instanceof Element) &&
+    !scrollTargets.includes(target)
+  ) {
+    // a component with a fragment root (no root element) or a plain
+    // object; the auto detected container is the best that can be done
+    console.warn(
+      '[Quasar] scroll-target: the specified value is not an Element nor' +
+        ' a component with a root element; falling back to auto detection'
+    )
+    target = void 0
+  }
 
   if (target === void 0) {
     if (el === void 0 || el === null) {
@@ -37,15 +53,11 @@ export function getScrollWidth(el) {
 }
 
 export function getVerticalScrollPosition(scrollTarget) {
-  return scrollTarget === window
-    ? window.pageYOffset || window.scrollY || document.body.scrollTop || 0
-    : scrollTarget.scrollTop
+  return scrollTarget === window ? window.scrollY : scrollTarget.scrollTop
 }
 
 export function getHorizontalScrollPosition(scrollTarget) {
-  return scrollTarget === window
-    ? window.pageXOffset || window.scrollX || document.body.scrollLeft || 0
-    : scrollTarget.scrollLeft
+  return scrollTarget === window ? window.scrollX : scrollTarget.scrollLeft
 }
 
 // oxlint-disable-next-line default-param-last
@@ -96,10 +108,7 @@ export function animHorizontalScrollTo(el, to, duration = 0, rawPrevTime) {
 
 function setScroll(scrollTarget, offset) {
   if (scrollTarget === window) {
-    window.scrollTo(
-      window.pageXOffset || window.scrollX || document.body.scrollLeft || 0,
-      offset
-    )
+    window.scrollTo(window.scrollX, offset)
     return
   }
   scrollTarget.scrollTop = offset
@@ -107,10 +116,7 @@ function setScroll(scrollTarget, offset) {
 
 function setHorizontalScroll(scrollTarget, offset) {
   if (scrollTarget === window) {
-    window.scrollTo(
-      offset,
-      window.pageYOffset || window.scrollY || document.body.scrollTop || 0
-    )
+    window.scrollTo(offset, window.scrollY)
     return
   }
   scrollTarget.scrollLeft = offset

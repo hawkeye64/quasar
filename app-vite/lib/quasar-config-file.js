@@ -108,6 +108,10 @@ function escapeHTMLAttribute(str) {
   return str ? str.replaceAll('"', '') : ''
 }
 
+// Vite's relative base shortcut: assets are referenced
+// relative to index.html, so the deploy path need not be known
+const relativePublicPath = './'
+
 // exported for testing purposes only
 export function formatPublicPath(publicPath) {
   if (!publicPath) return '/'
@@ -116,7 +120,9 @@ export function formatPublicPath(publicPath) {
     publicPath = `${publicPath}/`
   }
 
-  if (urlRegex.test(publicPath)) return publicPath
+  if (publicPath === relativePublicPath || urlRegex.test(publicPath)) {
+    return publicPath
+  }
 
   if (!publicPath.startsWith('/')) {
     publicPath = `/${publicPath}`
@@ -125,8 +131,42 @@ export function formatPublicPath(publicPath) {
   return publicPath
 }
 
+const nonWebModes = ['capacitor', 'cordova', 'electron', 'bex']
+
+// exported for testing purposes only;
+// returns why a relative publicPath cannot be used, if that is the case
+export function getRelativePublicPathError({ publicPath, vueRouterMode }, ctx) {
+  if (
+    nonWebModes.includes(ctx.modeName) ||
+    formatPublicPath(publicPath) !== relativePublicPath
+  ) {
+    return
+  }
+
+  if (!ctx.mode.spa && !ctx.mode.pwa) {
+    return `A relative build > publicPath ("${relativePublicPath}") is only supported by the SPA and PWA modes.`
+  }
+
+  if (vueRouterMode !== 'hash') {
+    return `A relative build > publicPath ("${relativePublicPath}") requires build > vueRouterMode "hash".`
+  }
+}
+
+// exported for testing purposes only
+export function resolvePublicPath({ publicPath }, ctx) {
+  if (nonWebModes.includes(ctx.modeName)) return ''
+
+  publicPath = formatPublicPath(publicPath)
+
+  // the dev server serves a relative base from the root, same as Vite does
+  return ctx.dev && publicPath === relativePublicPath ? '/' : publicPath
+}
+
 // exported for testing purposes only
 export function formatRouterBase(publicPath) {
+  // with a relative publicPath, Vue Router derives its base from the page URL
+  if (publicPath === relativePublicPath) return ''
+
   if (!publicPath || !publicPath.startsWith('http')) {
     return publicPath
   }
@@ -269,7 +309,10 @@ async function onAddress({ host, port }, mode) {
       )
     } else if (err.message === 'ERROR_NETWORK_ADDRESS_NOT_AVAIL') {
       warn(
-        'Invalid host specified. No network address matches. Please specify another one.'
+        'Invalid devServer host: no local network address matches it. The host is the address' +
+          ' the dev server binds to, so it must be a local IP or hostname. To reach the dev server' +
+          ' through a tunnel or any other public hostname, keep the default host and list that' +
+          ' hostname in quasar.config file > devServer > allowedHosts instead.'
       )
     } else {
       warn('Unknown network error occurred')
@@ -976,6 +1019,13 @@ export class QuasarConfigFile {
         cfg.devServer.host = '0.0.0.0'
       }
 
+      // Vite also accepts `host: true` ("listen on all addresses");
+      // normalize it for the string handling downstream (address
+      // verification, APP_URL, external IP detection)
+      if (cfg.devServer.host === true) {
+        cfg.devServer.host = '0.0.0.0'
+      }
+
       if (this.#opts.port) {
         cfg.devServer.port = this.#opts.port
         tip(
@@ -1109,6 +1159,7 @@ export class QuasarConfigFile {
     cfg.build = merge(
       {
         filenameBasedRouting: false,
+        vueJsx: false,
 
         viteVuePluginOptions: {
           isProduction: this.#ctx.prod,
@@ -1246,6 +1297,20 @@ export class QuasarConfigFile {
           : defaultOptions
     }
 
+    if (cfg.build.vueJsx && cfg.build.vueJsx !== 'preserve') {
+      // Vite (through Oxc) compiles the JSX/TSX itself, so the only thing
+      // needed is pointing it at Vue's JSX runtime instead of React's.
+      // "preserve" opts out of it, for when a Vite plugin
+      // (@vitejs/plugin-vue-jsx) takes over the transformation.
+      const defaultOptions = { runtime: 'automatic', importSource: 'vue' }
+
+      const { vueJsx } = cfg.build
+      cfg.build.vueJsx =
+        Object(vueJsx) === vueJsx
+          ? merge({}, defaultOptions, vueJsx)
+          : defaultOptions
+    }
+
     if (this.#ctx.mode.ssr || this.#ctx.mode.ssg) {
       cfg.build.vueRouterMode = 'history'
     } else if (
@@ -1280,15 +1345,18 @@ export class QuasarConfigFile {
       cfg.build.distDir = appPaths.resolve.app(cfg.build.distDir)
     }
 
-    cfg.build.publicPath =
-      cfg.build.publicPath &&
-      ['spa', 'pwa', 'ssr', 'ssg'].includes(this.#ctx.modeName)
-        ? formatPublicPath(cfg.build.publicPath)
-        : ['capacitor', 'cordova', 'electron', 'bex'].includes(
-              this.#ctx.modeName
-            )
-          ? ''
-          : '/'
+    const relativePublicPathError = getRelativePublicPathError(
+      cfg.build,
+      this.#ctx
+    )
+    if (relativePublicPathError !== void 0) {
+      if (this.#shouldFail) fatal(relativePublicPathError, 'FAIL')
+
+      warn(relativePublicPathError + ' Please fix it.\n')
+      return
+    }
+
+    cfg.build.publicPath = resolvePublicPath(cfg.build, this.#ctx)
 
     /* careful if you configure the following; make sure that you really know what you are doing */
     cfg.build.vueRouterBase =
@@ -1334,14 +1402,15 @@ export class QuasarConfigFile {
     // make sure we have preFetch in config
     cfg.preFetch ||= false
 
-    if (
-      this.#ctx.mode.capacitor &&
-      cfg.capacitor.capacitorCliPreparationParams.length === 0
-    ) {
-      cfg.capacitor.capacitorCliPreparationParams = [
-        'sync',
-        this.#ctx.targetName
-      ]
+    if (this.#ctx.mode.capacitor) {
+      if (cfg.capacitor.capacitorCliPreparationParams.length === 0) {
+        cfg.capacitor.capacitorCliPreparationParams = [
+          'sync',
+          this.#ctx.targetName
+        ]
+      }
+
+      cfg.capacitor.iosBuildScheme ||= 'App'
     }
 
     if (this.#ctx.mode.ssr) {

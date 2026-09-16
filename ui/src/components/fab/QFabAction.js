@@ -3,7 +3,7 @@ import { computed, getCurrentInstance, h, inject } from 'vue'
 import QBtn from '../btn/QBtn.js'
 import QIcon from '../icon/QIcon.js'
 
-import useFab, { useFabProps } from './use-fab.js'
+import useFab, { getFabBtnProps, useFabProps } from './use-fab.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { fabKey } from '../../utils/private.symbols/symbols.js'
@@ -41,12 +41,18 @@ export default /*#__PURE__*/ createComponent({
   emits: ['click'],
 
   setup(props, { slots, emit }) {
-    const $fab = inject(fabKey, () => ({
-      showing: { value: true },
-      onChildClick: noop
-    }))
+    // the factory flag is required: without it Vue injects this function
+    // as-is, leaving a QFabAction used outside a QFab with no fallback
+    const $fab = inject(
+      fabKey,
+      () => ({
+        showing: { value: true },
+        onChildClick: noop
+      }),
+      true
+    )
 
-    const { formClass, labelProps } = useFab(props, $fab.showing)
+    const { formClass, stacked, labelProps } = useFab(props, $fab.showing)
 
     const classes = computed(() => {
       const align = anchorMap[props.anchor]
@@ -91,11 +97,11 @@ export default /*#__PURE__*/ createComponent({
         QBtn,
         {
           class: classes.value,
-          ...props,
+          ...getFabBtnProps(props),
+          to: props.to,
+          replace: props.replace,
           noWrap: true,
-          stack: props.stacked,
-          icon: void 0,
-          label: void 0,
+          stack: stacked.value,
           noCaps: true,
           fabMini: true,
           disable: isDisabled.value,

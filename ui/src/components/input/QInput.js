@@ -4,11 +4,11 @@ import {
   h,
   nextTick,
   onBeforeUnmount,
-  onMounted,
-  ref,
+  shallowRef,
   watch
 } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useField, {
   fieldValueIsFilled,
   useFieldEmits,
@@ -16,6 +16,7 @@ import useField, {
   useFieldState
 } from '../../composables/private.use-field/use-field.js'
 import useMask, { useMaskProps } from './use-mask.js'
+import { useAutogrow } from './use-autogrow.js'
 import {
   useFormInputNameAttr,
   useFormProps
@@ -73,7 +74,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { emit, attrs }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const temp = {}
     let emitCachedValue = Number.NaN,
@@ -82,7 +83,7 @@ export default /*#__PURE__*/ createComponent({
       emitTimer = null,
       emitValueFn
 
-    const inputRef = ref(null)
+    const inputRef = shallowRef(null)
     const nameProp = useFormInputNameAttr(props)
 
     const {
@@ -92,7 +93,13 @@ export default /*#__PURE__*/ createComponent({
       updateMaskValue,
       onMaskedKeydown,
       onMaskedClick
-    } = useMask(props, emit, emitValue, inputRef)
+    } = useMask(props, emit, emitValue, inputRef, () => {
+      // the mask found the displayed value matching the model again: a
+      // debounced emission still in flight carries a stale intermediate
+      // state (#17568), and so would a kept temp.value on the next render
+      cancelPendingValueEmission()
+      delete temp.value
+    })
 
     const formDomProps = useFileFormDomProps(props, /* type guard */ true)
     const hasValue = computed(() => fieldValueIsFilled(innerValue.value))
@@ -115,6 +122,10 @@ export default /*#__PURE__*/ createComponent({
     const isTextarea = computed(
       () => props.type === 'textarea' || props.autogrow
     )
+
+    // autogrow sizing: the browser's own (CSS field-sizing, see
+    // QInput.sass) where available, the measuring routine elsewhere
+    const adjustHeightViaJS = useAutogrow?.(props, attrs, inputRef, $q)
 
     const isTypeText = computed(
       () =>
@@ -147,7 +158,10 @@ export default /*#__PURE__*/ createComponent({
         evt.onClick = onMaskedClick
       }
 
-      if (props.autogrow) {
+      // browser autofill fires no input event; the q-autofill keyframe on
+      // :autofill ends right after it, so the JS fallback remeasures then
+      // (field-sizing needs nothing, the user's listener passes through)
+      if (adjustHeightViaJS && props.autogrow) {
         evt.onAnimationend = onAnimationend
       }
 
@@ -160,15 +174,13 @@ export default /*#__PURE__*/ createComponent({
         'data-autofocus': props.autofocus || void 0,
         rows: props.type === 'textarea' ? 6 : void 0,
         'aria-label': props.label,
-        name: nameProp.value,
+        name: nameProp(),
         ...state.splitAttrs.attributes.value,
         id: state.targetUid.value,
         maxlength: props.maxlength,
         disabled: props.disable,
         readonly: props.readonly
       }
-
-      Object.assign(acc, state.getErrorAriaAttrs(acc))
 
       if (!isTextarea.value) {
         acc.type = props.type
@@ -196,7 +208,9 @@ export default /*#__PURE__*/ createComponent({
     watch(
       () => props.modelValue,
       v => {
-        if (emitTimer !== null) {
+        // any pending emission (debounced or lazy; a lazy one holds no
+        // timer) is stale once the model changed underneath it
+        if (emitValueFn !== void 0) {
           cancelPendingValueEmission()
           typedNumber = false
           stopValueWatcher = false
@@ -231,28 +245,7 @@ export default /*#__PURE__*/ createComponent({
         }
 
         // textarea only
-        if (props.autogrow) nextTick(adjustHeight)
-      }
-    )
-
-    watch(
-      () => props.autogrow,
-      val => {
-        // textarea only
-        if (val) {
-          nextTick(adjustHeight)
-        }
-        // if it has a number of rows set respect it
-        else if (inputRef.value !== null && attrs.rows > 0) {
-          inputRef.value.style.height = 'auto'
-        }
-      }
-    )
-
-    watch(
-      () => props.dense,
-      () => {
-        if (props.autogrow) nextTick(adjustHeight)
+        if (adjustHeightViaJS && props.autogrow) nextTick(adjustHeightViaJS)
       }
     )
 
@@ -334,12 +327,13 @@ export default /*#__PURE__*/ createComponent({
 
       // we need to trigger it immediately too,
       // to avoid "flickering"
-      if (props.autogrow) adjustHeight()
+      if (adjustHeightViaJS && props.autogrow) adjustHeightViaJS()
     }
 
+    // replaces the user's own listener in onEvents, hence the re-emit
     function onAnimationend(e) {
       emit('animationend', e)
-      adjustHeight()
+      adjustHeightViaJS()
     }
 
     function emitValue(val, stopWatcher) {
@@ -373,9 +367,25 @@ export default /*#__PURE__*/ createComponent({
         temp.value = val
       }
 
-      if (props.debounce !== void 0) {
+      // while an emission is pending, temp.value keeps the typed text
+      // rendered; a masked control renders from innerValue instead (and
+      // with unmasked-value `val` is the raw value rather than the
+      // displayed text), so there temp must be dropped: an IME pass may
+      // have left its raw snapshot in it, which would shadow innerValue
+      // and rewrite the field on the next re-render
+      const holdTemp = () => {
+        if (hasMask.value) delete temp.value
+        else temp.value = val
+      }
+
+      if (props.modelModifiers?.lazy === true) {
+        // v-model.lazy: the emission stays pending until the change event
+        // or the blur handler invokes emitValueFn; a debounce timer could
+        // only fire earlier than that, so none is scheduled
+        holdTemp()
+      } else if (props.debounce !== void 0) {
         if (emitTimer !== null) clearTimeout(emitTimer)
-        temp.value = val
+        holdTemp()
         emitTimer = setTimeout(emitValueFn, props.debounce)
       } else {
         emitValueFn()
@@ -396,44 +406,6 @@ export default /*#__PURE__*/ createComponent({
       typedNumber = false
       stopValueWatcher = false
       delete temp.value
-    }
-
-    // textarea only
-    function adjustHeight() {
-      requestAnimationFrame(() => {
-        const inp = inputRef.value
-        if (inp !== null) {
-          const parentStyle = inp.parentNode.style
-          // chrome does not keep scroll #15498
-          const { scrollTop } = inp
-          // chrome calculates a smaller scrollHeight when in a .column container
-          const { overflowY, maxHeight } = $q.platform.is.firefox
-            ? {}
-            : window.getComputedStyle(inp)
-          // on firefox or if overflowY is specified as scroll #14263, #14344
-          // we don't touch overflow
-          // firefox is not so bad in the end
-          const changeOverflow = overflowY !== void 0 && overflowY !== 'scroll'
-
-          // reset height of textarea to a small size to detect the real height
-          // but keep the total control size the same
-          if (changeOverflow) inp.style.overflowY = 'hidden'
-          parentStyle.marginBottom = inp.scrollHeight - 1 + 'px'
-          inp.style.height = '1px'
-
-          inp.style.height = inp.scrollHeight + 'px'
-          // we should allow scrollbars only
-          // if there is maxHeight and content is taller than maxHeight
-          if (changeOverflow) {
-            inp.style.overflowY =
-              Number.parseInt(maxHeight, 10) < inp.scrollHeight
-                ? 'auto'
-                : 'hidden'
-          }
-          parentStyle.marginBottom = ''
-          inp.scrollTop = scrollTop
-        }
-      })
     }
 
     function onChange(e) {
@@ -487,11 +459,6 @@ export default /*#__PURE__*/ createComponent({
       onFinishEditing()
     })
 
-    onMounted(() => {
-      // textarea only
-      if (props.autogrow) adjustHeight()
-    })
-
     Object.assign(state, {
       innerValue,
 
@@ -523,17 +490,23 @@ export default /*#__PURE__*/ createComponent({
           fieldValueIsFilled(props.displayValue)
       ),
 
-      getControl: () =>
-        h(isTextarea.value ? 'textarea' : 'input', {
+      getControl: () => {
+        const controlAttrs = inputAttrs.value
+
+        return h(isTextarea.value ? 'textarea' : 'input', {
           ref: inputRef,
           class: ['q-field__native q-placeholder', props.inputClass],
           style: props.inputStyle,
-          ...inputAttrs.value,
+          ...controlAttrs,
+          // render-path merge: getErrorAriaAttrs() reads slot presence,
+          // which is not reactive, so a computed must not cache it
+          ...state.getErrorAriaAttrs(controlAttrs),
           ...onEvents.value,
           ...(props.type !== 'file'
             ? { value: getCurValue() }
             : formDomProps.value)
-        }),
+        })
+      },
 
       getShadowControl: () =>
         h(

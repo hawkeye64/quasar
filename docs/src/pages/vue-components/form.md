@@ -10,20 +10,19 @@ related:
   - /vue-composables/use-form-child
 ---
 
-The QForm component renders a `<form>` DOM element and allows you to easily validate child form components (like [QInput](/vue-components/input#Internal-validation), [QSelect](/vue-components/select) or your [QField](/vue-components/field) wrapped components) that have the **internal validation** (NOT the external one) through `rules` associated with them.
+The QForm component renders a `<form>` DOM element and allows you to easily validate child form components (like [QInput](/vue-components/input#internal-validation), [QSelect](/vue-components/select) or your [QField](/vue-components/field) wrapped components) that have the **internal validation** (NOT the external one) through `rules` associated with them.
 
 <DocApi file="QForm" />
 
 ## Usage
 
-::: warning
-Please be aware of the following:
-
-- QForm hooks into QInput, QSelect or QField wrapped components
-- QInput, QSelect or QField wrapped components must use the internal validation (NOT the external one).
-- If you want to take advantage of the `reset` functionality, then be sure to also capture the `@reset` event on QForm and make its handler reset all of the wrapped components models.
-
-:::
+> [!WARNING]
+> Please be aware of the following:
+>
+> - QForm hooks into QInput, QSelect or QField wrapped components
+> - QInput, QSelect or QField wrapped components must use the internal validation (NOT the external one).
+> - The `validate()` method runs the components' internal validation (their `rules`) only. Native HTML constraints (like `type="email"` or a `required` attribute on the underlying native input) are enforced by the browser on a native form submission, but `validate()` does not consult them, so express such constraints as rules too (e.g. `:rules="['email']"`).
+> - If you want to take advantage of the `reset` functionality, then be sure to also capture the `@reset` event on QForm and make its handler reset all of the wrapped components models.
 
 <DocExample title="Basic" file="Basic" />
 
@@ -164,3 +163,9 @@ export default {
   // ...
 }
 ```
+
+## Accessibility <q-badge label="v2.25+" />
+
+QForm renders a native `<form>` element, so the browser's built-in form semantics (including implicit submission with <kbd>Enter</kbd>) apply as-is. When validation fails, QForm moves keyboard focus to the first invalid field (opt out with the `no-error-focus` prop), and screen readers pick up that field's error through its own `role="alert"` message — see [QField's Accessibility section](/vue-components/field#accessibility). The `autofocus` prop focuses the first `[autofocus]` element (falling back to the first tabbable one) when the form is mounted.
+
+There is no aggregate error summary: a screen reader user hears the alert of the field that receives focus, not how many fields failed overall. For long forms, consider rendering a live region of your own (e.g. "3 fields need attention") when validation fails.

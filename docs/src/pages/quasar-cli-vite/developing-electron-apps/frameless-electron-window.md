@@ -64,7 +64,7 @@ app.whenReady().then(async () => {
 })
 ```
 
-Resolving the window from `event.sender` ensures that each renderer controls only its own window. If your app loads remote content or accepts navigation away from its packaged UI, also [validate the sender of every IPC message](/quasar-cli-vite/developing-electron-apps/electron-security-concerns#checklist-security-recommendations) before performing privileged actions.
+Resolving the window from `event.sender` ensures that each renderer controls only its own window. If your app loads remote content or accepts navigation away from its packaged UI, also [validate the sender of every IPC message](/quasar-cli-vite/developing-electron-apps/electron-security-concerns#expose-narrow-preload-apis) before performing privileged actions.
 
 ### The preload script
 
@@ -100,7 +100,7 @@ A frameless window needs a draggable region. Use the `q-electron-drag` and `q-el
 
 The class allows the user to drag the window from that region.
 
-Interactive children must not trigger dragging. [QBtn](/vue-components/button) is excluded automatically; add `q-electron-drag--exception` to other interactive children.
+Interactive children must not trigger dragging. [QBtn](/vue-components/button) is excluded automatically, and so is overlay content (menus, dialogs, notifications, tooltips) that would otherwise be unclickable where it overlaps the drag region (v2.27+); add `q-electron-drag--exception` to other interactive children.
 
 Example of adding an exception to an icon:
 
@@ -159,9 +159,15 @@ We can also hide the header window bar for non-Electron Quasar modes:
 
     <q-space />
 
-    <q-btn dense flat icon="minimize" @click="minimize" />
-    <q-btn dense flat icon="crop_square" @click="toggleMaximize" />
-    <q-btn dense flat icon="close" @click="closeApp" />
+    <q-btn aria-label="Minimize" dense flat icon="minimize" @click="minimize" />
+    <q-btn
+      aria-label="Maximize"
+      dense
+      flat
+      icon="crop_square"
+      @click="toggleMaximize"
+    />
+    <q-btn aria-label="Close" dense flat icon="close" @click="closeApp" />
   </q-bar>
 </template>
 

@@ -5,9 +5,8 @@ desc: Quick tutorial about Vue principles and how to use it with Quasar.
 
 Before you begin with Quasar, it is a good idea to have a fairly good knowledge about how Vue 3 works. For devs experienced with reactive UIs, the [Vue 3 documentation](https://vuejs.org/) itself takes a half-day at most to read top-to-bottom and will help you understand how Quasar components can be used and configured.
 
-::: tip
-If you are a total beginner to Vue and reactive UI libraries and want a good tutorial, we recommend you take a look at [Vue and Quasar video tutorials](/video-tutorials).
-:::
+> [!TIP]
+> If you are a total beginner to Vue and reactive UI libraries and want a good tutorial, we recommend you take a look at [Vue and Quasar video tutorials](/video-tutorials).
 
 After reading the Vue documentation, let's clear up some of the most frequently asked questions, like _"How can I use Quasar components, Vue properties, methods and events"_.
 
@@ -115,9 +114,8 @@ Let's take the following example with a QBtn and QIcon and then we'll see how to
 
 Quasar Plugins are features that you can use both in your Vue files as well as outside of them, like Notify, BottomSheet, AppVisibility and so on.
 
-::: warning
-**Before using them in your app**, you need to add a reference to them in the `/quasar.config` file (as shown below).
-:::
+> [!WARNING]
+> **Before using them in your app**, you need to add a reference to them in the `/quasar.config` file (as shown below).
 
 ```js
 framework: {
@@ -180,9 +178,8 @@ Notify.create('My message')
 
 ### Self-Closing Tags
 
-::: danger
-Do NOT use self-closing tag form when you are using **Quasar UMD version**. Your browser is interpreting the HTML before Vue parses your DOM elements, so your HTML syntax must be correct. Unknown tags (like Vue components) cannot be self-closing because your browser will interpret those as if you are opening a tag but never closing it.
-:::
+> [!CAUTION]
+> Do NOT use self-closing tag form when you are using **Quasar UMD version**. Your browser is interpreting the HTML before Vue parses your DOM elements, so your HTML syntax must be correct. Unknown tags (like Vue components) cannot be self-closing because your browser will interpret those as if you are opening a tag but never closing it.
 
 Some Quasar components do not need you to include HTML content inside of them. In this case, you can use them as self-closing tags. One example with QIcon below:
 
@@ -222,9 +219,8 @@ Let's take some examples with a bogus Quasar component (we will call it QBogus) 
 
 A boolean property means it only accepts a strictly Boolean value. The values will not be cast to Boolean, so you must ensure you are using a true Boolean.
 
-::: tip
-In Quasar, all Boolean properties have `false` as the default value. As a result, you don't have to explicitly assign them the `false` value.
-:::
+> [!TIP]
+> In Quasar, all Boolean properties have `false` as the default value. As a result, you don't have to explicitly assign them the `false` value.
 
 If you are trying to control that property and change it dynamically at runtime, then bind it to a variable in your scope:
 
@@ -339,6 +335,50 @@ As you can imagine, Strings are required as a value for this type of property.
   const myOffset = [10, 20]
 </script>
 ```
+
+## Handling Vue Slots
+
+You will notice throughout the documentation that some Quasar components have a section called "Slots". Example:
+
+| Slot Name | Description                                          |
+| --------- | ---------------------------------------------------- |
+| `default` | The main content of the component.                   |
+| `header`  | Content rendered above the main content.             |
+| `item`    | Renders one item; receives the item as `scope.item`. |
+
+Content placed between the component tags fills the `default` slot. Any other slot is targeted with a `<template>` whose slot name follows a `#`, the shorthand of Vue's `v-slot:` directive and the only form the documentation uses. A slot that passes data to its content is a "scoped slot": assign that data to a variable (`#item="scope"` below) and read its keys, listed in the "Slots" section of each component.
+
+```html
+<template>
+  <q-bogus>
+    <!-- fills the "default" slot -->
+    Some content
+
+    <!-- fills the "header" slot -->
+    <template #header>
+      <div>My header</div>
+    </template>
+
+    <!-- fills the scoped "item" slot; "scope" holds the data it passes -->
+    <template #item="scope">
+      <div>{{ scope.item.name }}</div>
+    </template>
+  </q-bogus>
+</template>
+```
+
+When the default slot is the only one used and it receives data, the shorthand can sit on the component itself:
+
+```html
+<template>
+  <q-bogus #default="scope">
+    <div>{{ scope.item.name }}</div>
+  </q-bogus>
+</template>
+```
+
+> [!TIP]
+> The `vue/v-slot-style` rule of eslint-plugin-vue (enabled by its `strongly-recommended` preset and above) prefers `v-slot="scope"` on a component tag by default. The [scaffolded ESLint configuration](/quasar-cli-vite/lint-and-format-code#eslint-prettier) sets it to `shorthand`, so a copied example never trips it.
 
 ## Handling Vue Methods
 

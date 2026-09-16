@@ -15,6 +15,11 @@ export default {
     search: 'Keresés',
     filter: 'Szűrés',
     refresh: 'Frissítés',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Tartomány',
+    noValue: 'Nincs érték',
+    resize: 'Átméretezés',
     expand: label => (label ? `A "${label}" kiterjesztése` : 'Kiterjed'),
     collapse: label => (label ? `A "${label}" összecsukása` : 'Összeomlás')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Előző év',
     nextYear: 'Jövőre',
     today: 'Ma',
-    prevRangeYears: range => `Előző ${range} évek`,
-    nextRangeYears: range => `Következő ${range} évek`
+    prevRangeYears: range => `Előző ${range} év`,
+    nextRangeYears: range => `Következő ${range} év`,
+    hour: 'Óra',
+    minute: 'Perc',
+    second: 'Másodperc',
+    now: 'Jelenlegi idő'
   },
   table: {
     noData: 'Nincs elérhető adat',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Elemek száma oldalanként:',
     allRows: 'Összes',
     pagination: (start, end, total) => start + '-' + end + ' / ' + total,
-    columns: 'Oszlopok'
+    columns: 'Oszlopok',
+    selectAllRows: 'Összes sor kijelölése',
+    selectRow: 'Sor kijelölése'
   },
   pagination: {
+    label: 'Lapozás',
     first: 'Első oldal',
     prev: 'Előző oldal',
     next: 'Következő oldal',
     last: 'Utolsó oldal'
   },
+  carousel: {
+    prevSlide: 'Előző dia',
+    nextSlide: 'Következő dia'
+  },
+  colorPicker: {
+    spectrum: 'Színkép',
+    tune: 'Finomhangolás',
+    palette: 'Paletta',
+    value: 'Színérték',
+    hue: 'Árnyalat',
+    alpha: 'Átlátszatlanság',
+    saturation: 'Telítettség',
+    brightness: 'Fényerő'
+  },
+  uploader: {
+    addFiles: 'Fájlok kiválasztása',
+    upload: 'Fájlok feltöltése',
+    abort: 'Feltöltés megszakítása',
+    removeQueued: 'Várakozó fájlok eltávolítása',
+    removeUploaded: 'Feltöltött fájlok eltávolítása',
+    removeFile: 'Fájl eltávolítása'
+  },
   editor: {
+    toolbar: 'Szerkesztő eszköztára',
     url: 'URL',
     bold: 'Félkövér',
     italic: 'Dőlt',

@@ -10,16 +10,18 @@
       before-class="overflow-hidden"
       after-class="overflow-hidden"
     >
-      <template v-slot:before>
+      <template #before>
         <img
+          alt="Landscape photo"
           src="https://cdn.quasar.dev/img/parallax1.jpg"
           :width="width"
           class="absolute-top-left"
         />
       </template>
 
-      <template v-slot:after>
+      <template #after>
         <img
+          alt="Landscape photo in black and white"
           src="https://cdn.quasar.dev/img/parallax1-bw.jpg"
           :width="width"
           class="absolute-top-right"

@@ -4,24 +4,27 @@
       <q-file filled v-model="model" label="Label (stacked)" stack-label />
 
       <q-file outlined v-model="model">
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="attach_file" />
         </template>
       </q-file>
 
       <q-file standout v-model="model">
-        <template v-slot:append>
+        <template #append>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+            <img
+              alt="Quasar logo"
+              src="https://cdn.quasar.dev/logo-v2/svg/logo.svg"
+            />
           </q-avatar>
         </template>
       </q-file>
 
       <q-file filled bottom-slots v-model="model" label="Label" counter>
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="cloud_upload" @click.stop.prevent />
         </template>
-        <template v-slot:append>
+        <template #append>
           <q-icon
             name="close"
             @click.stop.prevent="model = null"
@@ -29,7 +32,7 @@
           />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-file>
 
       <q-file
@@ -41,11 +44,11 @@
         counter
         max-files="12"
       >
-        <template v-slot:before>
+        <template #before>
           <q-icon name="attachment" />
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon
             v-if="model !== null"
             name="close"
@@ -55,7 +58,7 @@
           <q-icon name="search" @click.stop.prevent />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-file>
 
       <q-file
@@ -66,13 +69,16 @@
         counter
         max-files="12"
       >
-        <template v-slot:before>
+        <template #before>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/img/avatar5.jpg" />
+            <img
+              alt="User avatar"
+              src="https://cdn.quasar.dev/img/avatar5.jpg"
+            />
           </q-avatar>
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon
             v-if="model !== null"
             name="close"
@@ -82,9 +88,9 @@
           <q-icon name="create_new_folder" @click.stop.prevent />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
 
-        <template v-slot:after>
+        <template #after>
           <q-btn round dense flat icon="send" />
         </template>
       </q-file>
@@ -97,13 +103,13 @@
         counter
         max-files="12"
       >
-        <template v-slot:before>
+        <template #before>
           <q-icon name="folder_open" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-btn round dense flat icon="add" @click.stop.prevent />
         </template>
       </q-file>

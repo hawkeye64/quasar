@@ -17,6 +17,7 @@
           color="white"
           class="q-mr-sm"
           no-caps
+          aria-label="GitHub"
         />
 
         <q-select
@@ -35,13 +36,14 @@
           @filter="filter"
           style="width: 300px"
         >
-          <template v-slot:append>
+          <template #append>
             <img
               src="https://cdn.quasar.dev/img/layout-gallery/img-github-search-key-slash.svg"
+              alt="Slash key"
             />
           </template>
 
-          <template v-slot:no-option>
+          <template #no-option>
             <q-item>
               <q-item-section>
                 <div class="text-center">
@@ -51,7 +53,7 @@
             </q-item>
           </template>
 
-          <template v-slot:option="scope">
+          <template #option="scope">
             <q-item v-bind="scope.itemProps" class="GL__select-GL__menu-link">
               <q-item-section side>
                 <q-icon name="collections_bookmark" />
@@ -96,8 +98,15 @@
             round
             size="sm"
             icon="notifications"
+            aria-label="Notifications"
           />
-          <q-btn v-if="$q.screen.gt.xs" dense flat>
+          <q-btn
+            v-if="$q.screen.gt.xs"
+            dense
+            flat
+            aria-label="Create new"
+            aria-haspopup="menu"
+          >
             <div class="row items-center no-wrap">
               <q-icon name="add" size="20px" />
               <q-icon
@@ -107,7 +116,7 @@
               />
             </div>
             <q-menu auto-close>
-              <q-list dense style="min-width: 100px">
+              <q-list role="menu" dense style="min-width: 100px">
                 <q-item clickable class="GL__menu-link">
                   <q-item-section>New repository</q-item-section>
                 </q-item>
@@ -129,14 +138,17 @@
             </q-menu>
           </q-btn>
 
-          <q-btn dense flat no-wrap>
+          <q-btn dense flat no-wrap aria-label="Account" aria-haspopup="menu">
             <q-avatar rounded size="20px">
-              <img src="https://cdn.quasar.dev/img/avatar3.jpg" />
+              <img
+                src="https://cdn.quasar.dev/img/avatar3.jpg"
+                alt="User avatar"
+              />
             </q-avatar>
             <q-icon name="arrow_drop_down" size="16px" />
 
             <q-menu auto-close>
-              <q-list dense>
+              <q-list role="menu" dense>
                 <q-item class="GL__menu-link-signed-in">
                   <q-item-section>
                     <div>Signed in as <strong>Mary</strong></div>

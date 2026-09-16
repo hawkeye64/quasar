@@ -6,6 +6,7 @@ import {
   onBeforeUnmount,
   provide,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
@@ -14,6 +15,7 @@ import QIcon from '../icon/QIcon.js'
 import QSpinner from '../spinner/QSpinner.js'
 import QCircularProgress from '../circular-progress/QCircularProgress.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -71,7 +73,7 @@ export const coreEmits = [
 export function getRenderer(getPlugin, expose) {
   const vm = getCurrentInstance()
   const { props, slots, emit, proxy } = vm
-  const { $q } = proxy
+  const $q = useQuasar()
 
   const isDark = useDark(props, $q)
 
@@ -106,8 +108,8 @@ export function getRenderer(getPlugin, expose) {
   const editable = computed(() => !props.disable && !props.readonly)
   const dnd = ref(false)
 
-  const rootRef = ref(null)
-  const inputRef = ref(null)
+  const rootRef = shallowRef(null)
+  const inputRef = shallowRef(null)
 
   const state = {
     files: ref([]),
@@ -183,7 +185,7 @@ export function getRenderer(getPlugin, expose) {
   const classes = computed(
     () =>
       'q-uploader column no-wrap' +
-      (isDark.value ? ' q-uploader--dark q-dark' : '') +
+      (isDark() ? ' q-uploader--dark q-dark' : '') +
       (props.bordered ? ' q-uploader--bordered' : '') +
       (props.square ? ' q-uploader--square no-border-radius' : '') +
       (props.flat ? ' q-uploader--flat no-shadow' : '') +
@@ -341,6 +343,15 @@ export function getRenderer(getPlugin, expose) {
     if (canUpload.value) state.upload()
   }
 
+  // icon-only controls the consumer never renders, so it cannot name them
+  const btnLabelKeys = {
+    add: 'addFiles',
+    upload: 'upload',
+    clear: 'abort',
+    removeQueue: 'removeQueued',
+    removeUploaded: 'removeUploaded'
+  }
+
   function getBtn(show, icon, fn) {
     if (show) {
       const data = {
@@ -348,7 +359,8 @@ export function getRenderer(getPlugin, expose) {
         key: icon,
         icon: $q.iconSet.uploader[icon],
         flat: true,
-        dense: true
+        dense: true,
+        'aria-label': $q.lang.uploader?.[btnLabelKeys[icon]]
       }
 
       let child = void 0
@@ -370,6 +382,7 @@ export function getRenderer(getPlugin, expose) {
       class: 'q-uploader__input overflow-hidden absolute-full',
       tabindex: -1,
       type: 'file',
+      'aria-label': $q.lang.uploader?.addFiles,
       title: '', // try to remove default tooltip
       accept: props.accept,
       multiple: props.multiple ? 'multiple' : void 0,
@@ -505,6 +518,7 @@ export function getRenderer(getPlugin, expose) {
                     icon: $q.iconSet.uploader[
                       file.__status === 'uploaded' ? 'done' : 'clear'
                     ],
+                    'aria-label': $q.lang.uploader?.removeFile,
                     onClick: () => {
                       removeFile(file)
                     }

@@ -2,6 +2,9 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, test } from 'vitest'
 import { nextTick } from 'vue'
 
+import langEn from '../../../lang/en-US.js'
+import langFa from '../../../lang/fa-IR.js'
+import Lang from '../../plugins/lang/Lang.js'
 import QDate from './QDate.js'
 
 // a Wednesday-starting month with 28 days, so that the calendar
@@ -206,6 +209,82 @@ describe('[QDate API]', () => {
         const wrapper = mountDate({ locale: propVal })
 
         expect(getNavButton(wrapper, 'month').text()).toBe('Februarie')
+      })
+
+      test('formatNumber renders every displayed number in its digits', async () => {
+        const formatNumber = value =>
+          value.replaceAll(/\d/g, digit => 'abcdefghij'[digit])
+        const wrapper = mountDate({ locale: { formatNumber } })
+
+        expect(getDayCells(wrapper).map(cell => cell.text())).toEqual(
+          Array.from({ length: 28 }, (_, index) =>
+            formatNumber(String(index + 1))
+          )
+        )
+        expect(getNavButton(wrapper, 'year').text()).toBe(formatNumber('1995'))
+        expect(getSubtitle(wrapper).text()).toBe(formatNumber('1995'))
+        expect(getTitle(wrapper).text()).toBe(`Thu, Feb ${formatNumber('23')}`)
+
+        const selected = wrapper.find(
+          '.q-date__calendar-days .q-btn.bg-primary'
+        )
+        expect(selected.attributes('aria-label')).toBe(
+          `${formatNumber('23')} ${langEn.date.months[1]} ${formatNumber('1995')}`
+        )
+
+        await wrapper.setProps({
+          multiple: true,
+          modelValue: ['1995/02/23', '1995/02/24']
+        })
+        expect(getTitle(wrapper).text()).toBe(
+          `${formatNumber('2')} ${langEn.date.pluralDay}`
+        )
+
+        wrapper.vm.setView('Years')
+        await nextTick()
+        expect(
+          wrapper.findAll('.q-date__years .q-btn').map(btn => btn.text())
+        ).toContain(formatNumber('1995'))
+      })
+
+      test('formatNumber never reaches the model', async () => {
+        const formatNumber = value =>
+          value.replaceAll(/\d/g, digit => 'abcdefghij'[digit])
+        const wrapper = mountDate({ locale: { formatNumber } })
+
+        await getDayBtn(wrapper, formatNumber('10')).trigger('click')
+
+        const [value, , details] = wrapper.emitted('update:modelValue')[0]
+        expect(value).toBe('1995/02/10')
+        expect(details).toStrictEqual({ year: 1995, month: 2, day: 10 })
+      })
+
+      test('the locale prop overrides the pack-level formatNumber', () => {
+        Lang.set({ ...langEn, formatNumber: value => `[${value}]` })
+
+        try {
+          expect(getSubtitle(mountDate()).text()).toBe('[1995]')
+
+          const wrapper = mountDate({
+            locale: { formatNumber: value => `(${value})` }
+          })
+          expect(getSubtitle(wrapper).text()).toBe('(1995)')
+        } finally {
+          Lang.set(langEn)
+        }
+      })
+
+      test('the fa-IR pack renders Persian digits', () => {
+        Lang.set(langFa)
+
+        try {
+          const wrapper = mountDate()
+
+          expect(getDayCell(wrapper, '۲۳')).toBeDefined()
+          expect(getSubtitle(wrapper).text()).toBe('۱۹۹۵')
+        } finally {
+          Lang.set(langEn)
+        }
       })
     })
 
@@ -1078,6 +1157,162 @@ describe('[QDate API]', () => {
 
         expect(wrapper.find('.q-date__edit-range').exists()).toBe(false)
       })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('day buttons expose their full date and selection state', () => {
+      const wrapper = mountDate()
+
+      // the fixture model is 1995/02/23
+      const selected = getDayBtn(wrapper, 23).attributes()
+      expect(selected['aria-label']).toBe(`23 ${langEn.date.months[1]} 1995`)
+      expect(selected['aria-pressed']).toBe('true')
+
+      const plain = getDayBtn(wrapper, 10).attributes()
+      expect(plain['aria-label']).toBe(`10 ${langEn.date.months[1]} 1995`)
+      expect(plain['aria-pressed']).toBe('false')
+    })
+
+    test('days spanned by a range are announced as selected', () => {
+      const wrapper = mountDate({
+        range: true,
+        modelValue: { from: '1995/02/10', to: '1995/02/12' }
+      })
+
+      expect(getDayBtn(wrapper, 11).attributes('aria-pressed')).toBe('true')
+      expect(getDayBtn(wrapper, 13).attributes('aria-pressed')).toBe('false')
+    })
+
+    test('today carries aria-current="date"', async () => {
+      const now = new Date()
+      const wrapper = mountDate({ modelValue: getTodayString() })
+
+      // the "today" marker only shows up after hydration
+      await flushPromises()
+
+      const day = now.getDate()
+      expect(getDayBtn(wrapper, day).attributes('aria-current')).toBe('date')
+      expect(
+        getDayBtn(wrapper, day === 1 ? 2 : 1).attributes('aria-current')
+      ).toBeUndefined()
+    })
+
+    test('the header view switchers are buttons operable with Space', async () => {
+      const wrapper = mountDate()
+      const subtitle = getSubtitle(wrapper)
+      const title = getTitle(wrapper)
+
+      expect(subtitle.attributes('role')).toBe('button')
+      expect(subtitle.attributes('tabindex')).toBe('0')
+      expect(subtitle.attributes('aria-pressed')).toBe('false')
+      expect(title.attributes('role')).toBe('button')
+      expect(title.attributes('aria-pressed')).toBe('true')
+
+      await subtitle.trigger('keyup', { keyCode: 32 })
+
+      expect(wrapper.find('.q-date__view.q-date__years').exists()).toBe(true)
+      expect(getSubtitle(wrapper).attributes('aria-pressed')).toBe('true')
+    })
+
+    test('months view buttons are named with the full month name', () => {
+      const wrapper = mountDate({ defaultView: 'Months' })
+      const march = wrapper.findAll('.q-date__months-item .q-btn')[2]
+
+      expect(march.text()).toBe(langEn.date.monthsShort[2])
+      expect(march.attributes('aria-label')).toBe(langEn.date.months[2])
+    })
+
+    test('the day grid exposes a single Tab stop, on the selected day', () => {
+      const wrapper = mountDate()
+
+      const stops = wrapper
+        .findAll('.q-date__calendar-days .q-btn')
+        .filter(btn => btn.attributes('tabindex') === '0')
+
+      expect(stops).toHaveLength(1)
+      expect(stops[0].text()).toBe('23')
+      expect(getDayBtn(wrapper, 10).attributes('tabindex')).toBe('-1')
+    })
+
+    test('arrow keys move the day focus without selecting', async () => {
+      const wrapper = mountDate()
+
+      await getDayBtn(wrapper, 23).trigger('keydown', { keyCode: 39 })
+
+      expect(getDayBtn(wrapper, 24).attributes('tabindex')).toBe('0')
+      expect(getDayBtn(wrapper, 23).attributes('tabindex')).toBe('-1')
+
+      await getDayBtn(wrapper, 24).trigger('keydown', { keyCode: 38 })
+
+      expect(getDayBtn(wrapper, 17).attributes('tabindex')).toBe('0')
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
+    test('Home/End jump to the edges of the week row', async () => {
+      const wrapper = mountDate()
+
+      // 1995/02 renders 3 leading fill days, so the 19th-25th form a week
+      await getDayBtn(wrapper, 23).trigger('keydown', { keyCode: 36 })
+      expect(getDayBtn(wrapper, 19).attributes('tabindex')).toBe('0')
+
+      await getDayBtn(wrapper, 19).trigger('keydown', { keyCode: 35 })
+      expect(getDayBtn(wrapper, 25).attributes('tabindex')).toBe('0')
+    })
+
+    test('arrows cross month boundaries and keep the grid focusable', async () => {
+      const wrapper = mountDate()
+
+      await getDayBtn(wrapper, 1).trigger('keydown', { keyCode: 37 })
+      await flushPromises()
+      await nextTick()
+
+      expect(getNavButton(wrapper, 'month').text()).toBe(langEn.date.months[0])
+      expect(getDayBtn(wrapper, 31).attributes('tabindex')).toBe('0')
+    })
+
+    test('PageUp/PageDown navigate by month, with Shift by year', async () => {
+      const wrapper = mountDate()
+
+      await getDayBtn(wrapper, 23).trigger('keydown', { keyCode: 34 })
+      await flushPromises()
+      await nextTick()
+
+      expect(getNavButton(wrapper, 'month').text()).toBe(langEn.date.months[2])
+      expect(getDayBtn(wrapper, 23).attributes('tabindex')).toBe('0')
+
+      await getDayBtn(wrapper, 23).trigger('keydown', {
+        keyCode: 33,
+        shiftKey: true
+      })
+      await flushPromises()
+      await nextTick()
+
+      expect(getNavButton(wrapper, 'year').text()).toBe('1994')
+    })
+
+    test('navigation boundaries stop keyboard month crossing', async () => {
+      const wrapper = mountDate({ navigationMinYearMonth: '1995/02' })
+
+      await getDayBtn(wrapper, 1).trigger('keydown', { keyCode: 37 })
+      await flushPromises()
+      await nextTick()
+
+      expect(getNavButton(wrapper, 'month').text()).toBe(langEn.date.months[1])
+    })
+
+    test('day focus moves only through selectable days', async () => {
+      const wrapper = mountDate({
+        options: ['1995/02/10', '1995/02/20']
+      })
+
+      // the model day is not selectable, so the Tab stop falls back
+      // to the first selectable day
+      expect(getDayBtn(wrapper, 10).attributes('tabindex')).toBe('0')
+
+      await getDayBtn(wrapper, 10).trigger('keydown', { keyCode: 39 })
+
+      expect(getDayBtn(wrapper, 20).attributes('tabindex')).toBe('0')
     })
   })
 })

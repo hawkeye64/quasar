@@ -10,14 +10,12 @@ import {
   onMounted,
   provide,
   ref,
-  vShow,
-  watch,
-  withDirectives
+  shallowRef,
+  watch
 } from 'vue'
 
 import QIcon from '../icon/QIcon.js'
 import QCheckbox from '../checkbox/QCheckbox.js'
-import QSlideTransition from '../slide-transition/QSlideTransition.js'
 import QSpinner from '../spinner/QSpinner.js'
 
 import {
@@ -25,6 +23,8 @@ import {
   useVirtualScrollProps
 } from '../virtual-scroll/use-virtual-scroll.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
+import useSlideTransition from '../../composables/private.use-slide-transition/use-slide-transition.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -42,6 +42,8 @@ const treeCtxKey = Symbol('QTree')
 // one instance per node so that a state change re-renders only the
 // affected nodes; all of the logic lives in QTree's setup and comes
 // in through the injected context
+const hiddenStyle = { display: 'none' }
+
 const QTreeNode = createComponent({
   name: 'QTreeNode',
 
@@ -54,7 +56,9 @@ const QTreeNode = createComponent({
 
   setup(props) {
     const ctx = inject(treeCtxKey)
-    return () => ctx.renderNode(props.node)
+    const collapsible = ctx.useCollapsible(props)
+
+    return () => ctx.renderNode(props.node, collapsible)
   }
 })
 
@@ -201,7 +205,10 @@ export default /*#__PURE__*/ createComponent({
     filter: String,
     filterMethod: Function,
 
-    duration: {},
+    duration: {
+      type: Number,
+      default: 300
+    },
     noConnectors: Boolean,
     noTransition: Boolean,
 
@@ -237,7 +244,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
 
@@ -266,7 +273,7 @@ export default /*#__PURE__*/ createComponent({
       () =>
         `q-tree q-tree--${props.dense ? 'dense' : 'standard'}` +
         (props.noConnectors ? ' q-tree--no-connectors' : '') +
-        (isDark.value ? ' q-tree--dark' : '') +
+        (isDark() ? ' q-tree--dark' : '') +
         (props.color !== void 0 ? ` text-${props.color}` : '')
     )
 
@@ -415,15 +422,6 @@ export default /*#__PURE__*/ createComponent({
     function isNodeVisible(key) {
       const matches = filterMatches.value
       return matches === null || matches.visible.has(key)
-    }
-
-    function linkOf(rec) {
-      const selectable =
-        !rec.disabled && hasSelection.value && rec.selectableBase
-      return (
-        !rec.disabled &&
-        (selectable || (rec.expandable && (rec.isParent || rec.lazy === true)))
-      )
     }
 
     const gatedTickableRefs = new Map(),
@@ -755,7 +753,7 @@ export default /*#__PURE__*/ createComponent({
         : props.virtualScrollItemSize
     )
 
-    const rootRef = ref(null)
+    const rootRef = shallowRef(null)
     let localScrollTarget
 
     function getVirtualScrollEl() {
@@ -835,6 +833,10 @@ export default /*#__PURE__*/ createComponent({
     onDeactivated(unconfigureScrollTarget)
     onBeforeUnmount(unconfigureScrollTarget)
 
+    // every node the user can see is a Tab stop candidate, as the tree
+    // pattern requires of a role="treeitem" -- including the ones nothing
+    // happens on (a leaf of a tree without selection) and the disabled
+    // ones, which stay perceivable through aria-disabled
     const focusableKeys = computed(() => {
       const acc = [],
         { map, rootKeys } = structure.value,
@@ -843,9 +845,9 @@ export default /*#__PURE__*/ createComponent({
       const travel = key => {
         if (matches !== null && !matches.visible.has(key)) return
 
-        const rec = map.get(key)
+        acc.push(key)
 
-        if (linkOf(rec)) acc.push(key)
+        const rec = map.get(key)
 
         if (rec.isParent && expandedKeys.value.has(key)) {
           rec.childKeys.forEach(travel)
@@ -916,12 +918,51 @@ export default /*#__PURE__*/ createComponent({
       return find(null, props.nodes)
     }
 
+    function getParentNode(key) {
+      const { map } = structure.value,
+        rec = map.get(key)
+
+      return rec !== void 0 && rec.parentKey !== null
+        ? map.get(rec.parentKey).node
+        : void 0
+    }
+
+    // structure's records point at the very node objects of the nodes
+    // model, so a keyed lookup replaces getNodeByKey()'s full-tree scan
+    // per key -- these two run over a whole model list
+    function getNodesByKeys(keys) {
+      const { map } = structure.value
+      return keys.map(key => map.get(key)?.node)
+    }
+
     function getTickedNodes() {
-      return innerTicked.value.map(key => getNodeByKey(key))
+      return getNodesByKeys(innerTicked.value)
+    }
+
+    // only the leaf strategies aggregate a parent's state from its
+    // children, so only their parents can ever be indeterminate; gating on
+    // that keeps a strict/none tree from materializing any aggregate ref
+    // (the ones it does materialize are cached and pruned with structure).
+    // Map insertion order is the depth-first travel order, so the result
+    // comes out in the same order as the nodes model
+    function getIndeterminateNodes() {
+      const acc = []
+
+      structure.value.map.forEach((rec, key) => {
+        if (
+          rec.isParent &&
+          rec.leafTicking &&
+          getTickAggRef(key).value.indeterminate === true
+        ) {
+          acc.push(rec.node)
+        }
+      })
+
+      return acc
     }
 
     function getExpandedNodes() {
-      return innerExpanded.value.map(key => getNodeByKey(key))
+      return getNodesByKeys(innerExpanded.value)
     }
 
     function isExpanded(key) {
@@ -965,6 +1006,11 @@ export default /*#__PURE__*/ createComponent({
       node = getNodeByKey(key),
       m = getMeta(key)
     ) {
+      // "expandable" already covers a disabled node in the branch below,
+      // but the lazy one would otherwise load the children of a node the
+      // user was never allowed to open
+      if (m.disabled === true) return
+
       if (m.lazy && m.lazy !== 'loaded') {
         if (m.lazy === 'loading') return
 
@@ -1046,6 +1092,20 @@ export default /*#__PURE__*/ createComponent({
       return key ? getMeta(key)?.ticked === true : false
     }
 
+    function isIndeterminate(key) {
+      return key ? getMeta(key)?.indeterminate === true : false
+    }
+
+    // the tri-state form of the two above -- the same value that the
+    // node's own tickbox gets, so it can be bound to a QCheckbox as is
+    function getTickState(key) {
+      const m = key ? getMeta(key) : void 0
+
+      if (m === void 0) return false
+
+      return m.indeterminate === true ? null : m.ticked
+    }
+
     function setTicked(keys, state) {
       let target = innerTicked.value
       const shouldEmit = props.ticked !== void 0
@@ -1071,7 +1131,7 @@ export default /*#__PURE__*/ createComponent({
         node,
         key,
         color: props.color,
-        dark: isDark.value
+        dark: isDark()
       }
 
       injectProp(
@@ -1096,6 +1156,10 @@ export default /*#__PURE__*/ createComponent({
         }
       )
 
+      // read-only: a node becomes partially ticked through its children,
+      // so there is nothing to assign here -- tick them instead
+      injectProp(scope, 'indeterminate', () => localMeta.indeterminate === true)
+
       return scope
     }
 
@@ -1107,12 +1171,49 @@ export default /*#__PURE__*/ createComponent({
       ).map(child => h(QTreeNode, { key: child[props.nodeKey], node: child }))
     }
 
-    function onShow() {
-      emit('afterShow')
+    function onSlideEnd(event) {
+      emit(event === 'show' ? 'afterShow' : 'afterHide')
     }
 
-    function onHide() {
-      emit('afterHide')
+    // the collapsible of one QTreeNode: its element, the settled
+    // visibility Vue binds display to, and the slide that moves it
+    // there (flipping the visibility once a hide completes)
+    function useCollapsible(nodeProps) {
+      const elRef = shallowRef(null)
+      const expanded = computed(
+        () => getMetaRef(nodeProps.node[props.nodeKey]).value?.expanded === true
+      )
+      const hidden = ref(!expanded.value)
+      const { onEnter, onLeave } = useSlideTransition(
+        () => props.duration,
+        onSlideEnd
+      )
+
+      function hide() {
+        hidden.value = true
+      }
+
+      function slide() {
+        if (elRef.value !== null) onEnter(elRef.value)
+      }
+
+      watch(expanded, val => {
+        if (props.noTransition) {
+          hidden.value = !val
+        } else if (!val) {
+          if (elRef.value !== null) onLeave(elRef.value, hide)
+          else hide()
+        } else if (hidden.value) {
+          // shown once Vue has dropped the display: none
+          hidden.value = false
+          nextTick(slide)
+        } else {
+          // reopened while still sliding shut
+          slide()
+        }
+      })
+
+      return { elRef, hidden }
     }
 
     // shared by the nested layout (renderNode) and the virtual scroll
@@ -1131,15 +1232,15 @@ export default /*#__PURE__*/ createComponent({
         'div',
         {
           class:
-            'q-tree__node-header relative-position row no-wrap items-center' +
-            (m.link ? ' q-tree__node--link q-hoverable q-focusable' : '') +
+            'q-tree__node-header relative-position row no-wrap items-center q-focusable' +
+            (m.link ? ' q-tree__node--link q-hoverable' : '') +
             (m.selected ? ' q-tree__node--selected' : '') +
             (m.disabled === true ? ' q-tree__node--disabled' : ''),
           ref: el => {
             if (el !== null) headerTargets[key] = el
             else delete headerTargets[key]
           },
-          tabindex: m.link && key === tabStopKey ? 0 : -1,
+          tabindex: key === tabStopKey ? 0 : -1,
           'aria-expanded': isParent ? (m.expanded ? 'true' : 'false') : null,
           'aria-selected': m.selectable
             ? m.selected
@@ -1158,16 +1259,16 @@ export default /*#__PURE__*/ createComponent({
           role: 'treeitem',
           ...extraAttrs,
           onFocus() {
-            if (m.link) {
-              focusedKey = key
-              moveTabStop(key)
-            }
+            focusedKey = key
+            moveTabStop(key)
           },
           onClick: e => {
             onClick(node, key, e)
           },
           onKeydown(e) {
-            if (shouldIgnoreKey(e) !== true) {
+            // keys pressed on interactive elements embedded in the header
+            // (inputs, buttons, ...) belong to them, not to tree navigation
+            if (e.target === e.currentTarget && shouldIgnoreKey(e) !== true) {
               if (e.keyCode === 13) {
                 onClick(node, key, e, true)
               } else if (e.keyCode === 32) {
@@ -1215,7 +1316,7 @@ export default /*#__PURE__*/ createComponent({
                 class: 'q-tree__tickbox',
                 modelValue: m.indeterminate === true ? null : m.ticked,
                 color: computedControlColor.value,
-                dark: isDark.value,
+                dark: isDark(),
                 dense: true,
                 keepColor: true,
                 disable: !m.tickable,
@@ -1223,6 +1324,15 @@ export default /*#__PURE__*/ createComponent({
                 // through the header (Space), which carries aria-checked
                 tabindex: -1,
                 'aria-hidden': 'true',
+                // being aria-hidden, it must never hold focus (browsers
+                // refuse to hide a focused element from AT and warn);
+                // park focus on the node instead, like header clicks do
+                onMousedown(e) {
+                  e.preventDefault()
+                  focusedKey = key
+                  moveTabStop(key)
+                  blur(key)
+                },
                 'onUpdate:modelValue': v => {
                   onTickedClick(key, v)
                 }
@@ -1246,7 +1356,7 @@ export default /*#__PURE__*/ createComponent({
       )
     }
 
-    function renderNode(node) {
+    function renderNode(node, collapsible) {
       const key = node[props.nodeKey],
         m = getMetaRef(key).value,
         header = node.header
@@ -1260,8 +1370,9 @@ export default /*#__PURE__*/ createComponent({
       }
 
       // an expanded node needs its collapsible rendered; a revealed one
-      // keeps it (hidden through v-show) so it can still animate -- unless
-      // transitions are off, where collapsed content renders as null
+      // keeps it (display: none once collapsed) so it can still animate
+      // -- unless transitions are off, where collapsed content renders
+      // as null
       const showCollapsible =
         m.expanded || (props.noTransition !== true && revealedKeys.has(key))
 
@@ -1322,44 +1433,32 @@ export default /*#__PURE__*/ createComponent({
                     ]
                   )
                 : null
-              : h(
-                  QSlideTransition,
-                  {
-                    duration: props.duration,
-                    onShow,
-                    onHide
-                  },
-                  () =>
-                    showCollapsible
-                      ? withDirectives(
-                          h(
-                            'div',
-                            {
-                              class:
-                                'q-tree__node-collapsible' +
-                                textColorClass.value,
-                              key: `${key}__q`
-                            },
-                            [
-                              body,
-                              h(
-                                'div',
-                                {
-                                  class:
-                                    'q-tree__children' +
-                                    (m.disabled === true
-                                      ? ' q-tree__node--disabled'
-                                      : ''),
-                                  role: 'group'
-                                },
-                                children
-                              )
-                            ]
-                          ),
-                          [[vShow, m.expanded]]
-                        )
-                      : null
-                )
+              : showCollapsible
+                ? h(
+                    'div',
+                    {
+                      ref: collapsible.elRef,
+                      class: 'q-tree__node-collapsible' + textColorClass.value,
+                      style: collapsible.hidden.value ? hiddenStyle : null,
+                      key: `${key}__q`
+                    },
+                    [
+                      body,
+                      h(
+                        'div',
+                        {
+                          class:
+                            'q-tree__children' +
+                            (m.disabled === true
+                              ? ' q-tree__node--disabled'
+                              : ''),
+                          role: 'group'
+                        },
+                        children
+                      )
+                    ]
+                  )
+                : null
             : body
         ]
       )
@@ -1445,13 +1544,15 @@ export default /*#__PURE__*/ createComponent({
         const slice = rows.slice(from, to)
 
         // the roving Tab stop must sit on a rendered row; fall back to
-        // the first focusable one in the slice when the preferred row
-        // is scrolled out of it
+        // the first row of the slice when the preferred one is scrolled
+        // out of it (every rendered row is focusable)
         let tabKey = getTabKey()
 
-        if (tabKey === void 0 || !slice.some(row => row.key === tabKey)) {
-          const fallback = slice.find(row => getMeta(row.key).link)
-          if (fallback !== void 0) tabKey = fallback.key
+        if (
+          slice.length !== 0 &&
+          (tabKey === void 0 || !slice.some(row => row.key === tabKey))
+        ) {
+          tabKey = slice[0].key
         }
 
         moveTabStop(tabKey)
@@ -1518,20 +1619,7 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function getFirstFocusableChild(childKeys) {
-      const { map } = structure.value
-
-      for (const childKey of childKeys) {
-        if (!isNodeVisible(childKey)) continue
-
-        const rec = map.get(childKey)
-
-        if (linkOf(rec)) return childKey
-
-        if (rec.isParent && expandedKeys.value.has(childKey)) {
-          const key = getFirstFocusableChild(rec.childKeys)
-          if (key !== void 0) return key
-        }
-      }
+      return childKeys.find(isNodeVisible)
     }
 
     // handlers receive keys and resolve current state at event time:
@@ -1576,13 +1664,9 @@ export default /*#__PURE__*/ createComponent({
         if (localMeta.expanded) {
           setExpanded(key, false)
         } else {
-          const { map } = structure.value
-          let parentKey = map.get(key).parentKey
-
-          while (parentKey !== null && !linkOf(map.get(parentKey))) {
-            parentKey = map.get(parentKey).parentKey
-          }
-
+          // a visible node always has a visible parent (the filter's
+          // matches bubble up), so no walk past it is needed
+          const parentKey = structure.value.map.get(key).parentKey
           focusNode(parentKey === null ? void 0 : parentKey)
         }
         return true
@@ -1593,12 +1677,13 @@ export default /*#__PURE__*/ createComponent({
 
     function onClick(node, key, e, keyboard) {
       const localMeta = getMeta(key)
-      if (localMeta === void 0) return
 
-      if (localMeta.link) {
-        focusedKey = key
-        moveTabStop(key)
-      }
+      // a disabled node is navigable (it announces itself through
+      // aria-disabled) but nothing acts on it -- not even its handler
+      if (localMeta === void 0 || localMeta.disabled === true) return
+
+      focusedKey = key
+      moveTabStop(key)
 
       if (keyboard !== true && localMeta.selectable) {
         blur(key)
@@ -1620,17 +1705,18 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function onExpandClick(node, key, e, keyboard) {
-      const localMeta = getMeta(key)
-      if (localMeta === void 0) return
-
-      if (localMeta.link) {
-        focusedKey = key
-        moveTabStop(key)
-      }
-
+      // suppressed for a disabled node too, so that Space on one scrolls
+      // the page no more than it does on any other node of the tree
       if (e !== void 0) {
         stopAndPrevent(e)
       }
+
+      const localMeta = getMeta(key)
+      if (localMeta === void 0 || localMeta.disabled === true) return
+
+      focusedKey = key
+      moveTabStop(key)
+
       if (keyboard !== true && localMeta.selectable) {
         blur(key)
       }
@@ -1687,18 +1773,22 @@ export default /*#__PURE__*/ createComponent({
       localResetVirtualScroll()
     }
 
-    provide(treeCtxKey, { renderNode })
+    provide(treeCtxKey, { renderNode, useCollapsible })
 
     // expose public methods
     Object.assign(proxy, {
       getNodeByKey,
+      getParentNode,
       getTickedNodes,
+      getIndeterminateNodes,
       getExpandedNodes,
       isExpanded,
       collapseAll,
       expandAll,
       setExpanded,
       isTicked,
+      isIndeterminate,
+      getTickState,
       setTicked,
       scrollTo
     })

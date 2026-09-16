@@ -15,6 +15,11 @@ export default {
     search: 'ស្វែងរក',
     filter: 'ច្រោះ',
     refresh: 'ធ្វើឲ្យថ្មី',
+    minimum: 'អប្បបរមា',
+    maximum: 'អតិបរមា',
+    range: 'ចន្លោះ',
+    noValue: 'គ្មានតម្លៃ',
+    resize: 'ប្តូរទំហំ',
     expand: label => (label ? `ពង្រីក "${label}"` : 'ពង្រីក'),
     collapse: label => (label ? `បង្រួម "${label}"` : 'ដួលរលំ')
   },
@@ -34,7 +39,11 @@ export default {
     nextYear: 'ឆ្នាំក្រោយ',
     today: 'ថ្ងៃនេះ',
     prevRangeYears: range => `មុន ${range} ឆ្នាំ`,
-    nextRangeYears: range => `បន្ទាប់ ${range} ឆ្នាំ`
+    nextRangeYears: range => `បន្ទាប់ ${range} ឆ្នាំ`,
+    hour: 'ម៉ោង',
+    minute: 'នាទី',
+    second: 'វិនាទី',
+    now: 'ពេលវេលាបច្ចុប្បន្ន'
   },
   table: {
     noData: 'គ្មានទិន្ន័យ',
@@ -47,15 +56,41 @@ export default {
     recordsPerPage: 'ជួរដេកក្នុងមួយទំព័រ:',
     allRows: 'ទាំងអស់',
     pagination: (start, end, total) => start + '-' + end + ' នៃ ' + total,
-    columns: 'ជួរឈរ'
+    columns: 'ជួរឈរ',
+    selectAllRows: 'ជ្រើសរើសជួរដេកទាំងអស់',
+    selectRow: 'ជ្រើសរើសជួរដេក'
   },
   pagination: {
+    label: 'ការបែងចែកទំព័រ',
     first: 'ទំព័រដំបូង',
     prev: 'ទំព័រមុន',
     next: 'ទំព័របន្ទាប់',
     last: 'ទំព័រចុងក្រោយ'
   },
+  carousel: {
+    prevSlide: 'ស្លាយមុន',
+    nextSlide: 'ស្លាយបន្ទាប់'
+  },
+  colorPicker: {
+    spectrum: 'វិសាលគម',
+    tune: 'ការកែសម្រួល',
+    palette: 'ក្តារពណ៌',
+    value: 'តម្លៃពណ៌',
+    hue: 'ពណ៌',
+    alpha: 'ភាពស្រអាប់',
+    saturation: 'តិត្ថិភាព',
+    brightness: 'ពន្លឺ'
+  },
+  uploader: {
+    addFiles: 'ជ្រើសរើសឯកសារ',
+    upload: 'ផ្ទុកឯកសារឡើង',
+    abort: 'បោះបង់ការផ្ទុកឡើង',
+    removeQueued: 'លុបឯកសាររង់ចាំ',
+    removeUploaded: 'លុបឯកសារដែលបានផ្ទុកឡើង',
+    removeFile: 'លុបឯកសារ'
+  },
   editor: {
+    toolbar: 'របារឧបករណ៍កម្មវិធីនិពន្ធ',
     url: 'URL',
     bold: 'ដិត',
     italic: 'ទ្រេត',

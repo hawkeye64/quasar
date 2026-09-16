@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { describe, expect, test } from 'vitest'
-import { nextTick } from 'vue'
+import { describe, expect, test, vi } from 'vitest'
+import { h, nextTick } from 'vue'
 
 import QTree from './QTree.js'
 
@@ -38,7 +38,7 @@ function getNodeHeaders(wrapper) {
 
 /**
  * The children of a collapsed node that was expanded before stay in
- * the DOM (hidden through v-show), so only the visible ones are of
+ * the DOM (with display: none), so only the visible ones are of
  * interest here.
  *
  * The inline display is all that needs looking at, and it avoids
@@ -509,19 +509,25 @@ describe('[QTree API]', () => {
 
     describe('[(prop)no-transition]', () => {
       test('type Boolean has effect', async () => {
-        const wrapper = mountTree({ expanded: ['fruits'] })
+        const wrapper = mountTree()
 
+        wrapper.vm.setExpanded('fruits', true)
+        await flushPromises()
+
+        // the test browser is a Chromium, so the slide is a Web Animation
         expect(
-          wrapper.findComponent({ name: 'QSlideTransition' }).exists()
-        ).toBe(true)
+          wrapper.get('.q-tree__node-collapsible').element.getAnimations()
+        ).toHaveLength(1)
 
+        wrapper.vm.setExpanded('fruits', false)
         await wrapper.setProps({ noTransition: true })
+        wrapper.vm.setExpanded('fruits', true)
+        await flushPromises()
 
         // the children are rendered straight away, with no animation
         expect(
-          wrapper.findComponent({ name: 'QSlideTransition' }).exists()
-        ).toBe(false)
-        expect(wrapper.find('.q-tree__node-collapsible').exists()).toBe(true)
+          wrapper.get('.q-tree__node-collapsible').element.getAnimations()
+        ).toHaveLength(0)
         expect(getLabels(wrapper)).toContain('Apple')
       })
     })
@@ -558,13 +564,16 @@ describe('[QTree API]', () => {
     describe('[(prop)duration]', () => {
       test('type Number has effect', async () => {
         const propVal = 1000
-        const wrapper = mountTree({ expanded: ['fruits'] })
+        const wrapper = mountTree({ duration: propVal })
 
-        await wrapper.setProps({ duration: propVal })
+        wrapper.vm.setExpanded('fruits', true)
+        await flushPromises()
 
-        expect(
-          wrapper.findComponent({ name: 'QSlideTransition' }).props('duration')
-        ).toBe(propVal)
+        // the test browser is a Chromium, so the slide is a Web Animation
+        const [animation] = wrapper
+          .get('.q-tree__node-collapsible')
+          .element.getAnimations()
+        expect(animation.effect.getTiming().duration).toBe(propVal)
       })
     })
 
@@ -671,6 +680,39 @@ describe('[QTree API]', () => {
 
         wrapper.unmount()
         container.remove()
+      })
+
+      test('type ComponentInstance has effect', async () => {
+        // the instance stands for its root element, the scroll container
+        const holder = mount(
+          {
+            // closed, as a script setup component is: its ref is the expose proxy
+            setup(_, { expose }) {
+              expose({})
+              return () => h('div', { style: 'height: 210px; overflow: auto' })
+            }
+          },
+          { attachTo: document.body }
+        )
+
+        const wrapper = mountVirtualTree(
+          { virtualScrollTarget: holder.vm },
+          { attachTo: holder.element, attrs: {} }
+        )
+        await flushPromises()
+
+        expect(wrapper.classes()).not.toContain('scroll')
+
+        const firstLabel = getLabels(wrapper)[0]
+
+        holder.element.scrollTop = holder.element.scrollHeight
+        holder.element.dispatchEvent(new Event('scroll'))
+        await settleVirtualScroll()
+
+        expect(getLabels(wrapper)[0]).not.toBe(firstLabel)
+
+        wrapper.unmount()
+        holder.unmount()
       })
     })
 
@@ -945,9 +987,45 @@ describe('[QTree API]', () => {
           color: void 0,
           dark: false,
           expanded: expect.any(Boolean),
-          ticked: expect.any(Boolean)
+          ticked: expect.any(Boolean),
+          indeterminate: expect.any(Boolean)
         })
         expect(slotScope.key).toBe('bread')
+      })
+
+      test('scope tells a partially ticked node from a ticked one', async () => {
+        const scopes = {}
+        const wrapper = mountTree(
+          { tickStrategy: 'leaf', defaultExpandAll: true },
+          {
+            slots: {
+              'default-header': scope => {
+                scopes[scope.key] = { ...scope }
+                return scope.node.label
+              }
+            }
+          }
+        )
+
+        wrapper.vm.setTicked(['apple'], true)
+        await nextTick()
+
+        expect(scopes.fruits).toMatchObject({
+          ticked: false,
+          indeterminate: true
+        })
+        expect(scopes.apple).toMatchObject({
+          ticked: true,
+          indeterminate: false
+        })
+
+        wrapper.vm.setTicked(['banana'], true)
+        await nextTick()
+
+        expect(scopes.fruits).toMatchObject({
+          ticked: true,
+          indeterminate: false
+        })
       })
     })
 
@@ -1002,7 +1080,8 @@ describe('[QTree API]', () => {
           color: void 0,
           dark: false,
           expanded: expect.any(Boolean),
-          ticked: expect.any(Boolean)
+          ticked: expect.any(Boolean),
+          indeterminate: expect.any(Boolean)
         })
       })
     })
@@ -1129,14 +1208,15 @@ describe('[QTree API]', () => {
 
     describe('[(event)after-show]', () => {
       test('is emitting', async () => {
-        const wrapper = mountTree()
+        vi.useFakeTimers()
+        const wrapper = mountTree({ duration: 10 })
 
         wrapper.vm.setExpanded('fruits', true)
         await flushPromises()
 
-        // the transition reports it once it has finished
-        wrapper.findComponent({ name: 'QSlideTransition' }).vm.$emit('show')
-        await nextTick()
+        // reported once the slide has finished
+        await vi.runAllTimersAsync()
+        vi.useRealTimers()
 
         const eventList = wrapper.emitted()
         expect(eventList).toHaveProperty('afterShow')
@@ -1147,10 +1227,19 @@ describe('[QTree API]', () => {
 
     describe('[(event)after-hide]', () => {
       test('is emitting', async () => {
-        const wrapper = mountTree({ expanded: ['fruits'] })
+        vi.useFakeTimers()
+        const wrapper = mountTree({ duration: 10 })
 
-        wrapper.findComponent({ name: 'QSlideTransition' }).vm.$emit('hide')
-        await nextTick()
+        wrapper.vm.setExpanded('fruits', true)
+        await flushPromises()
+        await vi.runAllTimersAsync()
+
+        wrapper.vm.setExpanded('fruits', false)
+        await flushPromises()
+
+        // reported once the slide has finished
+        await vi.runAllTimersAsync()
+        vi.useRealTimers()
 
         const eventList = wrapper.emitted()
         expect(eventList).toHaveProperty('afterHide')
@@ -1201,6 +1290,20 @@ describe('[QTree API]', () => {
       })
     })
 
+    describe('[(method)getParentNode]', () => {
+      test('should be callable', () => {
+        const wrapper = mountTree()
+
+        expect(wrapper.vm.getParentNode('banana')).toBe(
+          wrapper.vm.getNodeByKey('fruits')
+        )
+
+        // a root node has no parent, nor has a key outside of the model
+        expect(wrapper.vm.getParentNode('fruits')).toBeUndefined()
+        expect(wrapper.vm.getParentNode('nowhere')).toBeUndefined()
+      })
+    })
+
     describe('[(method)getTickedNodes]', () => {
       test('should be callable', () => {
         const wrapper = mountTree({
@@ -1212,6 +1315,37 @@ describe('[QTree API]', () => {
           { id: 'banana', label: 'Banana' },
           { id: 'bread', label: 'Bread' }
         ])
+      })
+    })
+
+    describe('[(method)getIndeterminateNodes]', () => {
+      test('should be callable', async () => {
+        const wrapper = mountTree({ tickStrategy: 'leaf' })
+
+        expect(wrapper.vm.getIndeterminateNodes()).toStrictEqual([])
+
+        wrapper.vm.setTicked(['apple'], true)
+        await nextTick()
+
+        // "Fruits" now has one of its two leaves ticked
+        expect(
+          wrapper.vm.getIndeterminateNodes().map(node => node.id)
+        ).toStrictEqual(['fruits'])
+
+        wrapper.vm.setTicked(['banana'], true)
+        await nextTick()
+
+        // ...and now it is fully ticked, so no longer partially so
+        expect(wrapper.vm.getIndeterminateNodes()).toStrictEqual([])
+      })
+
+      test('should be empty for the strict strategy', () => {
+        const wrapper = mountTree({
+          tickStrategy: 'strict',
+          ticked: ['apple']
+        })
+
+        expect(wrapper.vm.getIndeterminateNodes()).toStrictEqual([])
       })
     })
 
@@ -1291,6 +1425,46 @@ describe('[QTree API]', () => {
       })
     })
 
+    describe('[(method)isIndeterminate]', () => {
+      test('should be callable', async () => {
+        const wrapper = mountTree({ tickStrategy: 'leaf' })
+
+        expect(wrapper.vm.isIndeterminate('fruits')).toBe(false)
+
+        wrapper.vm.setTicked(['apple'], true)
+        await nextTick()
+
+        expect(wrapper.vm.isIndeterminate('fruits')).toBe(true)
+        // a leaf is either ticked or not; it is never partially ticked
+        expect(wrapper.vm.isIndeterminate('apple')).toBe(false)
+
+        wrapper.vm.setTicked(['banana'], true)
+        await nextTick()
+
+        expect(wrapper.vm.isIndeterminate('fruits')).toBe(false)
+        expect(wrapper.vm.isTicked('fruits')).toBe(true)
+      })
+    })
+
+    describe('[(method)getTickState]', () => {
+      test('should be callable', async () => {
+        const wrapper = mountTree({ tickStrategy: 'leaf' })
+
+        expect(wrapper.vm.getTickState('fruits')).toBe(false)
+
+        wrapper.vm.setTicked(['apple'], true)
+        await nextTick()
+
+        // the tri-state form a QCheckbox model takes
+        expect(wrapper.vm.getTickState('fruits')).toBeNull()
+        expect(wrapper.vm.getTickState('apple')).toBe(true)
+        expect(wrapper.vm.getTickState('banana')).toBe(false)
+
+        // a key outside of the nodes model reports as unticked
+        expect(wrapper.vm.getTickState('nowhere')).toBe(false)
+      })
+    })
+
     describe('[(method)setTicked]', () => {
       test('should be callable', async () => {
         const wrapper = mountTree({ tickStrategy: 'strict' })
@@ -1335,7 +1509,8 @@ describe('[QTree API]', () => {
 
   describe('[Generic]', () => {
     test('renders a collapsed subtree only after its first expansion', async () => {
-      const wrapper = mountTree()
+      // an instant toggle, so the collapse settles within the tick
+      const wrapper = mountTree({ duration: 0 })
 
       // never-expanded nodes have no collapsible content in the DOM
       expect(wrapper.find('.q-tree__node-collapsible').exists()).toBe(false)
@@ -1354,7 +1529,8 @@ describe('[QTree API]', () => {
       await nextTick()
 
       expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
-      // once revealed it is kept alive (v-show) so collapsing can animate
+      // once revealed it is kept alive (display: none) so collapsing
+      // can animate
       expect(wrapper.findAll('.q-tree__node-collapsible')).toHaveLength(1)
     })
 
@@ -1703,9 +1879,7 @@ describe('[QTree API]', () => {
       await settleVirtualScroll()
 
       expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
-      expect(wrapper.findComponent({ name: 'QSlideTransition' }).exists()).toBe(
-        false
-      )
+      expect(wrapper.find('.q-tree__node-collapsible').exists()).toBe(false)
 
       wrapper.vm.setExpanded('fruits', true)
       await settleVirtualScroll()
@@ -1794,10 +1968,10 @@ describe('[QTree API]', () => {
   })
 
   describe('[Accessibility]', () => {
-    // binding a selection makes leaf nodes focusable "links" too,
-    // like in real keyboard-accessible usage
-    function mountNavTree(props) {
-      return mountTree({ selected: null, ...props })
+    // a bound selection gives Enter and the selection assertions
+    // something to emit; navigation itself needs no such model
+    function mountNavTree(props, options) {
+      return mountTree({ selected: null, ...props }, options)
     }
 
     function keydown(header, keyCode) {
@@ -1830,6 +2004,39 @@ describe('[QTree API]', () => {
 
       await keydown(getHeader(wrapper, 'Banana'), 38)
       expect(document.activeElement).toBe(getHeader(wrapper, 'Apple').element)
+    })
+
+    test('reaches every node of a tree with no selection model', async () => {
+      // nothing happens when such a leaf is activated, but the tree
+      // pattern still has it be a Tab stop of the roving set
+      const wrapper = mountTree({ defaultExpandAll: true })
+
+      await keydown(getHeader(wrapper, 'Fruits'), 40)
+
+      const apple = getHeader(wrapper, 'Apple')
+      expect(document.activeElement).toBe(apple.element)
+      expect(apple.attributes('tabindex')).toBe('0')
+
+      await keydown(apple, 35)
+      expect(document.activeElement).toBe(getHeader(wrapper, 'Bread').element)
+    })
+
+    test('ticks a leaf with Space when ticking is the only interaction', async () => {
+      const wrapper = mountTree({
+        tickStrategy: 'leaf',
+        defaultExpandAll: true
+      })
+
+      // the leaf has to be reachable first: the tickbox is aria-hidden
+      // and out of the Tab order, so Space on the node is the only way
+      await keydown(getHeader(wrapper, 'Fruits'), 40)
+
+      const apple = getHeader(wrapper, 'Apple')
+      expect(document.activeElement).toBe(apple.element)
+
+      await keydown(apple, 32)
+
+      expect(wrapper.vm.isTicked('apple')).toBe(true)
     })
 
     test('skips the children of collapsed nodes', async () => {
@@ -1889,7 +2096,8 @@ describe('[QTree API]', () => {
     })
 
     test('collapses an expanded parent node with ArrowLeft', async () => {
-      const wrapper = mountNavTree({ defaultExpandAll: true })
+      // an instant toggle, so the collapse settles within the tick
+      const wrapper = mountNavTree({ defaultExpandAll: true, duration: 0 })
 
       await keydown(getHeader(wrapper, 'Fruits'), 37)
 
@@ -1943,19 +2151,61 @@ describe('[QTree API]', () => {
       expect(stops).toHaveLength(1)
     })
 
-    test('skips disabled nodes entirely', async () => {
+    test('navigates through disabled nodes but does not act on them', async () => {
+      const handler = vi.fn()
       const nodes = getNodes()
       nodes[0].children[0].disabled = true
+      nodes[0].children[0].handler = handler
 
       const wrapper = mountNavTree({ nodes, defaultExpandAll: true })
 
       const apple = getHeader(wrapper, 'Apple')
       expect(apple.attributes('aria-disabled')).toBe('true')
-      expect(apple.attributes('tabindex')).toBe('-1')
 
+      // reachable, so that it is not silently missing from the tree
       await keydown(getHeader(wrapper, 'Fruits'), 40)
 
+      expect(document.activeElement).toBe(apple.element)
+      expect(apple.attributes('tabindex')).toBe('0')
+
+      // ...but inert: no selection, no handler of its own
+      await keydown(apple, 13)
+
+      expect(wrapper.emitted('update:selected')).toBeUndefined()
+      expect(handler).not.toHaveBeenCalled()
+
+      // ...and navigation continues past it
+      await keydown(apple, 40)
+
       expect(document.activeElement).toBe(getHeader(wrapper, 'Banana').element)
+    })
+
+    test('leaves a disabled parent unexpandable from the keyboard', async () => {
+      const nodes = getNodes()
+      nodes[0].disabled = true
+
+      const wrapper = mountNavTree({ nodes })
+      const fruits = getHeader(wrapper, 'Fruits')
+
+      // neither the expansion keys nor Space reach a disabled parent
+      await keydown(fruits, 39)
+      await keydown(fruits, 32)
+      await keydown(fruits, 13)
+
+      expect(wrapper.vm.isExpanded('fruits')).toBe(false)
+      expect(getLabels(wrapper)).toStrictEqual(['Fruits', 'Bread'])
+    })
+
+    test('does not lazy-load the children of a disabled node', async () => {
+      const wrapper = mountNavTree({
+        nodes: [{ id: 'lazy', label: 'Lazy', lazy: true, disabled: true }]
+      })
+
+      await keydown(getHeader(wrapper, 'Lazy'), 39)
+      wrapper.vm.setExpanded('lazy', true)
+      await nextTick()
+
+      expect(wrapper.emitted('lazyLoad')).toBeUndefined()
     })
 
     test('navigates only through the filtered nodes', async () => {
@@ -2018,6 +2268,37 @@ describe('[QTree API]', () => {
       }
     })
 
+    test('keeps focus out of the aria-hidden tickbox on mouse ticking', async () => {
+      const wrapper = mountNavTree(
+        {
+          tickStrategy: 'strict',
+          ticked: [],
+          'onUpdate:ticked': () => {}
+        },
+        { attachTo: document.body }
+      )
+
+      const header = getHeader(wrapper, 'Bread')
+      const tickbox = header.get('.q-tree__tickbox')
+      const event = new MouseEvent('mousedown', {
+        cancelable: true,
+        bubbles: true
+      })
+
+      tickbox.element.dispatchEvent(event)
+
+      // the browser's focus-on-mousedown must be suppressed
+      expect(event.defaultPrevented).toBe(true)
+
+      await tickbox.trigger('click')
+
+      expect(wrapper.emitted('update:ticked')).toStrictEqual([[['bread']]])
+      expect(tickbox.element.contains(document.activeElement)).toBe(false)
+      // the roving tab stop still moves to the ticked node
+      expect(header.attributes('tabindex')).toBe('0')
+      expect(header.element.contains(document.activeElement)).toBe(true)
+    })
+
     test('does not trap Tab on a tickbox', () => {
       const wrapper = mountNavTree({ tickStrategy: 'strict' })
 
@@ -2057,6 +2338,32 @@ describe('[QTree API]', () => {
         'Banana',
         'Bread'
       ])
+    })
+
+    test('leaves keys typed into interactive header content alone', async () => {
+      const wrapper = mountNavTree(
+        {},
+        {
+          slots: {
+            'default-header': () => h('input', { class: 'header-input' })
+          }
+        }
+      )
+
+      expect(getNodeHeaders(wrapper)).toHaveLength(2)
+
+      const event = new KeyboardEvent('keydown', {
+        cancelable: true,
+        bubbles: true
+      })
+      Object.defineProperty(event, 'keyCode', { value: 32 })
+
+      wrapper.get('input.header-input').element.dispatchEvent(event)
+      await flushPromises()
+
+      // typing Space in the input neither expands the node nor swallows the key
+      expect(event.defaultPrevented).toBe(false)
+      expect(getNodeHeaders(wrapper)).toHaveLength(2)
     })
 
     test('exposes the ticked state', async () => {

@@ -1,0 +1,721 @@
+import { afterEach, describe, expect, test, vi } from 'vitest'
+
+import {
+  applyBoundary,
+  applyPointBoundary,
+  cssAnchorSupport,
+  parsePosition,
+  pointOffset,
+  restoreScroll,
+  validateOffset,
+  validatePosition
+} from './core.js'
+
+const nodes = []
+
+afterEach(() => {
+  nodes.splice(0).forEach(node => node.remove())
+  vi.restoreAllMocks()
+})
+
+/**
+ * Creates a real fixed-positioned element so the boundary passes under
+ * test measure through the actual layout engine.
+ */
+function createAnchor({ top, left, width, height }) {
+  const el = document.createElement('div')
+
+  Object.assign(el.style, {
+    position: 'fixed',
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${width}px`,
+    height: `${height}px`
+  })
+
+  document.body.append(el)
+  nodes.push(el)
+  return el
+}
+
+/**
+ * Creates a popup-like fixed element of a known natural size.
+ */
+function createTarget({ width = 150, height = 50 } = {}) {
+  const el = document.createElement('div')
+
+  Object.assign(el.style, {
+    position: 'fixed',
+    width: `${width}px`,
+    height: `${height}px`
+  })
+
+  document.body.append(el)
+  nodes.push(el)
+  return el
+}
+
+const origin = pos => parsePosition(pos, false)
+
+describe('[core API]', () => {
+  describe('[Functions]', () => {
+    describe('[(function)validatePosition]', () => {
+      test.each([
+        'top left',
+        'top middle',
+        'top right',
+        'top start',
+        'top end',
+        'center left',
+        'center middle',
+        'bottom right',
+        'bottom start',
+        'bottom end'
+      ])('accepts "%s"', pos => {
+        expect(validatePosition(pos)).toBe(true)
+      })
+
+      test.each(['top', 'top left right', ''])(
+        'rejects "%s" without complaining',
+        pos => {
+          const errorSpy = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => {})
+
+          expect(validatePosition(pos)).toBe(false)
+          expect(errorSpy).not.toHaveBeenCalled()
+        }
+      )
+
+      test('rejects an unknown vertical part', () => {
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        expect(validatePosition('middle left')).toBe(false)
+        expect(errorSpy).toHaveBeenCalledExactlyOnceWith(
+          expect.stringContaining('top/center/bottom')
+        )
+      })
+
+      test('rejects an unknown horizontal part', () => {
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        expect(validatePosition('top center')).toBe(false)
+        expect(errorSpy).toHaveBeenCalledExactlyOnceWith(
+          expect.stringContaining('left/middle/right/start/end')
+        )
+      })
+    })
+
+    describe('[(function)validateOffset]', () => {
+      test.each([
+        ['undefined', void 0],
+        ['null', null],
+        ['a pair of numbers', [10, 20]],
+        ['a pair of negative numbers', [-10, -20]]
+      ])('accepts %s', (_, val) => {
+        expect(validateOffset(val)).toBe(true)
+      })
+
+      test.each([
+        ['an empty array', []],
+        ['a single value', [10]],
+        ['more than two values', [10, 20, 30]],
+        ['a non-number first value', ['10', 20]],
+        ['a non-number second value', [10, '20']]
+      ])('rejects %s', (_, val) => {
+        expect(validateOffset(val)).toBe(false)
+      })
+    })
+
+    describe('[(function)parsePosition]', () => {
+      test.each([
+        ['top left', false, { vertical: 'top', horizontal: 'left' }],
+        ['center middle', false, { vertical: 'center', horizontal: 'middle' }],
+        ['bottom right', false, { vertical: 'bottom', horizontal: 'right' }],
+        ['top left', true, { vertical: 'top', horizontal: 'left' }],
+        ['center middle', true, { vertical: 'center', horizontal: 'middle' }],
+        ['bottom right', true, { vertical: 'bottom', horizontal: 'right' }]
+      ])('splits "%s" (rtl: %s)', (pos, rtl, expected) => {
+        expect(parsePosition(pos, rtl)).toStrictEqual(expected)
+      })
+
+      test.each([
+        ['top start', false, 'left'],
+        ['top start', true, 'right'],
+        ['top end', false, 'right'],
+        ['top end', true, 'left']
+      ])('resolves "%s" (rtl: %s) to %s', (pos, rtl, horizontal) => {
+        expect(parsePosition(pos, rtl).horizontal).toBe(horizontal)
+      })
+    })
+
+    describe('[(function)applyBoundary]', () => {
+      test('keeps the intended origins when the placement fits', () => {
+        const anchorEl = createAnchor({
+          top: 100,
+          left: 100,
+          width: 100,
+          height: 30
+        })
+        const anchorOrigin = origin('bottom left')
+        const selfOrigin = origin('top left')
+
+        const res = applyBoundary({
+          el: createTarget(),
+          anchorEl,
+          anchorOrigin,
+          selfOrigin
+        })
+
+        expect(res).toStrictEqual({
+          anchorOrigin,
+          selfOrigin,
+          maxHeight: null,
+          maxWidth: null
+        })
+      })
+
+      test('flips above and caps the height when there is no room below', () => {
+        const viewportHeight = document.documentElement.clientHeight
+        const anchorEl = createAnchor({
+          top: viewportHeight - 60,
+          left: 100,
+          width: 100,
+          height: 30
+        })
+
+        const res = applyBoundary({
+          el: createTarget({ height: 5000 }),
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left')
+        })
+
+        expect(res.anchorOrigin.vertical).toBe('top')
+        expect(res.selfOrigin.vertical).toBe('bottom')
+        // capped to the space above the anchor's top edge
+        expect(res.maxHeight).toBe(`${viewportHeight - 60}px`)
+      })
+
+      test('keeps the intended side while it has at least as much room', () => {
+        // the anchor straddles the viewport middle: its bottom edge is
+        // below the middle, yet there is more room below than above
+        // (#16443)
+        const viewportHeight = document.documentElement.clientHeight
+        const anchorHeight = 36
+        const top = viewportHeight / 2 - anchorHeight + 4
+        const anchorEl = createAnchor({
+          top,
+          left: 100,
+          width: 100,
+          height: anchorHeight
+        })
+
+        const res = applyBoundary({
+          el: createTarget({ height: 5000 }),
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left')
+        })
+
+        expect(res.anchorOrigin.vertical).toBe('bottom')
+        expect(res.selfOrigin.vertical).toBe('top')
+        expect(res.maxHeight).toBe(`${viewportHeight - top - anchorHeight}px`)
+      })
+
+      test('keeps the intended side on a tie', () => {
+        const { clientWidth: viewportWidth, clientHeight: viewportHeight } =
+          document.documentElement
+        const anchorEl = createAnchor({
+          top: viewportHeight / 2 - 18,
+          left: viewportWidth / 2 - 50,
+          width: 100,
+          height: 36
+        })
+        const anchorOrigin = origin('top right')
+        const selfOrigin = origin('bottom right')
+
+        const res = applyBoundary({
+          el: createTarget({ width: 5000, height: 5000 }),
+          anchorEl,
+          anchorOrigin,
+          selfOrigin
+        })
+
+        expect(res.anchorOrigin).toStrictEqual(anchorOrigin)
+        expect(res.selfOrigin).toStrictEqual(selfOrigin)
+        expect(res.maxHeight).toBe(`${viewportHeight / 2 - 18}px`)
+        expect(res.maxWidth).toBe(`${viewportWidth / 2 + 50}px`)
+      })
+
+      test('flips a straddling anchor once the mirrored side is roomier', () => {
+        const viewportWidth = document.documentElement.clientWidth
+        const anchorEl = createAnchor({
+          top: 100,
+          left: viewportWidth / 2 - 4,
+          width: 100,
+          height: 30
+        })
+
+        const res = applyBoundary({
+          el: createTarget({ width: 5000 }),
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left')
+        })
+
+        expect(res.anchorOrigin.horizontal).toBe('right')
+        expect(res.selfOrigin.horizontal).toBe('right')
+        expect(res.maxWidth).toBe(`${viewportWidth / 2 + 96}px`)
+      })
+
+      test('flips towards the left and caps the width at the right edge', () => {
+        const viewportWidth = document.documentElement.clientWidth
+        const anchorEl = createAnchor({
+          top: 100,
+          left: viewportWidth - 120,
+          width: 100,
+          height: 30
+        })
+
+        const res = applyBoundary({
+          el: createTarget({ width: 5000 }),
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left')
+        })
+
+        expect(res.anchorOrigin.horizontal).toBe('right')
+        expect(res.selfOrigin.horizontal).toBe('right')
+        expect(res.maxWidth).toBe(`${viewportWidth - 20}px`)
+      })
+
+      test('caps a popup that fits the mirrored side at the available space', () => {
+        // the cap is the fractional space (getBoundingClientRect), never
+        // the popup's own measured size (offsetWidth/offsetHeight are
+        // integers): rounding that down would wrap or scroll content
+        // that fit before the flip. Content that grows after this pass
+        // still needs a bound, so the flipped side always gets one (#18536)
+        const { clientWidth: viewportWidth, clientHeight: viewportHeight } =
+          document.documentElement
+        const anchorEl = createAnchor({
+          top: viewportHeight - 60,
+          left: viewportWidth - 120,
+          width: 100,
+          height: 30
+        })
+
+        const res = applyBoundary({
+          el: createTarget({ width: 150.5, height: 50.5 }),
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left')
+        })
+
+        expect(res.anchorOrigin).toStrictEqual(origin('top right'))
+        expect(res.selfOrigin).toStrictEqual(origin('bottom right'))
+        expect(res.maxHeight).toBe(`${viewportHeight - 60}px`)
+        expect(res.maxWidth).toBe(`${viewportWidth - 20}px`)
+      })
+
+      test('keeps a smaller caller maxHeight/maxWidth in force through min()', () => {
+        // the flipped-side space can be roomier than a caller-supplied
+        // maxHeight/maxWidth prop; the cap must not widen back to it
+        // (the prop is read back as the popup's computed bound)
+        const { clientWidth: viewportWidth, clientHeight: viewportHeight } =
+          document.documentElement
+        const anchorEl = createAnchor({
+          top: viewportHeight - 60,
+          left: viewportWidth - 120,
+          width: 100,
+          height: 30
+        })
+
+        const res = applyBoundary({
+          el: createTarget({ width: 150.5, height: 50.5 }),
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left'),
+          maxHeight: '200px',
+          maxWidth: '300px'
+        })
+
+        expect(res.maxHeight).toBe(`min(${viewportHeight - 60}px, 200px)`)
+        expect(res.maxWidth).toBe(`min(${viewportWidth - 20}px, 300px)`)
+      })
+
+      test('keeps a smaller stylesheet max-height/max-width in force through min()', () => {
+        // the popups' own stylesheet ceilings (and any app CSS override
+        // of them) bound the popup just like the props do; an inline cap
+        // would replace them, so the bound is read as the computed value
+        // once the previous caps are lifted (#18536)
+        const { clientWidth: viewportWidth, clientHeight: viewportHeight } =
+          document.documentElement
+        const anchorEl = createAnchor({
+          top: viewportHeight - 60,
+          left: viewportWidth - 120,
+          width: 100,
+          height: 30
+        })
+        const style = document.createElement('style')
+        style.textContent =
+          '.q-bound-test { max-height: 20vh; max-width: 30vw }'
+        document.head.append(style)
+        nodes.push(style)
+
+        const el = createTarget({ width: 150.5, height: 50.5 })
+        el.classList.add('q-bound-test')
+        // a previous pass' cap is lifted before the bound is read
+        el.style.maxHeight = '10px'
+        el.style.maxWidth = '10px'
+
+        const res = applyBoundary({
+          el,
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left')
+        })
+
+        expect(res.maxHeight).toBe(
+          `min(${viewportHeight - 60}px, ${viewportHeight * 0.2}px)`
+        )
+        expect(res.maxWidth).toBe(
+          `min(${viewportWidth - 20}px, ${viewportWidth * 0.3}px)`
+        )
+      })
+
+      test('measures the natural size by lifting previous caps', () => {
+        const anchorEl = createAnchor({
+          top: 100,
+          left: 100,
+          width: 100,
+          height: 30
+        })
+        const el = createTarget()
+        el.style.maxHeight = '10px'
+        el.style.maxWidth = '10px'
+        el.style.visibility = 'hidden'
+
+        applyBoundary({
+          el,
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left')
+        })
+
+        expect(el.style.maxHeight).toBe('')
+        expect(el.style.maxWidth).toBe('')
+        expect(el.style.visibility).toBe('')
+      })
+
+      test('leaves the element at the caps it decided', () => {
+        // the engines restore the popup's scroll offset right after the
+        // pass, which needs the popup scrollable again by then (#18534)
+        const { clientWidth: viewportWidth, clientHeight: viewportHeight } =
+          document.documentElement
+        const anchorEl = createAnchor({
+          top: viewportHeight - 60,
+          left: viewportWidth - 120,
+          width: 100,
+          height: 30
+        })
+        const el = createTarget({ width: 5000, height: 5000 })
+
+        const res = applyBoundary({
+          el,
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left')
+        })
+
+        expect(res.maxHeight).not.toBeNull()
+        expect(res.maxWidth).not.toBeNull()
+        expect(el.style.maxHeight).toBe(res.maxHeight)
+        expect(el.style.maxWidth).toBe(res.maxWidth)
+      })
+
+      test('expands the anchor by the offset before measuring the space', () => {
+        const viewportHeight = document.documentElement.clientHeight
+        const anchorEl = createAnchor({
+          top: viewportHeight - 60,
+          left: 100,
+          width: 100,
+          height: 30
+        })
+
+        const res = applyBoundary({
+          el: createTarget({ height: 5000 }),
+          anchorEl,
+          anchorOrigin: origin('bottom left'),
+          selfOrigin: origin('top left'),
+          offset: [0, 10]
+        })
+
+        // the expanded top edge sits 10px higher
+        expect(res.maxHeight).toBe(`${viewportHeight - 70}px`)
+      })
+
+      test('leaves natively clamped center axes alone', () => {
+        const viewportWidth = document.documentElement.clientWidth
+        const anchorEl = createAnchor({
+          top: 100,
+          left: viewportWidth - 50,
+          width: 40,
+          height: 30
+        })
+
+        const res = applyBoundary({
+          el: createTarget({ width: 300 }),
+          anchorEl,
+          anchorOrigin: origin('bottom middle'),
+          selfOrigin: origin('top middle')
+        })
+
+        expect(res.maxWidth).toBeNull()
+        expect(res.selfOrigin.horizontal).toBe('middle')
+      })
+    })
+
+    describe('[(function)pointOffset]', () => {
+      test('signs the offset by the direction the popup grows', () => {
+        // away from the point on the side the popup opens towards
+        expect(pointOffset('top', 6)).toBe(6)
+        expect(pointOffset('left', 6)).toBe(6)
+        expect(pointOffset('bottom', 6)).toBe(-6)
+        expect(pointOffset('right', 6)).toBe(-6)
+
+        // a straddling axis has no direction of its own
+        expect(pointOffset('center', 6)).toBe(6)
+        expect(pointOffset('middle', 6)).toBe(6)
+      })
+    })
+
+    describe('[(function)applyPointBoundary]', () => {
+      test('returns null while the intended sides fit', () => {
+        const anchorEl = createAnchor({
+          top: 100,
+          left: 100,
+          width: 100,
+          height: 50
+        })
+
+        const res = applyPointBoundary({
+          el: createTarget(),
+          anchorEl,
+          point: { top: 25, left: 50 },
+          selfOrigin: origin('top left')
+        })
+
+        expect(res).toBeNull()
+      })
+
+      test('mirrors vertically around the point', () => {
+        const viewportHeight = document.documentElement.clientHeight
+        const anchorEl = createAnchor({
+          top: viewportHeight - 40,
+          left: 100,
+          width: 100,
+          height: 30
+        })
+
+        const res = applyPointBoundary({
+          el: createTarget({ height: 100 }),
+          anchorEl,
+          point: { top: 20, left: 10 },
+          selfOrigin: origin('top left'),
+          offset: [4, 6]
+        })
+
+        // only the origin flips: the offset re-signs itself with it, so
+        // the popup clears the point by the same 6px on the other side
+        expect(res.selfOrigin).toStrictEqual({
+          vertical: 'bottom',
+          horizontal: 'left'
+        })
+        expect(res.point).toStrictEqual({ top: 20, left: 10 })
+      })
+
+      test('mirrors horizontally at the right viewport edge', () => {
+        const viewportWidth = document.documentElement.clientWidth
+        const anchorEl = createAnchor({
+          top: 100,
+          left: viewportWidth - 40,
+          width: 30,
+          height: 30
+        })
+
+        const res = applyPointBoundary({
+          el: createTarget({ width: 100 }),
+          anchorEl,
+          point: { top: 10, left: 20 },
+          selfOrigin: origin('top left'),
+          offset: [4, 6]
+        })
+
+        expect(res.selfOrigin).toStrictEqual({
+          vertical: 'top',
+          horizontal: 'right'
+        })
+        expect(res.point).toStrictEqual({ top: 10, left: 20 })
+      })
+
+      test('mirrors back when a flipped side stops fitting', () => {
+        const anchorEl = createAnchor({
+          top: 0,
+          left: 100,
+          width: 100,
+          height: 30
+        })
+
+        // an already-flipped popup (opening upwards) with no room above
+        const res = applyPointBoundary({
+          el: createTarget({ height: 100 }),
+          anchorEl,
+          point: { top: 10, left: 10 },
+          selfOrigin: origin('bottom left'),
+          offset: [4, 6]
+        })
+
+        expect(res.selfOrigin.vertical).toBe('top')
+        expect(res.point.top).toBe(10)
+      })
+
+      test('returns null while a centered axis needs no shift', () => {
+        const anchorEl = createAnchor({
+          top: 100,
+          left: 100,
+          width: 100,
+          height: 50
+        })
+
+        const res = applyPointBoundary({
+          el: createTarget(),
+          anchorEl,
+          point: { top: 25, left: 50 },
+          selfOrigin: origin('center middle'),
+          offset: [4, 6]
+        })
+
+        expect(res).toBeNull()
+      })
+
+      test('shifts a centered axis back inside the viewport', () => {
+        const viewportHeight = document.documentElement.clientHeight
+        const anchorEl = createAnchor({
+          top: viewportHeight - 20,
+          left: 100,
+          width: 100,
+          height: 30
+        })
+
+        // the popup is centered on a point 10px into an anchor whose top
+        // sits 20px above the viewport bottom, plus the 6px offset a
+        // centered axis takes in the positive direction, so it hangs off
+        // by half its height minus the 4px of room left below
+        const res = applyPointBoundary({
+          el: createTarget({ height: 100 }),
+          anchorEl,
+          point: { top: 10, left: 10 },
+          selfOrigin: origin('center left'),
+          offset: [4, 6]
+        })
+
+        expect(res.selfOrigin).toStrictEqual({
+          vertical: 'center',
+          horizontal: 'left'
+        })
+        expect(res.point.top).toBe(10 - 46)
+      })
+
+      test('shifts a centered axis away from the right viewport edge', () => {
+        const viewportWidth = document.documentElement.clientWidth
+        const anchorEl = createAnchor({
+          top: 100,
+          left: viewportWidth - 20,
+          width: 10,
+          height: 30
+        })
+
+        const res = applyPointBoundary({
+          el: createTarget({ width: 100 }),
+          anchorEl,
+          point: { top: 10, left: 5 },
+          selfOrigin: origin('top middle'),
+          offset: [4, 6]
+        })
+
+        expect(res.selfOrigin).toStrictEqual({
+          vertical: 'top',
+          horizontal: 'middle'
+        })
+        expect(res.point.left).toBe(5 - 39)
+      })
+
+      test('pins a centered axis larger than the viewport to its start', () => {
+        const viewportHeight = document.documentElement.clientHeight
+        const anchorEl = createAnchor({
+          top: 100,
+          left: 100,
+          width: 100,
+          height: 30
+        })
+
+        const res = applyPointBoundary({
+          el: createTarget({ height: viewportHeight + 100 }),
+          anchorEl,
+          point: { top: 10, left: 10 },
+          selfOrigin: origin('center left'),
+          offset: [4, 6]
+        })
+
+        // top edge at the viewport top: the point sits half a popup
+        // height above it, less the offset it carries
+        expect(res.point.top).toBe(
+          (viewportHeight + 100) / 2 - anchorEl.getBoundingClientRect().top - 6
+        )
+      })
+    })
+
+    describe('[(function)restoreScroll]', () => {
+      test('puts back the scroll offset a measuring pass clamped', () => {
+        const el = document.createElement('div')
+        Object.assign(el.style, {
+          overflow: 'auto',
+          width: '100px',
+          height: '100px'
+        })
+        const content = document.createElement('div')
+        Object.assign(content.style, { width: '300px', height: '300px' })
+        el.append(content)
+        document.body.append(el)
+        nodes.push(el)
+
+        el.scrollTop = 50
+        el.scrollLeft = 40
+
+        // a pass with the caps lifted: everything fits, so layout clamps
+        // the offset to 0 and shrinking back does not bring it back
+        el.style.width = '400px'
+        el.style.height = '400px'
+        expect(el.scrollTop).toBe(0)
+        el.style.width = '100px'
+        el.style.height = '100px'
+        expect(el.scrollTop).toBe(0)
+
+        restoreScroll(el, 50, 40)
+        expect(el.scrollTop).toBe(50)
+        expect(el.scrollLeft).toBe(40)
+      })
+    })
+  })
+
+  describe('[Variables]', () => {
+    describe('[(variable)cssAnchorSupport]', () => {
+      test('is defined correctly', () => {
+        // the tests run in a real Chromium, which both passes the brand
+        // gate and implements every probed CSS anchor positioning piece
+        expect(cssAnchorSupport).toBe(true)
+      })
+    })
+  })
+})

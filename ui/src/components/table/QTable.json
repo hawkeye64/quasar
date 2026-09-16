@@ -355,6 +355,11 @@
           "type": "String",
           "desc": "Classes to add on header cells of the column",
           "examples": ["'my-special-class'"]
+        },
+        "autoWidth": {
+          "type": "Boolean",
+          "desc": "Tries to shrink the column to the minimum width required by its content (header and body cells alike)",
+          "addedIn": "v2.31"
         }
       }
     },
@@ -429,17 +434,11 @@
     },
 
     "separator": {
-      "type": "String",
-      "desc": "Use a separator/border between rows, columns or all cells",
-      "default": "'horizontal'",
-      "values": ["'horizontal'", "'vertical'", "'cell'", "'none'"],
-      "category": "content"
+      "extends": "table-separator"
     },
 
     "wrap-cells": {
-      "type": "Boolean",
-      "desc": "Wrap text within table cells",
-      "category": "content"
+      "extends": "wrap-cells"
     },
 
     "binary-state-sort": {
@@ -497,7 +496,7 @@
 
     "rows-per-page-label": {
       "type": "String",
-      "desc": "Text to override default rows per page label at bottom of table",
+      "desc": "Text to override default rows per page label at bottom of table; also used as the 'aria-label' of the rows per page selection field",
       "examples": ["'Records per page:'"],
       "category": "pagination"
     },
@@ -1408,6 +1407,17 @@
       }
     },
 
+    "footer": {
+      "desc": "Slot to define the table footer (gets rendered in a <tfoot> element); not applied when in 'grid' mode; example: a totals row (which can be made sticky through CSS)",
+      "scope": {
+        "cols": {
+          "type": "Object",
+          "desc": "Column definitions"
+        }
+      },
+      "addedIn": "v2.26"
+    },
+
     "top": {
       "desc": "Slot to define how table top looks like",
       "scope": {
@@ -2182,7 +2192,7 @@
               "values": ["'increase'", "'decrease'"]
             },
             "ref": {
-              "type": "Component",
+              "type": "ComponentInstance",
               "required": true,
               "desc": "Vue reference to the underlying QVirtualScroll instance"
             }

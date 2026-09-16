@@ -34,6 +34,10 @@ In the example below, `show-value` property also enables the default slot, so yo
 
 <DocExample title="Indeterminate state" file="Indeterminate" />
 
-<DocExample title="Rounded arc of progress (v2.8.4+)" file="RoundedStyle" />
+<DocExample title="Rounded arc of progress" file="RoundedStyle" />
 
 <DocExample title="Standard sizes" file="StandardSizes" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QCircularProgress exposes `role="progressbar"` with `aria-valuemin`/`aria-valuemax` taken from the `min`/`max` props and `aria-valuenow` tracking the current value (omitted while `indeterminate`, as the pattern requires). It has no accessible name by default, so add an `aria-label` telling screen reader users what is progressing — "Uploading attachment", not just a number.

@@ -1,15 +1,21 @@
 <template>
   <q-card flat bordered>
     <div class="q-pa-md text-center">
-      <q-btn class="call-to-action-btn" label="Test me" style="width: 200px">
+      <q-btn
+        class="call-to-action-btn"
+        label="Test me"
+        style="width: 200px"
+        aria-haspopup="menu"
+      >
         <q-menu
+          :hover="hover"
           :fit="fit"
           :cover="cover"
           :anchor="anchor"
           :self="self"
           auto-close
         >
-          <q-list style="min-width: 100px">
+          <q-list dense role="menu" style="min-width: 100px">
             <q-item clickable>
               <q-item-section>New tab</q-item-section>
             </q-item>
@@ -36,8 +42,9 @@
 
     <div class="q-pt-sm">
       <div class="flex flex-center q-gutter-md">
-        <q-toggle v-model="fit" label="Fit"></q-toggle>
-        <q-toggle v-model="cover" label="Cover"></q-toggle>
+        <q-toggle v-model="fit" label="Fit" />
+        <q-toggle v-model="cover" label="Cover" />
+        <q-toggle v-model="hover" label="Hover" />
       </div>
     </div>
 
@@ -45,7 +52,11 @@
       <div class="column items-center col-6">
         <div class="text-weight-bold">Anchor Origin</div>
         <div class="flex q-gutter-sm">
-          <div class="column q-gutter-y-xs">
+          <div
+            class="column q-gutter-y-xs"
+            role="radiogroup"
+            aria-label="Anchor origin vertical"
+          >
             <div class="text-center">Vertical</div>
             <q-radio
               dense
@@ -66,7 +77,11 @@
               label="Bottom"
             />
           </div>
-          <div class="column q-gutter-y-xs">
+          <div
+            class="column q-gutter-y-xs"
+            role="radiogroup"
+            aria-label="Anchor origin horizontal"
+          >
             <div class="text-center">Horizontal</div>
             <q-radio
               dense
@@ -105,7 +120,11 @@
       <div class="column items-center col-6" v-if="!cover">
         <div class="text-weight-bold">Self Origin</div>
         <div class="flex q-gutter-sm">
-          <div class="column q-gutter-y-xs">
+          <div
+            class="column q-gutter-y-xs"
+            role="radiogroup"
+            aria-label="Self origin vertical"
+          >
             <div class="text-center">Vertical</div>
             <q-radio
               dense
@@ -126,7 +145,11 @@
               label="Bottom"
             />
           </div>
-          <div class="column q-gutter-y-xs">
+          <div
+            class="column q-gutter-y-xs"
+            role="radiogroup"
+            aria-label="Self origin horizontal"
+          >
             <div class="text-center">Horizontal</div>
             <q-radio
               dense
@@ -176,6 +199,7 @@ import DocCode from '@/components/DocCode.vue'
 
 const fit = ref(false)
 const cover = ref(false)
+const hover = ref(true)
 const anchorOrigin = reactive({ vertical: 'bottom', horizontal: 'left' })
 const selfOrigin = reactive({ vertical: 'top', horizontal: 'left' })
 
@@ -184,9 +208,11 @@ const anchor = computed(
 )
 const self = computed(() => `${selfOrigin.vertical} ${selfOrigin.horizontal}`)
 const menuExport = computed(() => {
-  const props = cover.value
-    ? `cover anchor="${anchor.value}"`
-    : `${fit.value ? 'fit ' : ''}anchor="${anchor.value}" self="${self.value}"`
+  const props =
+    (hover.value ? 'hover ' : '') +
+    (cover.value
+      ? `cover anchor="${anchor.value}"`
+      : `${fit.value ? 'fit ' : ''}anchor="${anchor.value}" self="${self.value}"`)
 
   return `<q-menu ${props}>
   <q-item clickable>

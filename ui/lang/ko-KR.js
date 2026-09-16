@@ -15,6 +15,11 @@ export default {
     search: '검색',
     filter: '필터',
     refresh: '새로 고침',
+    minimum: '최소',
+    maximum: '최대',
+    range: '범위',
+    noValue: '값 없음',
+    resize: '크기 조정',
     expand: label => (label ? `"${label}" 확장` : '확장하다'),
     collapse: label => (label ? `"${label}" 접기` : '무너지다')
   },
@@ -33,8 +38,12 @@ export default {
     prevYear: '작년',
     nextYear: '내년',
     today: '오늘',
-    prevRangeYears: range => `이전 ${range} 년`,
-    nextRangeYears: range => `다음 ${range} 년`
+    prevRangeYears: range => `이전 ${range}년`,
+    nextRangeYears: range => `다음 ${range}년`,
+    hour: '시',
+    minute: '분',
+    second: '초',
+    now: '현재 시각'
   },
   table: {
     noData: '데이터가 없습니다.',
@@ -45,15 +54,41 @@ export default {
     recordsPerPage: '페이지 당 개수:',
     allRows: '전체',
     pagination: (start, end, total) => total + ' 중 ' + start + '-' + end,
-    columns: '열'
+    columns: '열',
+    selectAllRows: '모든 행 선택',
+    selectRow: '행 선택'
   },
   pagination: {
+    label: '페이지 매김',
     first: '첫 페이지',
     prev: '이전 페이지',
     next: '다음 페이지',
     last: '마지막 페이지'
   },
+  carousel: {
+    prevSlide: '이전 슬라이드',
+    nextSlide: '다음 슬라이드'
+  },
+  colorPicker: {
+    spectrum: '스펙트럼',
+    tune: '조정',
+    palette: '팔레트',
+    value: '색상 값',
+    hue: '색조',
+    alpha: '불투명도',
+    saturation: '채도',
+    brightness: '명도'
+  },
+  uploader: {
+    addFiles: '파일 선택',
+    upload: '파일 업로드',
+    abort: '업로드 중단',
+    removeQueued: '대기 중인 파일 제거',
+    removeUploaded: '업로드된 파일 제거',
+    removeFile: '파일 제거'
+  },
   editor: {
+    toolbar: '편집기 도구 모음',
     url: 'URL',
     bold: '굵게',
     italic: '기울이기',

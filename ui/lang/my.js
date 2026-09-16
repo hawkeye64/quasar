@@ -15,6 +15,11 @@ export default {
     search: 'ရှာမည်',
     filter: 'စစ်ထုတ်မည်',
     refresh: 'အသစ်ပြန်လုပ်မည်',
+    minimum: 'အနည်းဆုံး',
+    maximum: 'အများဆုံး',
+    range: 'အပိုင်းအခြား',
+    noValue: 'တန်ဖိုးမရှိ',
+    resize: 'အရွယ်အစားပြောင်းမည်',
     expand: label => (label ? `"${label}" ကိုချဲ့ထွင်ပါ။` : 'ချဲ့ထွင်ပါ။'),
     collapse: label => (label ? `"${label}" ကို ခေါက်သိမ်းပါ` : 'ခေါက်သိမ်းပါ')
   },
@@ -37,8 +42,12 @@ export default {
     prevYear: 'အရင်နှစ်',
     nextYear: 'နောက်နှစ်',
     today: 'ဒီနေ့',
-    prevRangeYears: range => `ယခင် ${range} နှစ် များ`,
-    nextRangeYears: range => `နောက် ${range} နှစ် များ`
+    prevRangeYears: range => `ယခင် ${range} နှစ်`,
+    nextRangeYears: range => `နောက် ${range} နှစ်`,
+    hour: 'နာရီ',
+    minute: 'မိနစ်',
+    second: 'စက္ကန့်',
+    now: 'လက်ရှိအချိန်'
   },
   table: {
     noData: 'အချက်အလတ်မရှိပါ',
@@ -50,15 +59,41 @@ export default {
     allRows: 'အားလုံး',
     pagination: (start, end, total) =>
       start + ' မှ ' + end + 'ထိ' + 'အားလုံး' + total + 'ရှိ',
-    columns: 'ကော်လံ'
+    columns: 'ကော်လံ',
+    selectAllRows: 'အတန်းအားလုံးရွေးရန်',
+    selectRow: 'အတန်းရွေးရန်'
   },
   pagination: {
+    label: 'စာမျက်နှာခွဲခြင်း',
     first: 'ပထမစာမျက်နှာ',
     prev: 'အရင်စာမျက်နှာ',
     next: 'နောက်စာမျက်နှာ',
     last: 'နောက်ဆုံးစာမျက်နှာ'
   },
+  carousel: {
+    prevSlide: 'ယခင်ဆလိုက်',
+    nextSlide: 'နောက်ဆလိုက်'
+  },
+  colorPicker: {
+    spectrum: 'အရောင်စဉ်',
+    tune: 'ချိန်ညှိရန်',
+    palette: 'အရောင်ပြား',
+    value: 'အရောင်တန်ဖိုး',
+    hue: 'အရောင်',
+    alpha: 'အလင်းပိတ်မှု',
+    saturation: 'အရောင်စိုမှု',
+    brightness: 'တောက်ပမှု'
+  },
+  uploader: {
+    addFiles: 'ဖိုင်များရွေးရန်',
+    upload: 'ဖိုင်များတင်ရန်',
+    abort: 'တင်ခြင်းရပ်ရန်',
+    removeQueued: 'စောင့်ဆိုင်းဖိုင်များဖယ်ရန်',
+    removeUploaded: 'တင်ပြီးဖိုင်များဖယ်ရန်',
+    removeFile: 'ဖိုင်ဖယ်ရန်'
+  },
   editor: {
+    toolbar: 'အယ်ဒီတာ ကိရိယာဘား',
     url: 'URL',
     bold: 'အထူ',
     italic: 'အစောင်း',

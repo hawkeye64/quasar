@@ -7,19 +7,20 @@ import {
   onDeactivated,
   provide,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
 import QIcon from '../icon/QIcon.js'
 import QResizeObserver from '../resize-observer/QResizeObserver.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useTick from '../../composables/use-tick/use-tick.js'
 import useTimeout from '../../composables/use-timeout/use-timeout.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { hSlot } from '../../utils/private.render/render.js'
 import { tabsKey } from '../../utils/private.symbols/symbols.js'
-import { rtlHasScrollBug } from '../../utils/private.rtl/rtl.js'
 
 function getIndicatorClass(color, top, vertical) {
   const pos = vertical ? ['left', 'right'] : ['top', 'bottom']
@@ -84,7 +85,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const { registerTick: registerScrollTick } = useTick()
     const { registerTick: registerUpdateArrowsTick } = useTick()
@@ -99,8 +100,8 @@ export default /*#__PURE__*/ createComponent({
       removeTimeout: removeScrollToTabTimeout
     } = useTimeout()
 
-    const rootRef = ref(null)
-    const contentRef = ref(null)
+    const rootRef = shallowRef(null)
+    const contentRef = shallowRef(null)
 
     const currentModel = ref(props.modelValue)
     const scrollable = ref(false)
@@ -175,23 +176,14 @@ export default /*#__PURE__*/ createComponent({
 
     const innerClass = computed(
       () =>
-        'q-tabs__content scroll--mobile row no-wrap items-center self-stretch hide-scrollbar relative-position ' +
+        'q-tabs__content row no-wrap items-center self-stretch hide-scrollbar relative-position ' +
         alignClass.value +
         (props.contentClass !== void 0 ? ` ${props.contentClass}` : '')
     )
 
-    const domProps = computed(() =>
-      props.vertical
-        ? {
-            container: 'height',
-            content: 'offsetHeight',
-            scroll: 'scrollHeight'
-          }
-        : { container: 'width', content: 'offsetWidth', scroll: 'scrollWidth' }
-    )
+    const sizeProp = computed(() => (props.vertical ? 'height' : 'width'))
 
     const isRTL = computed(() => !props.vertical && $q.lang.rtl === true)
-    const rtlPosCorrection = computed(() => !rtlHasScrollBug && isRTL.value)
 
     watch(isRTL, updateArrows)
 
@@ -232,18 +224,30 @@ export default /*#__PURE__*/ createComponent({
       // it can be called faster than component being initialized
       // so we need to protect against that case
       // (one example of such case is the docs release notes page)
-      if (domProps.value === void 0 || contentRef.value === null) return
+      if (contentRef.value === null) return
 
-      const size = domSize[domProps.value.container],
-        scrollSize = Math.min(
-          contentRef.value[domProps.value.scroll],
-          Array.prototype.reduce.call(
-            contentRef.value.children,
-            (acc, el) => acc + (el[domProps.value.content] || 0),
-            0
-          )
+      // We measure the content as the sum of the children sizes rather than
+      // reading scrollWidth/scrollHeight, because that only reports overflow
+      // towards the end edge. When align is "right" (or "center") the content
+      // overflows towards the start edge instead, and Blink and Gecko leave it
+      // out of the scrollable overflow region, so scrollWidth collapses to the
+      // client size and the arrows never show up (#17847). WebKit does report
+      // it, hence the engine split. The sum also avoids the transiently
+      // oversized scrollWidth that used to raise a phantom arrow (#7667).
+      //
+      // The children are measured with subpixel precision: offsetWidth
+      // rounds each tab to a whole pixel, and a justified row of fractional
+      // tabs then sums to a pixel more than the container it exactly fills,
+      // which flipped scrollable on and dropped the justify stretch at every
+      // third pixel of width (#18532). Overflow under a pixel is not visible,
+      // so it is never treated as scrollable.
+      const size = domSize[sizeProp.value],
+        scrollSize = Array.prototype.reduce.call(
+          contentRef.value.children,
+          (acc, el) => acc + el.getBoundingClientRect()[sizeProp.value],
+          0
         ),
-        scroll = size > 0 && scrollSize > size // when there is no tab, in Chrome, size === 0 and scrollSize === 1
+        scroll = size > 0 && scrollSize - size > 1 // no tab -> size is 0 in Chrome
 
       scrollable.value = scroll
 
@@ -286,8 +290,8 @@ export default /*#__PURE__*/ createComponent({
           newPos = newEl.getBoundingClientRect()
 
         newEl.style.transform = props.vertical
-          ? `translate3d(0,${oldPos.top - newPos.top}px,0) scale3d(1,${newPos.height ? oldPos.height / newPos.height : 1},1)`
-          : `translate3d(${oldPos.left - newPos.left}px,0,0) scale3d(${newPos.width ? oldPos.width / newPos.width : 1},1,1)`
+          ? `translateY(${oldPos.top - newPos.top}px) scaleY(${newPos.height ? oldPos.height / newPos.height : 1})`
+          : `translateX(${oldPos.left - newPos.left}px) scaleX(${newPos.width ? oldPos.width / newPos.width : 1})`
 
         // allow scope updates to kick in (QRouteTab needs more time)
         registerAnimateTick(() => {
@@ -352,11 +356,11 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function scrollToStart() {
-      animScrollTo(rtlPosCorrection.value ? Number.MAX_SAFE_INTEGER : 0)
+      animScrollTo(isRTL.value ? Number.MAX_SAFE_INTEGER : 0)
     }
 
     function scrollToEnd() {
-      animScrollTo(rtlPosCorrection.value ? 0 : Number.MAX_SAFE_INTEGER)
+      animScrollTo(isRTL.value ? 0 : Number.MAX_SAFE_INTEGER)
     }
 
     function stopAnimScroll() {
@@ -410,7 +414,7 @@ export default /*#__PURE__*/ createComponent({
     // with a computed variable by directly applying the minimal
     // number of instructions on get/set functions
     const posFn = computed(() =>
-      rtlPosCorrection.value
+      isRTL.value
         ? {
             get: content => Math.abs(content.scrollLeft),
             set: (content, pos) => {

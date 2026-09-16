@@ -10,11 +10,11 @@ import {
 import { join } from 'node:path'
 
 // The freshness contract for ui/dist: the full build writes a stamp of
-// its input hashes (script.build.js) and every test suite consuming
-// the build verifies it before running (the vite-plugin/app-vite/docs
-// global setups fail on a stale dist; the create-quasar/cli e2e local
-// registry rebuilds instead) — so a forgotten rebuild after ui changes
-// can never silently test old code.
+// its input hashes (script.build.js) and every consumer verifies it
+// before running — the vite-plugin/app-vite/docs global setups, the
+// pretest hooks and the create-quasar/cli e2e local registry all
+// rebuild a stale dist — so a forgotten rebuild after ui changes can
+// never silently test old code.
 
 const uiDir = join(import.meta.dirname, '..')
 const repoDir = join(uiDir, '..')
@@ -36,6 +36,14 @@ const inputGroups = {
   'pnpm-lock.yaml': join(repoDir, 'pnpm-lock.yaml')
 }
 
+// None of the input groups tracks a dotfile, so what turns up under one is
+// an OS or editor dropping (.DS_Store, .eslintcache, .vscode/) that git
+// ignores and a CI checkout never has. Hashing those would let a Finder
+// visit read as a source change — a needless multi-minute rebuild — and
+// would put this digest permanently out of step with the workflows' key.
+const isDroppingPath = entry =>
+  entry.split('/').some(part => part.startsWith('.'))
+
 function hashTarget(target) {
   const hash = createHash('sha256')
 
@@ -47,6 +55,7 @@ function hashTarget(target) {
       .sort()
 
     for (const entry of entries) {
+      if (isDroppingPath(entry)) continue
       const file = join(target, entry)
       if (!statSync(file).isFile()) continue
       hash.update(entry)

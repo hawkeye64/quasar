@@ -9,7 +9,10 @@
       <q-header elevated>
         <q-toolbar>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg" />
+            <img
+              alt="Quasar logo"
+              src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg"
+            />
           </q-avatar>
           <q-toolbar-title> <strong>Quasar</strong> Framework </q-toolbar-title>
         </q-toolbar>
@@ -30,7 +33,12 @@
             :scroll-offset="150"
             :offset="[18, 18]"
           >
-            <q-btn fab icon="keyboard_arrow_up" color="accent" />
+            <q-btn
+              aria-label="Scroll to top"
+              fab
+              icon="keyboard_arrow_up"
+              color="accent"
+            />
           </q-page-scroller>
         </q-page>
       </q-page-container>

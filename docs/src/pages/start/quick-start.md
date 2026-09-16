@@ -5,9 +5,8 @@ desc: Get up and developing a Quasar app in less than 3 minutes.
 
 It takes two easy steps and in a couple of minutes, you are off and running with a full-fledged Vue app, built with state-of-the-art best practices via Quasar's CLI and also ready with Quasar's own powerful UI library.
 
-::: tip
-If you are a more advanced Vue developer, we invite you to start off by [deciding between all Quasar flavours](/start/pick-quasar-flavour).
-:::
+> [!TIP]
+> If you are a more advanced Vue developer, we invite you to start off by [deciding between all Quasar flavours](/start/pick-quasar-flavour).
 
 ## Prerequisites
 
@@ -101,3 +100,5 @@ If you are new to Quasar and a...
 **Intermediate Vue Dev** - We recommend getting accustomed to [Quasar's Directory Structure](/quasar-cli-vite/directory-structure) and its different build modes, [starting with SSR](/quasar-cli-vite/developing-ssr/introduction) (the project you built is an SPA).
 
 **Advanced Vue Dev** - You might want to use Quasar in different scenarios outside of Quasar's own CLI, then check out the different [Quasar Flavours](/start/pick-quasar-flavour). Or, if you wish to stick with the Quasar CLI, check out the different build modes, [starting with SSR](/quasar-cli-vite/developing-ssr/introduction) and please be sure not to miss out on [App Extensions](/app-extensions/introduction).
+
+**Working with an AI coding agent** - Give it the documentation and API of the versions your project runs, offline, through the [@quasar/mcp server](/start/ai-agents). One line in your agent's configuration, nothing to install in the project.

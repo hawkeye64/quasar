@@ -1,4 +1,4 @@
-import { Teleport, h, onUnmounted, ref } from 'vue'
+import { Teleport, h, onBeforeUnmount, onUnmounted, ref } from 'vue'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { noop } from '../../utils/event/event.js'
@@ -46,20 +46,32 @@ function isOnGlobalDialog(vm) {
   return false
 }
 
+// When anchored inside a dialog with aria-modal="true", assistive
+// tech ignores anything rendered outside the dialog's element, so
+// such portals must render within it to stay in the a11y tree
+function getAriaModalEl(vm) {
+  let node = vm.parent
+
+  while (node !== void 0 && node !== null) {
+    if (node.type.name === 'QDialog') {
+      const el = node.proxy?.__getAriaModalEl?.()
+      if (el !== null && el !== void 0) return el
+    }
+
+    node = node.parent
+  }
+
+  return null
+}
+
 // Warning!
 // You MUST specify "inheritAttrs: false" in your component
 
 export default function usePortal(vm, innerRef, renderPortalContent, type) {
-  // showing, including while in show/hide transition
-  const portalIsActive = ref(false)
-
-  // showing & not in any show/hide transition
-  const portalIsAccessible = ref(false)
-
   if (__QUASAR_SSR_SERVER__) {
     return {
-      portalIsActive,
-      portalIsAccessible,
+      portalIsActive: { value: false },
+      portalIsOpening: () => false,
 
       showPortal: noop,
       hidePortal: noop,
@@ -67,22 +79,59 @@ export default function usePortal(vm, innerRef, renderPortalContent, type) {
     }
   }
 
+  // showing, including while in show/hide transition
+  const portalIsActive = ref(false)
+
+  // in the show transition (nothing renders off it, so no ref)
+  let portalIsOpening = false
+
   let portalEl = null
   const focusObj = {}
   const onGlobalDialog = type === 'dialog' && isOnGlobalDialog(vm)
 
-  function showPortal(isReady) {
+  // A menu or dialog opened from inside a QField's control (a QPopupProxy
+  // in the append slot, an autocomplete menu, ...) takes focus away from
+  // the field; the field must keep its focused state (and hold off lazy
+  // validation) until the popup is gone. It is told through bubbling DOM
+  // events dispatched from this component's placeholder node, which sits
+  // in the field's own markup (portal content is teleported to <body>, so
+  // a popup nested in another popup's content never reaches the field).
+  // Tooltips never take focus, so they stay silent.
+  const notifiesField = type !== 'tooltip'
+  let fieldNotified = false
+
+  function notifyField(name) {
+    vm.vnode.el?.dispatchEvent(new CustomEvent(name, { bubbles: true }))
+  }
+
+  function notifyFieldHide() {
+    if (fieldNotified) {
+      fieldNotified = false
+      notifyField('popup-hide')
+    }
+  }
+
+  // silent: this show takes no focus away from anything (a hover-shown
+  // menu), so a hosting field must not be told about it
+  function showPortal(isReady, silent) {
     if (isReady) {
       removeFocusWaitFlag(focusObj)
-      portalIsAccessible.value = true
+      portalIsOpening = false
       return
     }
 
-    portalIsAccessible.value = false
+    portalIsOpening = true
 
     if (!portalIsActive.value) {
       if (!onGlobalDialog && portalEl === null) {
-        portalEl = createGlobalNode(false, type)
+        const modalEl = type === 'menu' ? getAriaModalEl(vm) : null
+
+        portalEl = createGlobalNode(false, type, modalEl)
+
+        if (modalEl !== null) {
+          // the dialog's root element has no-pointer-events
+          portalEl.classList.add('all-pointer-events')
+        }
       }
 
       portalIsActive.value = true
@@ -91,11 +140,17 @@ export default function usePortal(vm, innerRef, renderPortalContent, type) {
       portalProxyList.push(vm.proxy)
 
       addFocusWaitFlag(focusObj)
+
+      if (notifiesField && !silent) {
+        fieldNotified = true
+        notifyField('popup-show')
+      }
     }
   }
 
   function hidePortal(isReady) {
-    portalIsAccessible.value = false
+    portalIsOpening = false
+    notifyFieldHide()
 
     if (!isReady) return
 
@@ -114,6 +169,10 @@ export default function usePortal(vm, innerRef, renderPortalContent, type) {
     }
   }
 
+  // the placeholder node is still in the document here, unlike in
+  // onUnmounted, so a field can still hear a popup unmounted while open
+  onBeforeUnmount(notifyFieldHide)
+
   onUnmounted(() => {
     hidePortal(true)
   })
@@ -129,7 +188,7 @@ export default function usePortal(vm, innerRef, renderPortalContent, type) {
     hidePortal,
 
     portalIsActive,
-    portalIsAccessible,
+    portalIsOpening: () => portalIsOpening,
 
     renderPortal: () =>
       onGlobalDialog

@@ -1,5 +1,6 @@
-import { computed, getCurrentInstance, h, ref } from 'vue'
+import { computed, h, inject, shallowRef } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -8,6 +9,7 @@ import useRouterLink, {
 } from '../../composables/private.use-router-link/use-router-link.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
+import { listKey } from '../../utils/private.symbols/symbols.js'
 import { hUniqueSlot } from '../../utils/private.render/render.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
 import { isKeyCode } from '../../utils/private.keyboard/key-composition.js'
@@ -29,9 +31,20 @@ export default /*#__PURE__*/ createComponent({
       default: null
     },
 
-    clickable: Boolean,
+    clickable: {
+      type: Boolean,
+      default: null
+    },
+    // declared as a prop (and "click" left out of emits, as the API
+    // validator forbids declaring both) so the presence of a click
+    // listener is observable: it implies clickability when the
+    // clickable prop is not set
+    onClick: Function,
+
     dense: Boolean,
     insetLevel: Number,
+
+    role: String,
 
     tabindex: [String, Number],
 
@@ -39,31 +52,56 @@ export default /*#__PURE__*/ createComponent({
     manualFocus: Boolean
   },
 
-  emits: ['click', 'keyup'],
+  emits: ['keyup'],
 
   setup(props, { slots, emit }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
     const { hasLink, linkAttrs, linkClass, linkTag, navigateOnClick } =
       useRouterLink()
 
-    const rootRef = ref(null)
-    const blurTargetRef = ref(null)
+    const rootRef = shallowRef(null)
+    const blurTargetRef = shallowRef(null)
 
     const isActionable = computed(
-      () => props.clickable || hasLink.value || props.tag === 'label'
+      () =>
+        (props.clickable === null
+          ? props.onClick !== void 0
+          : props.clickable) ||
+        hasLink.value ||
+        props.tag === 'label'
     )
 
     const isClickable = computed(() => !props.disable && isActionable.value)
+
+    const listRole = inject(listKey, null)
+
+    const role = computed(() => {
+      if (props.role !== void 0) return props.role
+
+      const ctx = listRole !== null ? listRole.value : null
+
+      if (ctx === 'menu' || ctx === 'menubar') {
+        // actionable entries (including disabled ones, which stay
+        // perceivable through aria-disabled) are the menu's items;
+        // anything else (headers, ...) stays generic
+        return isActionable.value ? 'menuitem' : void 0
+      }
+
+      if (hasLink.value) return void 0 // implicit link role of <a>
+      if (isClickable.value) return 'button'
+
+      // the listitem role requires an ancestor with list semantics,
+      // so it may only be claimed inside such a QList
+      return ctx === 'list' ? 'listitem' : void 0
+    })
 
     const classes = computed(
       () =>
         'q-item q-item-type row no-wrap' +
         (props.dense ? ' q-item--dense' : '') +
-        (isDark.value ? ' q-item--dark' : '') +
+        (isDark() ? ' q-item--dark' : '') +
         (hasLink.value && props.active === null
           ? linkClass.value
           : props.active
@@ -143,17 +181,18 @@ export default /*#__PURE__*/ createComponent({
         ref: rootRef,
         class: classes.value,
         style: style.value,
-        role: hasLink.value
-          ? void 0
-          : isClickable.value
-            ? 'button'
-            : 'listitem',
-        onClick,
-        onKeydown,
+        role: role.value,
+        // bound regardless of clickability: bubbled key events from
+        // inner content emit "keyup" as part of the public contract
         onKeyup
       }
 
       if (isClickable.value) {
+        // pointer listeners on a non-interactive element would flag
+        // WCAG keyboard-accessibility checks, so bind them only when
+        // the item is truly interactive
+        data.onClick = onClick
+        data.onKeydown = onKeydown
         data.tabindex = props.tabindex || '0'
         Object.assign(data, linkAttrs.value)
       } else if (isActionable.value) {

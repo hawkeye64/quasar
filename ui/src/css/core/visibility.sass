@@ -53,7 +53,6 @@
 
 .hide-scrollbar
   scrollbar-width: none
-  -ms-overflow-style: none
 
   &::-webkit-scrollbar
     width: 0
@@ -118,40 +117,53 @@ $platforms: desktop, mobile, native-mobile, cordova, capacitor, electron, touch,
 .q-focus-helper, .q-focusable, .q-manual-focusable, .q-hoverable
   outline: 0
 
-body.desktop
-  .q-focus-helper
+.q-focus-helper
+  position: absolute
+  top: 0
+  left: 0 #{"/* rtl:ignore */"}
+  width: 100%
+  height: 100%
+  pointer-events: none
+  border-radius: inherit
+  opacity: 0
+  transition: background-color .3s cubic-bezier(.25,.8,.5,1), opacity .4s cubic-bezier(.25,.8,.5,1)
+
+  &:before, &:after
+    content: ''
     position: absolute
     top: 0
     left: 0 #{"/* rtl:ignore */"}
     width: 100%
     height: 100%
-    pointer-events: none
-    border-radius: inherit
     opacity: 0
-    transition: background-color .3s cubic-bezier(.25,.8,.5,1), opacity .4s cubic-bezier(.25,.8,.5,1)
+    border-radius: inherit
+    transition: background-color .3s cubic-bezier(.25,.8,.5,1), opacity .6s cubic-bezier(.25,.8,.5,1)
 
-    &:before, &:after
-      content: ''
-      position: absolute
-      top: 0
-      left: 0 #{"/* rtl:ignore */"}
-      width: 100%
-      height: 100%
-      opacity: 0
-      border-radius: inherit
-      transition: background-color .3s cubic-bezier(.25,.8,.5,1), opacity .6s cubic-bezier(.25,.8,.5,1)
+  &:before
+    background: #000
+  &:after
+    background: #fff
 
+  &--rounded
+    border-radius: $generic-border-radius
+  &--round
+    border-radius: 50%
+
+// keyboard focus (:focus-visible) and the programmatically-set manual
+// state paint on every platform; :hover needs a hover-capable input
+// connected, otherwise a tap would leave it stuck on lit
+.q-focusable:focus-visible,
+.q-manual-focusable--focused
+  > .q-focus-helper
+    background: currentColor
+    opacity: .15
     &:before
-      background: #000
+      opacity: .1
     &:after
-      background: #fff
+      opacity: .4
 
-    &--rounded
-      border-radius: $generic-border-radius
-    &--round
-      border-radius: 50%
-
-  .q-focusable:focus, .q-manual-focusable--focused, .q-hoverable:hover
+@media (any-hover: hover)
+  .q-hoverable:hover
     > .q-focus-helper
       background: currentColor
       opacity: .15
@@ -160,6 +172,7 @@ body.desktop
       &:after
         opacity: .4
 
-  .q-focusable:focus, .q-manual-focusable--focused
-    > .q-focus-helper
-      opacity: .22
+.q-focusable:focus-visible,
+.q-manual-focusable--focused
+  > .q-focus-helper
+    opacity: .22

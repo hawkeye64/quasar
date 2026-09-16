@@ -1,7 +1,7 @@
 ---
-title: Touch Hold Directive
+title: v-touch-hold directive
 desc: Vue directive which triggers an event when the user touches and holds on a component or element for a specified amount of time.
-keys: touch-hold
+keys: touch-hold,v-touch-hold
 examples: TouchHold
 related:
   - /vue-directives/touch-swipe
@@ -25,9 +25,8 @@ The default wait time is 600ms, but you can change it:
 
 <DocExample title="Custom wait time" file="CustomTimer" />
 
-::: tip
-TouchHold also has a default sensitivity of 5px for touch events and 7px for mouse events, which means that it allows a slight movement of the finger or mouse without aborting, improving the user experience.
-:::
+> [!TIP]
+> TouchHold also has a default sensitivity of 5px for touch events and 7px for mouse events, which means that it allows a slight movement of the finger or mouse without aborting, improving the user experience.
 
 However, you can change this sensitivity too (notice the directive argument below - `600:12:15` - 600ms wait time, 12px sensitivity for touch events, 15px sensitivity for mouse events):
 
@@ -61,6 +60,16 @@ When you want to inhibit TouchHold, you can do so by stopping propagation of the
 
 However, if you are using `capture` or `mouseCapture` modifiers then events will first reach the TouchHold directive then the inner content, so TouchHold will still trigger.
 
-## Note on HMR
+### Events after TouchHold triggers
 
-Due to performance reasons, not all of the modifiers are reactive. Some require a window/page/component refresh to get updated. Please check the API card for the modifiers which are not marked as reactive.
+Once the wait time is up and TouchHold triggers, the directive consumes the event that ends the gesture, so that a long press does not also count as a tap or as a click, be it on the element itself or on any of its parents. For touch events this is `touchend` (whose default action, the emulated `click`, gets cancelled as well) and for mouse events this is `click`.
+
+This means that a `@touchend` listener on the element will not be called after TouchHold has triggered. It is still called when the user lifts the finger before the wait time is up. Should you need it in both cases, listen for it in the capture phase:
+
+```html
+<div v-touch-hold="userHasHold" @touchend.capture="userHasLifted">
+  <!-- ...content -->
+</div>
+```
+
+Mouse events are not affected the same way: `@mousedown` and `@mouseup` are always called, only the subsequent `@click` is suppressed.

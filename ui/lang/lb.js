@@ -15,6 +15,11 @@ export default {
     search: 'Sichen',
     filter: 'Filter',
     refresh: 'Aktualiséieren',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Beräich',
+    noValue: 'Kee Wäert',
+    resize: 'Gréisst änneren',
     expand: label => (label ? `"${label}" erweideren` : 'Erweideren'),
     collapse: label => (label ? `"${label}" zesummeklappen` : 'Zesummeklappen')
   },
@@ -37,7 +42,11 @@ export default {
     nextYear: 'Nächst Joer',
     today: 'Haut',
     prevRangeYears: range => `Vireg ${range} Joer`,
-    nextRangeYears: range => `Nächst ${range} Joer`
+    nextRangeYears: range => `Nächst ${range} Joer`,
+    hour: 'Stonn',
+    minute: 'Minutt',
+    second: 'Sekonn',
+    now: 'Aktuell Zäit'
   },
   table: {
     noData: 'Keng Donnéeë verfügbar',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Zeilen pro Säit:',
     allRows: 'All',
     pagination: (start, end, total) => start + '–' + end + ' vun ' + total,
-    columns: 'Kolonnen'
+    columns: 'Kolonnen',
+    selectAllRows: 'All Reien auswielen',
+    selectRow: 'Rei auswielen'
   },
   pagination: {
+    label: 'Säitennummeréierung',
     first: 'Éischt Säit',
     prev: 'Vireg Säit',
     next: 'Nächst Säit',
     last: 'Lescht Säit'
   },
+  carousel: {
+    prevSlide: 'Virescht Folie',
+    nextSlide: 'Nächst Folie'
+  },
+  colorPicker: {
+    spectrum: 'Spektrum',
+    tune: 'Feinofstëmmung',
+    palette: 'Palette',
+    value: 'Faarfwäert',
+    hue: 'Faarftoun',
+    alpha: 'Deckkraaft',
+    saturation: 'Sättigung',
+    brightness: 'Hellegkeet'
+  },
+  uploader: {
+    addFiles: 'Fichieren auswielen',
+    upload: 'Fichieren eroplueden',
+    abort: 'Eroplueden ofbriechen',
+    removeQueued: 'Waardend Fichieren ewechhuelen',
+    removeUploaded: 'Eropgelueden Fichieren ewechhuelen',
+    removeFile: 'Fichier ewechhuelen'
+  },
   editor: {
+    toolbar: 'Toolbar vum Editeur',
     url: 'URL',
     bold: 'Fett',
     italic: 'Kursiv',

@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import useAlign, {
   useAlignProps
 } from '../../composables/private.use-align/use-align.js'
-import useSize, {
+import {
+  createSizeStyle,
   useSizeProps
 } from '../../composables/private.use-size/use-size.js'
 import useRouterLink, {
@@ -26,6 +27,8 @@ export const defaultSizes = {
   lg: 20,
   xl: 24
 }
+
+const getSizeStyle = /*#__PURE__*/ createSizeStyle(defaultSizes)
 
 const formTypes = ['button', 'submit', 'reset']
 const mediaTypeRE = /[^\s]\/[^\s]/
@@ -101,7 +104,6 @@ export const useBtnProps = {
 }
 
 export default function useBtn(props) {
-  const sizeStyle = useSize(props, defaultSizes)
   const alignClass = useAlign(props)
   const { hasRouterLink, hasLink, linkTag, linkAttrs, navigateOnClick } =
     useRouterLink({
@@ -109,7 +111,7 @@ export default function useBtn(props) {
     })
 
   const style = computed(() => {
-    const obj = props.fab || props.fabMini ? {} : sizeStyle.value
+    const obj = props.fab || props.fabMini ? {} : getSizeStyle(props.size)
 
     return props.padding !== void 0
       ? {
@@ -146,7 +148,11 @@ export default function useBtn(props) {
     if (linkTag.value === 'a') {
       if (props.disable) {
         acc['aria-disabled'] = 'true'
-      } else if (acc.href === void 0) {
+      }
+
+      // a disabled link loses its href, but must still announce
+      // as a (dimmed) button rather than as plain text
+      if (acc.href === void 0) {
         acc.role = 'button'
       }
 
@@ -205,7 +211,7 @@ export default function useBtn(props) {
 
   const innerClasses = computed(
     () =>
-      alignClass.value +
+      alignClass() +
       (props.stack ? ' column' : ' row') +
       (props.noWrap ? ' no-wrap text-no-wrap' : '') +
       (props.loading ? ' q-btn__content--hidden' : '')

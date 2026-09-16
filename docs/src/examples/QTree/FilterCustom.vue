@@ -6,7 +6,7 @@
       v-model="filter"
       label="Search - only filters labels that have also '(*)'"
     >
-      <template v-slot:append>
+      <template #append>
         <q-icon
           v-if="filter !== ''"
           name="clear"
@@ -34,6 +34,7 @@ const filter = ref('de')
 const filterRef = useTemplateRef('filterRef')
 const expanded = ref(['Good service (disabled node) (*)'])
 const simple = [
+  // #region
   {
     label: 'Satisfied customers',
     children: [
@@ -59,6 +60,7 @@ const simple = [
       }
     ]
   }
+  // #endregion
 ]
 
 function myFilterMethod(node, filterStr) {

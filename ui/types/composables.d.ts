@@ -1,6 +1,6 @@
 import { QDialog } from "quasar";
 import { MetaOptions } from "./meta";
-import { Ref } from "vue";
+import { ComponentPublicInstance, MaybeRefOrGetter, Ref } from "vue";
 import { QVueGlobals } from "./globals";
 
 export function useAnimationFrame(): {
@@ -8,21 +8,27 @@ export function useAnimationFrame(): {
   removeAnimationFrame: () => void;
 };
 
-interface useDialogPluginComponent {
+export type DialogDismissReason =
+  | "cancel"
+  | "backdrop"
+  | "escape"
+  | "programmatic";
+
+interface UseDialogPluginComponent {
   <T = any>(): {
     dialogRef: Ref<QDialog | null>;
-    onDialogHide: () => void;
+    onDialogHide: (evt?: Event) => void;
     onDialogOK: (payload?: T) => void;
     onDialogCancel: () => void;
   };
   emits: ["ok", "hide"];
   emitsObject: {
     ok: (payload?: any) => true;
-    hide: () => true;
+    hide: (reason?: DialogDismissReason) => true;
   };
 }
 
-export const useDialogPluginComponent: useDialogPluginComponent;
+export const useDialogPluginComponent: UseDialogPluginComponent;
 
 interface UseFormChildOptions {
   validate: () => boolean | Promise<boolean>;
@@ -34,6 +40,26 @@ export function useFormChild(options: UseFormChildOptions): void;
 
 export function useHydration(): {
   isHydrated: Ref<boolean>;
+};
+
+export interface UseIntersectionOptions {
+  target?: MaybeRefOrGetter<
+    Element | ComponentPublicInstance | null | undefined
+  >;
+  root?: Element | Document | null;
+  rootMargin?: string;
+  threshold?: number | number[];
+  once?: boolean;
+  disabled?: boolean;
+  onIntersect?: (entry: IntersectionObserverEntry) => boolean | void;
+}
+
+export function useIntersection(
+  options?: MaybeRefOrGetter<UseIntersectionOptions>
+): {
+  isIntersecting: Ref<boolean>;
+  refresh: () => void;
+  stop: () => void;
 };
 
 export function useInterval(): {

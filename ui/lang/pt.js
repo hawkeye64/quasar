@@ -15,6 +15,11 @@ export default {
     search: 'Procurar',
     filter: 'Filtrar',
     refresh: 'Recarregar',
+    minimum: 'Mínimo',
+    maximum: 'Máximo',
+    range: 'Intervalo',
+    noValue: 'Sem valor',
+    resize: 'Redimensionar',
     expand: label => (label ? `Expandir "${label}"` : 'Expandir'),
     collapse: label => (label ? `Recolher "${label}"` : 'Colapso')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Ano anterior',
     nextYear: 'Próximo ano',
     today: 'Hoje',
-    prevRangeYears: range => `Anterior ${range} anos`,
-    nextRangeYears: range => `Próximo ${range} anos`
+    prevRangeYears: range => `${range} anos anteriores`,
+    nextRangeYears: range => `${range} anos seguintes`,
+    hour: 'Hora',
+    minute: 'Minuto',
+    second: 'Segundo',
+    now: 'Hora atual'
   },
   table: {
     noData: 'Sem dados disponíveis',
@@ -53,15 +62,41 @@ export default {
     recordsPerPage: 'Linhas por página:',
     allRows: 'Todas',
     pagination: (start, end, total) => start + '-' + end + ' de ' + total,
-    columns: 'Colunas'
+    columns: 'Colunas',
+    selectAllRows: 'Selecionar todas as linhas',
+    selectRow: 'Selecionar linha'
   },
   pagination: {
+    label: 'Paginação',
     first: 'Primeira página',
     prev: 'Página anterior',
     next: 'Próxima página',
     last: 'Última página'
   },
+  carousel: {
+    prevSlide: 'Slide anterior',
+    nextSlide: 'Próximo slide'
+  },
+  colorPicker: {
+    spectrum: 'Espectro',
+    tune: 'Ajuste',
+    palette: 'Paleta',
+    value: 'Valor da cor',
+    hue: 'Matiz',
+    alpha: 'Opacidade',
+    saturation: 'Saturação',
+    brightness: 'Brilho'
+  },
+  uploader: {
+    addFiles: 'Escolher ficheiros',
+    upload: 'Carregar ficheiros',
+    abort: 'Cancelar o carregamento',
+    removeQueued: 'Remover ficheiros em fila',
+    removeUploaded: 'Remover ficheiros carregados',
+    removeFile: 'Remover ficheiro'
+  },
   editor: {
+    toolbar: 'Barra de ferramentas do editor',
     url: 'URL',
     bold: 'Negrito',
     italic: 'Itálico',

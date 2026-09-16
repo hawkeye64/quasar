@@ -15,6 +15,11 @@ export default {
     search: 'Hľadať',
     filter: 'Filtrovať',
     refresh: 'Obnoviť',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Rozsah',
+    noValue: 'Bez hodnoty',
+    resize: 'Zmeniť veľkosť',
     expand: label => (label ? `Rozbaliť "${label}"` : 'Rozbaliť'),
     collapse: label => (label ? `Zbaliť "${label}"` : 'Kolaps')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Predchádzajúci rok',
     nextYear: 'Budúci rok',
     today: 'Dnes',
-    prevRangeYears: range => `Predchádzajúce ${range} roky`,
-    nextRangeYears: range => `Ďalej ${range} roky`
+    prevRangeYears: range => `Predchádzajúcich ${range} rokov`,
+    nextRangeYears: range => `Ďalších ${range} rokov`,
+    hour: 'Hodina',
+    minute: 'Minúta',
+    second: 'Sekunda',
+    now: 'Aktuálny čas'
   },
   table: {
     noData: 'Nie sú dostupné údaje',
@@ -55,15 +64,41 @@ export default {
     recordsPerPage: 'Riadkov na stránku:',
     allRows: 'Všetky',
     pagination: (start, end, total) => start + '-' + end + ' z ' + total,
-    columns: 'Stĺpce'
+    columns: 'Stĺpce',
+    selectAllRows: 'Vybrať všetky riadky',
+    selectRow: 'Vybrať riadok'
   },
   pagination: {
+    label: 'Stránkovanie',
     first: 'Prvá stránka',
     prev: 'Predchádzajúca stránka',
     next: 'Ďalšia stránka',
     last: 'Posledná stránka'
   },
+  carousel: {
+    prevSlide: 'Predchádzajúca snímka',
+    nextSlide: 'Ďalšia snímka'
+  },
+  colorPicker: {
+    spectrum: 'Spektrum',
+    tune: 'Doladenie',
+    palette: 'Paleta',
+    value: 'Hodnota farby',
+    hue: 'Odtieň',
+    alpha: 'Krytie',
+    saturation: 'Sýtosť',
+    brightness: 'Jas'
+  },
+  uploader: {
+    addFiles: 'Vybrať súbory',
+    upload: 'Nahrať súbory',
+    abort: 'Prerušiť nahrávanie',
+    removeQueued: 'Odstrániť čakajúce súbory',
+    removeUploaded: 'Odstrániť nahraté súbory',
+    removeFile: 'Odstrániť súbor'
+  },
   editor: {
+    toolbar: 'Panel nástrojov editora',
     url: 'URL',
     bold: 'Tučné',
     italic: 'Kurzíva',

@@ -10,17 +10,15 @@ related:
 
 QFile is a component which handles the user interaction for picking file(s).
 
-::: tip
-If you also want a component to handle the upload for you, please consider using [QUploader](/vue-components/uploader) instead.
-:::
+> [!TIP]
+> If you also want a component to handle the upload for you, please consider using [QUploader](/vue-components/uploader) instead.
 
 <DocApi file="QFile" />
 
 ## Design
 
-::: warning
-For your QFile you can use only one of the main designs (`filled`, `outlined`, `standout`, `borderless`). You cannot use multiple as they are self-exclusive.
-:::
+> [!WARNING]
+> For your QFile you can use only one of the main designs (`filled`, `outlined`, `standout`, `borderless`). You cannot use multiple as they are self-exclusive.
 
 <DocExample title="Design Overview" file="DesignOverview" />
 
@@ -44,9 +42,8 @@ As a helper, you can use `clearable` prop so user can reset model to `null` thro
 
 ## Usage
 
-::: warning
-Under the hood, QFile uses a native input. Due to browser security policy, it is not allowed to programmatically fill such an input with a value. As a result, even if you set v-model from the beginning to a value, the component will show those file(s) but the input tag itself won't be filled in with that value. A user interaction (click/tap/<kbd>Enter</kbd> key/<kbd>Space</kbd> key) is absolutely required in order for the native input to contain them. It's best to always have the initial value of model set to `null` or `undefined/void 0`.
-:::
+> [!WARNING]
+> Under the hood, QFile uses a native input. Due to browser security policy, it is not allowed to programmatically fill such an input with a value. As a result, even if you set v-model from the beginning to a value, the component will show those file(s) but the input tag itself won't be filled in with that value. A user interaction (click/tap/<kbd>Enter</kbd> key/<kbd>Space</kbd> key) is absolutely required in order for the native input to contain them. It's best to always have the initial value of model set to `null` or `undefined/void 0`.
 
 ### Basic
 
@@ -84,13 +81,11 @@ The example below highlights how you can customize the display of each file and 
 
 You can even combine the restrictions above.
 
-::: tip
-In the example above, we're using `accept` property. Its value must be a comma separated list of unique file type specifiers. Maps to 'accept' attribute of native input type=file element. [More info](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file#Unique_file_type_specifiers).
-:::
+> [!TIP]
+> In the example above, we're using `accept` property. Its value must be a comma separated list of unique file type specifiers. Maps to 'accept' attribute of native input type=file element. [More info](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file#Unique_file_type_specifiers).
 
-::: warning
-Recommended format for the `accept` property is `<mediatype>/<extension>`. Examples: "image/png", "image/png". QFile uses an `<input type="file">` under the hood and it relies entirely on the host browser to trigger the file picker. If the `accept` property (that gets applied to the input) is not correct, no file picker will appear on screen or it will appear but it will accept all file types.
-:::
+> [!WARNING]
+> Recommended format for the `accept` property is `<mediatype>/<extension>`. Examples: "image/png", "image/png". QFile uses an `<input type="file">` under the hood and it relies entirely on the host browser to trigger the file picker. If the `accept` property (that gets applied to the input) is not correct, no file picker will appear on screen or it will appear but it will accept all file types.
 
 You can also apply custom filters (which are executed after user picks files):
 
@@ -101,3 +96,9 @@ You can also apply custom filters (which are executed after user picks files):
 When dealing with a native form which has an `action` and a `method` (eg. when using Quasar with ASP.NET controllers), you need to specify the `name` property on QFile, otherwise formData will not contain it (if it should):
 
 <DocExample title="Native form" file="NativeForm" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QFile is built on the QField frame, so label it like any other field: the label association through a generated SSR-safe id, the `role="alert"` error announcements and the keyboard-operable clear button all work as described in [QField's Accessibility section](/vue-components/field#accessibility). The validation attributes (`aria-invalid`, `aria-errormessage`, `aria-describedby`) are applied to the underlying native file input.
+
+With the field focused, <kbd>Enter</kbd> or <kbd>Space</kbd> opens the file picker (a `readonly` field still takes focus and shows it, but neither key opens the picker). When `use-chips` is set, each selected file's chip is keyboard-removable through <kbd>Enter</kbd> or <kbd>Space</kbd>, with a localized "Remove" label from the [Quasar Language Pack](/options/quasar-language-packs). Drag-and-drop is a pointer-only convenience — the file picker itself is the keyboard path to selecting files.

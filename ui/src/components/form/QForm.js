@@ -6,7 +6,7 @@ import {
   onDeactivated,
   onMounted,
   provide,
-  ref
+  shallowRef
 } from 'vue'
 
 import { createComponent } from '../../utils/private.create/create.js'
@@ -17,9 +17,19 @@ import { formKey } from '../../utils/private.symbols/symbols.js'
 import { vmIsDestroyed } from '../../utils/private.vm/vm.js'
 
 function validateComponent(comp) {
-  const valid = comp.validate()
+  let valid
 
-  return typeof valid.then === 'function'
+  try {
+    valid = comp.validate()
+  } catch (err) {
+    // a synchronously throwing rule must fail the same
+    // way an asynchronously rejecting one already does
+    return Promise.resolve({ valid: false, comp, err })
+  }
+
+  // a nullish return (broken validate() contract)
+  // must fail the component, not break the form
+  return typeof valid?.then === 'function'
     ? valid.then(
         isValid => ({ valid: isValid, comp }),
         err => ({ valid: false, comp, err })
@@ -43,7 +53,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const vm = getCurrentInstance()
-    const rootRef = ref(null)
+    const rootRef = shallowRef(null)
 
     let validateIndex = 0
     const registeredComponents = []

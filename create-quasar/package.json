@@ -1,7 +1,7 @@
 {
   "name": "create-quasar",
-  "version": "5.0.12",
-  "description": "Scaffolds Quasar Apps & App Extensions",
+  "version": "5.0.27",
+  "description": "Scaffolds Quasar Apps & App Extensions: the enterprise-ready, AI-ready cross-platform Vue.js framework",
   "homepage": "https://quasar.dev",
   "bugs": "https://github.com/quasarframework/quasar/issues",
   "license": "MIT",
@@ -12,7 +12,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/quasarframework/quasar"
+    "url": "https://github.com/quasarframework/quasar",
+    "directory": "create-quasar"
   },
   "funding": {
     "type": "github",
@@ -33,11 +34,10 @@
     "test:unit": "vitest run",
     "test:e2e": "pnpm test:e2e:app && pnpm test:e2e:ae",
     "test:e2e:app": "vitest run --config ./vitest-e2e.config.js test/e2e/app",
-    "test:e2e:ae": "vitest run --config ./vitest-e2e.config.js test/e2e/ae",
-    "prepublishOnly": "pnpm test:unit && E2E_INSTALL=pnpm E2E_SCRIPT=js E2E_LINTER=oxlint pnpm test:e2e:app && E2E_SCRIPT=js E2E_LINT=true pnpm test:e2e:ae"
+    "test:e2e:ae": "vitest run --config ./vitest-e2e.config.js test/e2e/ae"
   },
   "dependencies": {
-    "@clack/prompts": "^1.7.0",
+    "@clack/prompts": "^1.8.0",
     "@quasar/art": "workspace:^",
     "@quasar/update-notifier": "workspace:^",
     "ci-info": "^4.4.0",
@@ -47,8 +47,8 @@
     "tinyglobby": "^0.2.17"
   },
   "devDependencies": {
-    "verdaccio": "^6.9.2",
-    "vitest": "^4.1.10"
+    "verdaccio": "^6.10.3",
+    "vitest": "^5.0.0"
   },
   "engines": {
     "node": ">=20"

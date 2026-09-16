@@ -15,6 +15,11 @@ export default {
     search: 'Zoek',
     filter: 'Filter',
     refresh: 'Ververs',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Bereik',
+    noValue: 'Geen waarde',
+    resize: 'Formaat wijzigen',
     expand: label => (label ? `"${label}" uitklappen` : 'Uitklappen'),
     collapse: label => (label ? `"${label}" inklappen` : 'Inklappen')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Vorig jaar',
     nextYear: 'Volgend jaar',
     today: 'Vandaag',
-    prevRangeYears: range => `Vorige ${range} jaren`,
-    nextRangeYears: range => `Volgende ${range} jaren`
+    prevRangeYears: range => `Vorige ${range} jaar`,
+    nextRangeYears: range => `Volgende ${range} jaar`,
+    hour: 'Uur',
+    minute: 'Minuut',
+    second: 'Seconde',
+    now: 'Huidige tijd'
   },
   table: {
     noData: 'Geen gegevens beschikbaar',
@@ -50,22 +59,48 @@ export default {
     recordsPerPage: 'Records per pagina:',
     allRows: 'Alle',
     pagination: (start, end, total) => start + '-' + end + ' van ' + total,
-    columns: 'Kolommen'
+    columns: 'Kolommen',
+    selectAllRows: 'Alle rijen selecteren',
+    selectRow: 'Rij selecteren'
   },
   pagination: {
+    label: 'Paginering',
     first: 'Eerste pagina',
     prev: 'Vorige pagina',
     next: 'Volgende pagina',
     last: 'Laatste pagina'
   },
+  carousel: {
+    prevSlide: 'Vorige dia',
+    nextSlide: 'Volgende dia'
+  },
+  colorPicker: {
+    spectrum: 'Spectrum',
+    tune: 'Afstemming',
+    palette: 'Palet',
+    value: 'Kleurwaarde',
+    hue: 'Kleurtoon',
+    alpha: 'Dekking',
+    saturation: 'Verzadiging',
+    brightness: 'Helderheid'
+  },
+  uploader: {
+    addFiles: 'Bestanden kiezen',
+    upload: 'Bestanden uploaden',
+    abort: 'Uploaden afbreken',
+    removeQueued: 'Wachtende bestanden verwijderen',
+    removeUploaded: 'Geüploade bestanden verwijderen',
+    removeFile: 'Bestand verwijderen'
+  },
   editor: {
+    toolbar: 'Werkbalk van de editor',
     url: 'URL',
     bold: 'Vet',
     italic: 'Cursief',
     strikethrough: 'Doorstrepen',
     underline: 'Onderstrepen',
     unorderedList: 'Ongeordende lijst',
-    orderedList: 'Geordende lijst ',
+    orderedList: 'Geordende lijst',
     subscript: 'Onderschrift',
     superscript: 'Bovenschrift',
     hyperlink: 'Hyperlink',

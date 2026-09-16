@@ -25,6 +25,11 @@ export default {
     search: 'Іздеу',
     filter: 'Сүзгі',
     refresh: 'Жаңарту',
+    minimum: 'Минимум',
+    maximum: 'Максимум',
+    range: 'Диапазон',
+    noValue: 'Мән жоқ',
+    resize: 'Өлшемін өзгерту',
     expand: label => (label ? `"${label}" кеңейту` : 'Кеңейту'),
     collapse: label => (label ? `"${label}" жию` : 'Жыйрату')
   },
@@ -45,7 +50,11 @@ export default {
     nextYear: 'Келесі жыл',
     today: 'Бүгін',
     prevRangeYears: range => `Алдыңғы ${range} жыл`,
-    nextRangeYears: range => `Келесі ${range} жыл`
+    nextRangeYears: range => `Келесі ${range} жыл`,
+    hour: 'Сағат',
+    minute: 'Минут',
+    second: 'Секунд',
+    now: 'Ағымдағы уақыт'
   },
   table: {
     noData: 'Мәлімет жоқ',
@@ -61,15 +70,41 @@ export default {
     recordsPerPage: 'Беттегі жолдар:',
     allRows: 'Бәрі',
     pagination: (start, end, total) => start + '-' + end + ' из ' + total,
-    columns: 'Бағандар'
+    columns: 'Бағандар',
+    selectAllRows: 'Барлық жолдарды таңдау',
+    selectRow: 'Жолды таңдау'
   },
   pagination: {
+    label: 'Беттеу',
     first: 'Бірінші бет',
     prev: 'Алдыңғы бет',
     next: 'Келесі бет',
     last: 'Соңғы бет'
   },
+  carousel: {
+    prevSlide: 'Алдыңғы слайд',
+    nextSlide: 'Келесі слайд'
+  },
+  colorPicker: {
+    spectrum: 'Спектр',
+    tune: 'Реттеу',
+    palette: 'Палитра',
+    value: 'Түс мәні',
+    hue: 'Реңк',
+    alpha: 'Мөлдірсіздік',
+    saturation: 'Қанықтық',
+    brightness: 'Жарықтық'
+  },
+  uploader: {
+    addFiles: 'Файлдарды таңдау',
+    upload: 'Файлдарды жүктеу',
+    abort: 'Жүктеуді тоқтату',
+    removeQueued: 'Кезектегі файлдарды жою',
+    removeUploaded: 'Жүктелген файлдарды жою',
+    removeFile: 'Файлды жою'
+  },
   editor: {
+    toolbar: 'Редактордың құралдар тақтасы',
     url: 'URL',
     bold: 'Қалың',
     italic: 'Курсив',

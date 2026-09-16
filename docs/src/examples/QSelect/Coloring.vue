@@ -7,7 +7,7 @@
         :options="options"
         label="Label"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="event" />
         </template>
       </q-select>
@@ -19,7 +19,7 @@
         :options="options"
         label="Label"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="event" />
         </template>
       </q-select>
@@ -32,7 +32,7 @@
         :options="options"
         label="Label"
       >
-        <template v-slot:append>
+        <template #append>
           <q-icon name="event" color="orange" />
         </template>
       </q-select>
@@ -45,7 +45,7 @@
         :options="options"
         label="Label"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="event" />
         </template>
       </q-select>
@@ -57,9 +57,12 @@
         :options="options"
         label="Label"
       >
-        <template v-slot:append>
+        <template #append>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+            <img
+              alt="Quasar logo"
+              src="https://cdn.quasar.dev/logo-v2/svg/logo.svg"
+            />
           </q-avatar>
         </template>
       </q-select>
@@ -74,14 +77,14 @@
         label="Label"
         counter
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="place" />
         </template>
-        <template v-slot:append>
+        <template #append>
           <q-icon name="favorite" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-select>
     </div>
   </div>

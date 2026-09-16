@@ -48,15 +48,18 @@
       />
 
       <q-input standout v-model="text" :dense="dense">
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="event" />
         </template>
       </q-input>
 
       <q-input standout v-model="text" :dense="dense">
-        <template v-slot:append>
+        <template #append>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+            <img
+              alt="Quasar logo"
+              src="https://cdn.quasar.dev/logo-v2/svg/logo.svg"
+            />
           </q-avatar>
         </template>
       </q-input>
@@ -69,14 +72,14 @@
         counter
         :dense="dense"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="place" />
         </template>
-        <template v-slot:append>
+        <template #append>
           <q-icon name="close" @click="text = ''" class="cursor-pointer" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-input>
 
       <q-input
@@ -88,11 +91,11 @@
         maxlength="12"
         :dense="dense"
       >
-        <template v-slot:before>
+        <template #before>
           <q-icon name="flight_takeoff" />
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon
             v-if="text !== ''"
             name="close"
@@ -102,7 +105,7 @@
           <q-icon name="search" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-input>
 
       <q-input
@@ -114,13 +117,16 @@
         maxlength="12"
         :dense="dense"
       >
-        <template v-slot:before>
+        <template #before>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/img/avatar5.jpg" />
+            <img
+              alt="User avatar"
+              src="https://cdn.quasar.dev/img/avatar5.jpg"
+            />
           </q-avatar>
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon
             v-if="text !== ''"
             name="close"
@@ -130,9 +136,9 @@
           <q-icon name="schedule" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
 
-        <template v-slot:after>
+        <template #after>
           <q-btn round dense flat icon="send" />
         </template>
       </q-input>
@@ -146,13 +152,13 @@
         maxlength="12"
         :dense="dense"
       >
-        <template v-slot:before>
+        <template #before>
           <q-icon name="event" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-btn round dense flat icon="add" />
         </template>
       </q-input>

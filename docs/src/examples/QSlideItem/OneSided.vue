@@ -2,7 +2,7 @@
   <div class="q-pa-md" style="max-width: 350px">
     <q-list bordered separator>
       <q-slide-item @left="onLeft" @right="onRight">
-        <template v-slot:left>
+        <template #left>
           <q-icon name="done" />
         </template>
 
@@ -10,6 +10,7 @@
           <q-item-section avatar>
             <q-avatar>
               <img
+                alt="User avatar"
                 src="https://cdn.quasar.dev/img/avatar2.jpg"
                 draggable="false"
               />
@@ -20,7 +21,7 @@
       </q-slide-item>
 
       <q-slide-item @left="onLeft" @right="onRight">
-        <template v-slot:right>
+        <template #right>
           <q-icon name="alarm" />
         </template>
 
@@ -28,6 +29,7 @@
           <q-item-section avatar>
             <q-avatar>
               <img
+                alt="User avatar"
                 src="https://cdn.quasar.dev/img/avatar3.jpg"
                 draggable="false"
               />
@@ -42,6 +44,7 @@
           <q-item-section avatar>
             <q-avatar>
               <img
+                alt="User avatar"
                 src="https://cdn.quasar.dev/img/avatar5.jpg"
                 draggable="false"
               />

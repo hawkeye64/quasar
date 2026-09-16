@@ -24,6 +24,46 @@
         hint="Mask: #:0:0:##"
       ></q-input>
 
+      <div>Model (#8354): {{ phonePrefixed }}</div>
+      <q-input
+        filled
+        v-model="phonePrefixed"
+        label="Phone with digit prefix"
+        mask="+1 123 ### ## ##"
+        hint="Mask: +1 123 ### ## ##"
+        data-test="phone-prefixed"
+      ></q-input>
+
+      <div>Model (#15624): {{ skuPrefixed }}</div>
+      <q-input
+        filled
+        v-model="skuPrefixed"
+        label="SKU with digit-only literal prefix"
+        mask="11##"
+        hint="Mask: 11##"
+        data-test="sku-prefixed"
+      ></q-input>
+
+      <div>Model (card): {{ cardNumber }}</div>
+      <q-input
+        filled
+        v-model="cardNumber"
+        label="Card number"
+        mask="card"
+        hint="Mask: #### #### #### ####"
+        data-test="card-number"
+      ></q-input>
+
+      <div>Model (#18051): {{ zeroPrefixed }}</div>
+      <q-input
+        filled
+        v-model="zeroPrefixed"
+        label="Number with 0 literal"
+        mask="04## ### ###"
+        hint="Mask: 04## ### ###"
+        data-test="zero-prefixed"
+      ></q-input>
+
       <div>Model: {{ text2 }}</div>
       <q-input
         mask="((###) ### - ####)"
@@ -176,6 +216,10 @@ const maskedOrNot = ref(true)
 const maskedOrNotValue = ref('##/##/####')
 const text1 = ref('12/12/2023')
 const id = ref(null)
+const phonePrefixed = ref('')
+const skuPrefixed = ref('')
+const cardNumber = ref('')
+const zeroPrefixed = ref('')
 const text2 = ref('')
 const text3 = ref('')
 const text4 = ref('')

@@ -1,10 +1,14 @@
-import { computed, getCurrentInstance, h, provide, ref } from 'vue'
+import { computed, h, provide, ref, shallowRef, watch } from 'vue'
 
 import QBtn from '../btn/QBtn.js'
 import QIcon from '../icon/QIcon.js'
 
-import useFab, { useFabProps } from './use-fab.js'
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
+import useFab, { getFabBtnProps, useFabProps } from './use-fab.js'
 import useId from '../../composables/use-id/use-id.js'
+import useHover, {
+  useHoverProps
+} from '../../composables/private.use-hover/use-hover.js'
 import useModelToggle, {
   useModelToggleEmits,
   useModelToggleProps
@@ -16,6 +20,11 @@ import { fabKey } from '../../utils/private.symbols/symbols.js'
 
 const directions = ['up', 'right', 'down', 'left']
 const alignValues = ['left', 'center', 'right']
+
+// must track the .18s show transition of the .q-fab__actions children
+// (QFab.sass); deliberately ignores the stagger, which only delays the
+// actions further out and not the ones the pointer is already over
+const hoverShowDuration = 180
 
 export default /*#__PURE__*/ createComponent({
   name: 'QFab',
@@ -39,7 +48,14 @@ export default /*#__PURE__*/ createComponent({
       validator: v => directions.includes(v)
     },
 
+    ...useHoverProps,
+
     persistent: Boolean,
+
+    stagger: {
+      type: Number,
+      default: 40
+    },
 
     verticalActionsAlign: {
       type: String,
@@ -51,21 +67,48 @@ export default /*#__PURE__*/ createComponent({
   emits: useModelToggleEmits,
 
   setup(props, { slots }) {
-    const triggerRef = ref(null)
+    const triggerRef = shallowRef(null)
     const showing = ref(props.modelValue === true)
     const targetUid = useId()
 
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
-    const { formClass, labelProps } = useFab(props, showing)
+    const $q = useQuasar()
+    const { formClass, stacked, labelProps } = useFab(props, showing)
 
     const hideOnRouteChange = computed(() => !props.persistent)
 
-    const { hide, toggle } = useModelToggle({
+    const { show, hide, toggle } = useModelToggle({
       showing,
       hideOnRouteChange
     })
+
+    // when the current "show" was hover-triggered, the moment it happened
+    let hoverShownAt = 0
+
+    const { clearHoverTimer, hoverShow, hoverHide } = useHover({
+      props,
+      canShow: () => !showing.value,
+      show: evt => {
+        hoverShownAt = Date.now()
+        show(evt)
+      },
+      canHide: () => showing.value,
+      hide
+    })
+
+    // opened or closed by any means: a pending hover show/hide is now moot
+    watch(showing, clearHoverTimer)
+
+    function onTriggerClick(evt) {
+      // on real hardware the pointer reaches the trigger before any click
+      // can, so with "hover" on the actions are still animating in when a
+      // move-and-click gesture's click lands; that click must not dismiss
+      // what the very same gesture just opened
+      if (showing.value && Date.now() - hoverShownAt < hoverShowDuration) {
+        return
+      }
+
+      toggle(evt)
+    }
 
     const slotScope = computed(() => ({ opened: showing.value }))
 
@@ -83,10 +126,19 @@ export default /*#__PURE__*/ createComponent({
         ` q-fab__actions--${showing.value ? 'opened' : 'closed'}`
     )
 
+    const onEvents = computed(() =>
+      props.hover
+        ? { onPointerenter: hoverShow, onPointerleave: hoverHide }
+        : {}
+    )
+
+    // deliberately no role on the actions container: its children are
+    // plain buttons/links, which the "menu" role would render invalid
+    // (menus permit nothing but menuitem* children)
     const actionAttrs = computed(() => {
       const attrs = {
         id: targetUid.value,
-        role: 'menu'
+        style: `--q-fab-stagger: ${props.stagger}ms`
       }
 
       if (!showing.value) {
@@ -157,7 +209,8 @@ export default /*#__PURE__*/ createComponent({
       h(
         'div',
         {
-          class: classes.value
+          class: classes.value,
+          ...onEvents.value
         },
         [
           h(
@@ -165,18 +218,16 @@ export default /*#__PURE__*/ createComponent({
             {
               ref: triggerRef,
               class: formClass.value,
-              ...props,
+              ...getFabBtnProps(props),
               noWrap: true,
-              stack: props.stacked,
-              align: void 0,
-              icon: void 0,
-              label: void 0,
+              stack: stacked.value,
               noCaps: true,
               fab: true,
+              // no aria-haspopup: its value must reflect the popup's
+              // ARIA role and the actions container claims none
               'aria-expanded': showing.value ? 'true' : 'false',
-              'aria-haspopup': 'true',
               'aria-controls': targetUid.value,
-              onClick: toggle
+              onClick: onTriggerClick
             },
             getTriggerContent
           ),

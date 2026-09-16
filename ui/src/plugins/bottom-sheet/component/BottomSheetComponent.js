@@ -1,4 +1,4 @@
-import { getCurrentInstance, h, ref } from 'vue'
+import { getCurrentInstance, h, shallowRef } from 'vue'
 
 import QDialog from '../../../components/dialog/QDialog.js'
 
@@ -12,6 +12,8 @@ import QItem from '../../../components/item/QItem.js'
 import QItemSection from '../../../components/item/QItemSection.js'
 
 import { createComponent } from '../../../utils/private.create/create.js'
+import { getDismissReason } from '../../../utils/private.dialog/dismiss-reason.js'
+import useQuasar from '../../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../../composables/private.use-dark/use-dark.js'
@@ -36,9 +38,9 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { emit }) {
     const { proxy } = getCurrentInstance()
-    const isDark = useDark(props, proxy.$q)
+    const isDark = useDark(props, useQuasar())
 
-    const dialogRef = ref(null)
+    const dialogRef = shallowRef(null)
 
     function show() {
       dialogRef.value.show()
@@ -53,8 +55,8 @@ export default /*#__PURE__*/ createComponent({
       hide()
     }
 
-    function onHide() {
-      emit('hide')
+    function onHide(evt) {
+      emit('hide', getDismissReason(evt))
     }
 
     function getGrid() {
@@ -64,7 +66,7 @@ export default /*#__PURE__*/ createComponent({
         return action.label === void 0
           ? h(QSeparator, {
               class: 'col-all',
-              dark: isDark.value
+              dark: isDark()
             })
           : h(
               'div',
@@ -106,7 +108,7 @@ export default /*#__PURE__*/ createComponent({
         const img = action.avatar || action.img
 
         return action.label === void 0
-          ? h(QSeparator, { spaced: true, dark: isDark.value })
+          ? h(QSeparator, { spaced: true, dark: isDark() })
           : h(
               QItem,
               {
@@ -114,7 +116,7 @@ export default /*#__PURE__*/ createComponent({
                 style: action.style,
                 tabindex: 0,
                 clickable: true,
-                dark: isDark.value,
+                dark: isDark(),
                 onClick() {
                   onOk(action)
                 }
@@ -193,7 +195,7 @@ export default /*#__PURE__*/ createComponent({
           {
             class: [
               `q-bottom-sheet q-bottom-sheet--${props.grid ? 'grid' : 'list'}` +
-                (isDark.value ? ' q-bottom-sheet--dark q-dark' : ''),
+                (isDark() ? ' q-bottom-sheet--dark q-dark' : ''),
               props.cardClass
             ],
             style: props.cardStyle

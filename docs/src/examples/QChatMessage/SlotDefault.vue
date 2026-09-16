@@ -14,6 +14,7 @@
         <div>
           Have you seen Quasar?
           <img
+            alt="Surprised Quasar emoji"
             src="https://cdn.quasar.dev/img/discord-omq.png"
             class="my-emoticon"
           />

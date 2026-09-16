@@ -15,9 +15,8 @@ Furthermore you can [add support by yourself](/vue-components/icon#custom-mappin
 
 There are multiple types of icons in Quasar: webfont-based, svg-based and image-based. You are not bound to using only one type in your website/app.
 
-::: tip
-Related pages: [Installing Icon Libraries](/options/installing-icon-libraries) and [Quasar Icon Sets](/options/quasar-icon-sets).
-:::
+> [!TIP]
+> Related pages: [Installing Icon Libraries](/options/installing-icon-libraries) and [Quasar Icon Sets](/options/quasar-icon-sets).
 
 <DocApi file="QIcon" />
 
@@ -37,9 +36,8 @@ For `icon` properties on different Quasar components you won't have the means to
 
 ## Webfont icons
 
-::: warning
-If you are using webfont-based icons, make sure that you [installed the icon library](/options/installing-icon-libraries) that you are using, otherwise it won't show up!
-:::
+> [!WARNING]
+> If you are using webfont-based icons, make sure that you [installed the icon library](/options/installing-icon-libraries) that you are using, otherwise it won't show up!
 
 ### Webfont usage
 
@@ -109,9 +107,10 @@ For reusable, runtime-configurable variations, scope CSS custom properties to th
 
 CSS custom properties allow per-icon changes, state changes, and runtime theming. Sass variables can instead be used when you only need fixed, project-wide values at build time.
 
-::: warning SVG icon sets
-Variable font axes apply only to Material Symbols webfonts. The Material Symbols SVG exports from `@quasar/extras` contain static paths and cannot be changed with `font-variation-settings`.
-:::
+> [!WARNING]
+> **SVG icon sets**
+>
+> Variable font axes apply only to Material Symbols webfonts. The Material Symbols SVG exports from `@quasar/extras` contain static paths and cannot be changed with `font-variation-settings`.
 
 ### Naming convention
 
@@ -166,7 +165,11 @@ There are many advantages of using only svg icons in your website/app:
 - Better quality icons
 - No need for including equivalent webfonts from `@quasar/extras` or CDN.
 
-The current disadvantage is that it is more tedious to use these icons than their webfont counterpart.
+There are two disadvantages. First, it is more tedious to use these icons than their webfont
+counterpart. Second, an SVG icon is a fixed shape, so the axes of a variable icon font (like Material
+Symbols) can no longer be adjusted: the `font-variation-settings` CSS property (`'FILL'`, `'wght'`,
+`'GRAD'`, `'opsz'`) only applies to webfont icons. Pick the webfont form of an icon set when you need
+to vary fill or weight, and the SVG form when you need the smaller footprint.
 
 ### Svg usage
 
@@ -188,9 +191,8 @@ The current disadvantage is that it is more tedious to use these icons than thei
 
 Notice that we are using `:` to bind variables instead of plain values, it's important. We must make those variables available to the template. The way to do that depends on your Vue API preference:
 
-::: tip
-If you are only using svg icons (and have configured a [Quasar Icon Set](/options/quasar-icon-sets)) then you don't need the webfont equivalent in your app at all.
-:::
+> [!TIP]
+> If you are only using svg icons (and have configured a [Quasar Icon Set](/options/quasar-icon-sets)) then you don't need the webfont equivalent in your app at all.
 
 | Vendor                             | Quasar IconSet name           | Import Icons from                        | Requirements           |
 | ---------------------------------- | ----------------------------- | ---------------------------------------- | ---------------------- |
@@ -485,24 +487,46 @@ You can also make an icon point to an image URL instead of relying on any webfon
 **All icon related props of Quasar components can make use of this.**
 
 ```html
-<q-icon name="img:/logo/logo.svg" />
-<q-btn icon="img:/logo/logo.svg" ... />
-
-<!-- reference from /public: -->
-<q-icon name="img:my/path/to/some.svg" />
+<q-icon name="img:https://cdn.example.com/logo.svg" />
+<q-btn icon="img:https://cdn.example.com/logo.svg" ... />
 ```
-
-::: tip
-Remember that you can place images in your `/public` folder too and point to them. You don't always need a full URL.
-:::
 
 This is not restricted to SVG only. You can use whatever image type you want (png, jpg, ...):
 
 ```html
-<q-icon name="img:bla/bla/my.png" />
-<q-btn icon="img:bla/bla/my.jpg" ... />
-<q-input clearable clear-icon="img:bla/bla/my.gif" ... />
+<q-icon name="img:/icons/my.png" />
+<q-btn icon="img:/icons/my.jpg" ... />
+<q-input clearable clear-icon="img:/icons/my.gif" ... />
 ```
+
+### Public folder images
+
+Images placed in your `/public` folder are served as-is, so point to them with a root-relative URL (leading `/`). Avoid bare relative URLs such as `img:icons/my.svg`: the browser resolves those against the current page URL, so they break on nested routes.
+
+```html
+<!-- /public/icons/my.svg -->
+<q-icon name="img:/icons/my.svg" />
+```
+
+If your app is deployed under a sub-path, prefix the URL with `import.meta.env.BASE_URL` as explained in the [Handling Assets](/quasar-cli-vite/handling-assets#static-assets-public) page.
+
+### Bundled images
+
+The `~` and `@` prefixes that work on `<img src>` or QImg `src` do **not** work inside an icon prop. Vite (through the Vue compiler) only rewrites an attribute into an import when the whole value starts with `.`, `~` or `@`, and the `img:` prefix in front prevents that. An icon like `img:~assets/my.svg` would be requested verbatim by the browser and fail.
+
+To use an image that lives in `/src/assets` (or anywhere else Vite bundles from), import it and bind the prop:
+
+```vue
+<template>
+  <q-btn :icon="`img:${myIcon}`" />
+</template>
+
+<script setup>
+import myIcon from 'assets/my.svg'
+</script>
+```
+
+### Inline images
 
 It is also possible to inline the image (svg, png, jpeg, gif...) and dynamically change its style (svg):
 
@@ -560,6 +584,8 @@ type GlobalQuasarIconMapFn = (iconName: string) =>
 ```
 
 Mapping icons will not only affect QIcon, but also any other Quasar component that uses icons like QBtn, QInput, and more.
+
+Your `iconMapFn` must be a pure mapping: for performance reasons Quasar caches its results per function. To change mappings at runtime, assign a new function to `$q.iconMapFn` and rendered icons will pick it up — mutating state behind the already-assigned function will not, since its results are cached.
 
 #### Use case 1: Simply mapping a few icons
 
@@ -664,3 +690,11 @@ We should then add the newly created CSS file into our app:
   ```
 
 And also add "my-app-icon.woff2" and "my-app-icon.woff" files into the same folder as "my-app-icon.css" (or somewhere else, but edit the relative paths (see "src:" above) to the woff/woff2 files).
+
+## Accessibility <q-badge label="v2.25+" />
+
+Every QIcon renders with `aria-hidden="true"` — icons are treated as decorative by default, and this includes webfont ligature text (a screen reader never reads out "home"). For the rare standalone icon that carries meaning of its own, override through attributes: `aria-hidden="false"` together with `role="img"` and an `aria-label`.
+
+For ligature-based sets (Material Icons and Material Symbols), the ligature text itself is additionally wrapped in its own `aria-hidden` element, so even an icon acting as an interactive control (like the clear action of a `clearable` field, which overrides `aria-hidden` and carries `role="button"` with an `aria-label`) never exposes the raw ligature (e.g. "cancel") as content competing with its accessible name (WCAG 2.5.3). Class-based sets (FontAwesome, MDI, etc.) render no real text content, so they need — and get — no wrapper.
+
+An icon inside a button or link contributes nothing to that control's accessible name — label the control itself (e.g. `aria-label` on the QBtn) rather than the icon.

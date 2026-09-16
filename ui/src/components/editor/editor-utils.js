@@ -7,9 +7,14 @@ import QTooltip from '../tooltip/QTooltip.js'
 import QItem from '../item/QItem.js'
 import QItemSection from '../item/QItemSection.js'
 
+import { linkPlaceholder } from './editor-caret.js'
 import { prevent, stop } from '../../utils/event/event.js'
 import { hSlot } from '../../utils/private.render/render.js'
 import { shouldIgnoreKey } from '../../utils/private.keyboard/key-composition.js'
+
+// toolbar dropdowns render their menu through a portal, so it lands outside
+// of the editor element; this marks those menus as still being part of it
+export const dropdownContentClass = 'q-editor__dropdown'
 
 function run(e, btn, eVm) {
   if (btn.handler) {
@@ -23,7 +28,24 @@ function getGroup(children) {
   return h('div', { class: 'q-editor__toolbar-group' }, children)
 }
 
-function getBtn(eVm, btn, clickHandler, active = false) {
+// commands that only read the content; a "readonly" editor keeps offering
+// them, while "disable" takes the whole toolbar out of play
+const readonlySafeCmdList = ['fullscreen', 'print', 'viewsource']
+
+function isBtnDisabled(eVm, btn) {
+  if (eVm.props.disable === true) return true
+  if (eVm.props.readonly === true && !readonlySafeCmdList.includes(btn.cmd)) {
+    return true
+  }
+
+  return btn.disable
+    ? typeof btn.disable === 'function'
+      ? btn.disable(eVm)
+      : true
+    : false
+}
+
+function getBtn(eVm, btn, clickHandler, active, tabAttrs) {
   const toggled =
       active ||
       (btn.type === 'toggle'
@@ -33,7 +55,7 @@ function getBtn(eVm, btn, clickHandler, active = false) {
         : false),
     child = []
 
-  if (eVm.$q.platform.is.desktop && (btn.tip || btn.htmlTip)) {
+  if (btn.tip || btn.htmlTip) {
     const Key = btn.key
       ? h('div', [h('small', `(CTRL + ${String.fromCodePoint(btn.key)})`)])
       : null
@@ -59,13 +81,15 @@ function getBtn(eVm, btn, clickHandler, active = false) {
           ? null
           : btn.textColor || eVm.props.toolbarTextColor,
       label: btn.label,
-      'aria-label': btn.label === null ? btn.tip : void 0,
-      disable: btn.disable
-        ? typeof btn.disable === 'function'
-          ? btn.disable(eVm)
-          : true
-        : false,
+      // icon-only buttons (no label) need an accessible name
+      'aria-label':
+        btn.label === void 0 || btn.label === null ? btn.tip : void 0,
+      // a toggle's state is otherwise conveyed by color alone
+      'aria-pressed':
+        btn.type === 'toggle' ? (toggled ? 'true' : 'false') : void 0,
+      disable: isBtnDisabled(eVm, btn),
       size: 'sm',
+      ...tabAttrs,
       onClick(e) {
         clickHandler?.()
         run(e, btn, eVm)
@@ -75,7 +99,7 @@ function getBtn(eVm, btn, clickHandler, active = false) {
   )
 }
 
-function getDropdown(eVm, btn) {
+function getDropdown(eVm, btn, tabAttrs) {
   const onlyIcons = btn.list === 'only-icons'
   let label = btn.label,
     icon = btn.icon !== null ? btn.icon : void 0,
@@ -99,7 +123,7 @@ function getDropdown(eVm, btn) {
       }
       return getBtn(eVm, localBtn, closeDropdown, active)
     })
-    contentClass = eVm.toolbarBackgroundClass.value
+    contentClass = [dropdownContentClass, eVm.toolbarBackgroundClass.value]
     Items = [getGroup(Items)]
   } else {
     const activeClass =
@@ -173,7 +197,11 @@ function getDropdown(eVm, btn) {
       )
     })
 
-    contentClass = [eVm.toolbarBackgroundClass.value, inactiveClass]
+    contentClass = [
+      dropdownContentClass,
+      eVm.toolbarBackgroundClass.value,
+      inactiveClass
+    ]
   }
 
   const highlight = btn.highlight && label !== btn.label
@@ -187,12 +215,22 @@ function getDropdown(eVm, btn) {
       textColor:
         highlight && !eVm.props.toolbarPush ? null : eVm.props.toolbarTextColor,
       label: btn.fixedLabel ? btn.label : label,
+      // fixedLabel dropdowns without a label render icon-only;
+      // name them after the currently active option, if any
+      toggleAriaLabel:
+        btn.fixedLabel && (btn.label === void 0 || btn.label === null)
+          ? label
+          : void 0,
       icon: btn.fixedIcon ? (btn.icon !== null ? btn.icon : void 0) : icon,
       contentClass,
+      hover: eVm.props.dropdownHover,
+      hoverDelay: eVm.props.dropdownHoverDelay,
+      hoverHideDelay: eVm.props.dropdownHoverHideDelay,
       onShow: evt => eVm.emit('dropdownShow', evt),
       onHide: evt => eVm.emit('dropdownHide', evt),
       onBeforeShow: evt => eVm.emit('dropdownBeforeShow', evt),
-      onBeforeHide: evt => eVm.emit('dropdownBeforeHide', evt)
+      onBeforeHide: evt => eVm.emit('dropdownBeforeHide', evt),
+      ...tabAttrs
     },
     () => Items
   )
@@ -202,29 +240,67 @@ function getDropdown(eVm, btn) {
 
 export function getToolbar(eVm) {
   if (eVm.caret) {
-    return eVm.buttons.value
-      .filter(
-        f => !eVm.isViewingSource.value || f.find(fb => fb.cmd === 'viewsource')
-      )
-      .map(group =>
-        getGroup(
-          group.map(btn => {
-            if (eVm.isViewingSource.value && btn.cmd !== 'viewsource') {
-              return false
-            }
+    const skipsToken = btn =>
+      (eVm.isViewingSource.value && btn.cmd !== 'viewsource') ||
+      btn.type === 'slot'
 
-            if (btn.type === 'slot') {
-              return hSlot(eVm.slots[btn.slot])
-            }
+    const groups = eVm.buttons.value.filter(
+      f => !eVm.isViewingSource.value || f.find(fb => fb.cmd === 'viewsource')
+    )
 
-            if (btn.type === 'dropdown') {
-              return getDropdown(eVm, btn)
-            }
+    // The toolbar acts as a single Tab stop (roving tabindex): only one
+    // control keeps tabindex 0 -- the last one focused, falling back to
+    // the first enabled one. Slot tokens stay out of the scheme (they
+    // remain their own Tab stops). Flat indices follow render order.
+    const disabledList = []
+    groups.forEach(group => {
+      group.forEach(btn => {
+        if (skipsToken(btn)) return
 
-            return getBtn(eVm, btn)
-          })
+        disabledList.push(
+          btn.type === 'dropdown'
+            ? eVm.buttonProps.value.disable
+            : isBtnDisabled(eVm, btn)
         )
+      })
+    })
+
+    let tabStop = eVm.toolbarTabStop.value
+    if (
+      tabStop === null ||
+      tabStop >= disabledList.length ||
+      disabledList[tabStop]
+    ) {
+      tabStop = disabledList.indexOf(false)
+    }
+
+    let flatIndex = -1
+
+    return groups.map(group =>
+      getGroup(
+        group.map(btn => {
+          if (eVm.isViewingSource.value && btn.cmd !== 'viewsource') {
+            return false
+          }
+
+          if (btn.type === 'slot') {
+            return hSlot(eVm.slots[btn.slot])
+          }
+
+          flatIndex++
+          const tabAttrs = {
+            'data-tbi': flatIndex,
+            tabindex: flatIndex === tabStop ? 0 : -1
+          }
+
+          if (btn.type === 'dropdown') {
+            return getDropdown(eVm, btn, tabAttrs)
+          }
+
+          return getBtn(eVm, btn, void 0, false, tabAttrs)
+        })
       )
+    )
   }
 }
 
@@ -266,11 +342,29 @@ export function getLinkEditor(eVm) {
   if (eVm.caret) {
     const color = eVm.props.toolbarColor || eVm.props.toolbarTextColor
     let link = eVm.editLinkUrl.value
+
     const updateLink = () => {
+      // a blur can still reach us after the field was closed by ESCAPE
+      // or by one of the buttons; there is nothing left to commit then
+      if (eVm.editLinkUrl.value === null) return
+
       eVm.caret.restore()
 
-      if (link !== eVm.editLinkUrl.value) {
-        document.execCommand('createLink', false, link === '' ? ' ' : link)
+      const nextLink = link.trim()
+      // the href the selection carries right now -- null while it is not
+      // linked yet, so a brand new link always counts as a change
+      const currentLink = eVm.caret.getParentAttribute('href')
+
+      if (nextLink !== currentLink) {
+        if (nextLink === '') {
+          // an emptied field blanks out a link that is already there
+          if (currentLink !== null) {
+            document.execCommand('createLink', false, ' ')
+          }
+        } else if (nextLink !== linkPlaceholder) {
+          // the untouched placeholder means no URL was ever typed
+          document.execCommand('createLink', false, nextLink)
+        }
       }
 
       eVm.editLinkUrl.value = null
@@ -285,11 +379,16 @@ export function getLinkEditor(eVm) {
       h('input', {
         key: 'qedt_btm_input',
         class: 'col q-editor__link-input',
+        // the visible "URL:" text is a sibling, not a label element
+        'aria-label': eVm.$q.lang.editor.url,
         value: link,
         onInput: evt => {
           stop(evt)
           link = evt.target.value
         },
+        // leaving the field commits, the same way the rest of the editor
+        // takes an edit without asking for an explicit confirmation
+        onBlur: updateLink,
         onKeydown: evt => {
           if (shouldIgnoreKey(evt)) return
 
@@ -300,15 +399,10 @@ export function getLinkEditor(eVm) {
               return updateLink()
             }
             case 27: {
-              // ESCAPE key
+              // ESCAPE key -- nothing was applied yet, so cancelling only
+              // has to close the field and hand the selection back
               prevent(evt)
               eVm.caret.restore()
-              if (
-                !eVm.editLinkUrl.value ||
-                eVm.editLinkUrl.value === 'https://'
-              ) {
-                document.execCommand('unlink')
-              }
               eVm.editLinkUrl.value = null
               break
             }
@@ -321,6 +415,9 @@ export function getLinkEditor(eVm) {
           ...eVm.buttonProps.value,
           label: eVm.$q.lang.label.remove,
           noCaps: true,
+          // holding on to the focus keeps the field -- and so this very
+          // button -- alive long enough for the click to land on it
+          onMousedown: prevent,
           onClick: () => {
             eVm.caret.restore()
             document.execCommand('unlink')
@@ -332,6 +429,7 @@ export function getLinkEditor(eVm) {
           ...eVm.buttonProps.value,
           label: eVm.$q.lang.label.update,
           noCaps: true,
+          onMousedown: prevent,
           onClick: updateLink
         })
       ])

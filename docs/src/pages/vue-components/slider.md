@@ -16,9 +16,8 @@ Also check its “sibling”, the [QRange](/vue-components/range) component.
 
 ## Usage
 
-::: warning
-You are responsible for accommodating the space around QSlider so that the label and marker labels won't overlap the other content on your page. You can use CSS margin or padding for this purpose.
-:::
+> [!WARNING]
+> You are responsible for accommodating the space around QSlider so that the label and marker labels won't overlap the other content on your page. You can use CSS margin or padding for this purpose.
 
 ### Standard
 
@@ -28,7 +27,7 @@ You are responsible for accommodating the space around QSlider so that the label
 
 <DocExample title="Vertical orientation" file="Vertical" />
 
-### With inner min/max <q-badge label="v2.4+" />
+### With inner min/max
 
 Sometimes you need to restrict the model value to an interval inside of the track's length. For this purpose, use `inner-min` and `inner-max` props. First prop needs to be higher or equal to `min` prop while the latter needs to be lower or equal to the `max` prop.
 
@@ -62,17 +61,18 @@ The example below is better highlighting how QSlider handles label positioning s
 
 <DocExample title="Markers" file="Markers" />
 
-### Marker labels <q-badge label="v2.4+" />
+### Marker labels
 
 <DocExample title="Marker labels" file="MarkerLabels" />
 
-::: tip TIP on slots
-In order to use the marker label slots (see below), you must enable them by using the `marker-labels` prop.
-:::
+> [!TIP]
+> **TIP on slots**
+>
+> In order to use the marker label slots (see below), you must enable them by using the `marker-labels` prop.
 
 <DocExample title="Marker label slots" file="MarkerLabelSlots" />
 
-### Other customizations <q-badge label="v2.4+" />
+### Other customizations
 
 <DocExample title="Color customizations" file="SliderColoring" />
 
@@ -113,3 +113,11 @@ In order to use the marker label slots (see below), you must enable them by usin
 When dealing with a native form which has an `action` and a `method` (eg. when using Quasar with ASP.NET controllers), you need to specify the `name` property on QSlider, otherwise formData will not contain it (if it should):
 
 <DocExample title="Native form" file="NativeForm" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QSlider implements the [WAI-ARIA slider pattern](https://www.w3.org/WAI/ARIA/apg/patterns/slider/): the element that receives keyboard focus exposes `role="slider"` with `aria-valuemin`/`aria-valuemax`/`aria-valuenow` tracking the model (a `null` model reports the minimum, where its thumb sits, since the role requires a value — and `aria-valuetext` then says "No value" so it is not announced as a real selection), `aria-orientation` for the vertical mode, and `aria-disabled` / `aria-readonly` when applicable. A `label-value` (e.g. "50%") also becomes `aria-valuetext`, so screen readers announce the same formatted value sighted users see.
+
+The slider is keyboard-operable on every platform (a tablet with a keyboard attached included): the <kbd>Arrow</kbd> keys step the value (the direction follows RTL, `reverse` and `vertical`), <kbd>PageUp</kbd> / <kbd>PageDown</kbd> jump by 10 steps and <kbd>Home</kbd> / <kbd>End</kbd> go straight to the limits.
+
+There is no built-in accessible name, so a QSlider is announced without a label by default. Pass an `aria-label` attribute — attributes fall through onto the focusable `role="slider"` element (only `class`/`style` stay on the wrapping element) — or associate a visible label yourself so screen reader users know what the value controls.

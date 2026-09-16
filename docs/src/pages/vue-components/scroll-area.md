@@ -15,9 +15,8 @@ The QScrollArea component offers a neat way of customizing the scrollbars by enc
 
 The following examples are best seen on desktop as they make too little sense on a mobile device.
 
-::: tip
-You can also take a look at [Layout Drawer](/layout/drawer) to see some more examples of it in action.
-:::
+> [!TIP]
+> You can also take a look at [Layout Drawer](/layout/drawer) to see some more examples of it in action.
 
 ### Basic
 
@@ -58,3 +57,9 @@ When content changes, the scrollbar appears then disappears again. You can set a
 Below is an example of using the `@scroll` event to synchronize the scrolling between two containers.
 
 <DocExample title="Synchronized" file="Synchronized" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+The custom scrollbars and their thumbs are hidden from assistive technology — they are redundant, pointer-only controls over what remains a natively scrollable container.
+
+Whenever the content actually overflows, the scroll container becomes a Tab stop on its own, so the browser's native keyboard scrolling — arrow keys, <kbd>PageUp</kbd>/<kbd>PageDown</kbd>, <kbd>Home</kbd>/<kbd>End</kbd> — works without any setup (WCAG 2.1.1). A QScrollArea whose content fits stays out of the tab order, since there would be nothing to scroll. The `tabindex` prop still overrides both cases — pass `-1` to opt out entirely.

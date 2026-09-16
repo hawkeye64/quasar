@@ -1,4 +1,7 @@
 const days = 'یکشنبه_دوشنبه_سه‌شنبه_چهارشنبه_پنجشنبه_جمعه_شنبه'.split('_')
+const persianDigits = '۰۱۲۳۴۵۶۷۸۹'
+const formatNumber = value =>
+  value.replaceAll(/\d/g, digit => persianDigits[digit])
 const monthsShort =
   'فروردین_اردیبهشت_خرداد_تیر_مرداد_شهریور_مهر_آبان_آذر_دی_بهمن_اسفند'.split(
     '_'
@@ -8,6 +11,7 @@ export default {
   isoName: 'fa',
   nativeName: 'فارسی',
   rtl: true,
+  formatNumber,
   label: {
     clear: 'پاک‌سازی',
     ok: 'قبول',
@@ -22,6 +26,11 @@ export default {
     search: 'جستجو',
     filter: 'فیلتر',
     refresh: 'تازه‌سازی',
+    minimum: 'کمینه',
+    maximum: 'بیشینه',
+    range: 'بازه',
+    noValue: 'بدون مقدار',
+    resize: 'تغییر اندازه',
     expand: label => (label ? `"${label}" گسترش` : 'بسط دادن'),
     collapse: label => (label ? `"${label}" کوچک کردن` : 'سقوط - فروپاشی')
   },
@@ -34,7 +43,7 @@ export default {
       ),
     monthsShort,
     headerTitle: (date, model) =>
-      `${days[date.getDay()]}، ${model.day} ${monthsShort[model.month - 1]}`,
+      `${days[date.getDay()]}، ${formatNumber(String(model.day))} ${monthsShort[model.month - 1]}`,
     firstDayOfWeek: 6,
     format24h: true,
     pluralDay: 'روز',
@@ -44,7 +53,11 @@ export default {
     nextYear: 'سال دیگر',
     today: 'امروز',
     prevRangeYears: range => `قبلی ${range} سال`,
-    nextRangeYears: range => `بعد ${range} سالها`
+    nextRangeYears: range => `بعد ${range} سالها`,
+    hour: 'ساعت',
+    minute: 'دقیقه',
+    second: 'ثانیه',
+    now: 'زمان کنونی'
   },
   table: {
     noData: 'اطلاعاتی موجود نیست',
@@ -55,15 +68,41 @@ export default {
     recordsPerPage: 'رکورد در صفحه:',
     allRows: 'همه',
     pagination: (start, end, total) => start + ' - ' + end + ' از ' + total,
-    columns: 'ستون'
+    columns: 'ستون',
+    selectAllRows: 'انتخاب همه ردیف‌ها',
+    selectRow: 'انتخاب ردیف'
   },
   pagination: {
+    label: 'صفحه‌بندی',
     first: 'صفحه اول',
     prev: 'صفحه قبلی',
     next: 'صفحه بعدی',
     last: 'صفحه آخر'
   },
+  carousel: {
+    prevSlide: 'اسلاید قبلی',
+    nextSlide: 'اسلاید بعدی'
+  },
+  colorPicker: {
+    spectrum: 'طیف',
+    tune: 'تنظیم',
+    palette: 'پالت',
+    value: 'مقدار رنگ',
+    hue: 'فام',
+    alpha: 'کدری',
+    saturation: 'اشباع',
+    brightness: 'روشنایی'
+  },
+  uploader: {
+    addFiles: 'انتخاب فایل‌ها',
+    upload: 'بارگذاری فایل‌ها',
+    abort: 'لغو بارگذاری',
+    removeQueued: 'حذف فایل‌های در صف',
+    removeUploaded: 'حذف فایل‌های بارگذاری‌شده',
+    removeFile: 'حذف فایل'
+  },
   editor: {
+    toolbar: 'نوار ابزار ویرایشگر',
     url: 'آدرس',
     bold: 'کلفت',
     italic: 'کج',

@@ -1,7 +1,7 @@
 <template>
   <div class="relative-position copybtn-hover">
     <template v-if="html">
-      <div v-html="html" />
+      <div class="doc-code__html" v-html="html" />
       <DocCopyBtn />
     </template>
 
@@ -85,6 +85,12 @@ if (import.meta.env.QUASAR_CLIENT) {
   --shiki-light-bg: #f5f5f5
   --shiki-dark-bg: #002433
 
+  // the v-html wrapper sits between the card and the pre: keep the radius
+  // flowing down to the pre, whose square background would otherwise paint
+  // over the card's rounded corners
+  &__html
+    border-radius: inherit
+
   code
     display: block
     padding: 16px
@@ -123,6 +129,7 @@ if (import.meta.env.QUASAR_CLIENT) {
     position: absolute
     pointer-events: none
     user-select: none
+    -webkit-user-select: none /* Safari 16.4, older Chrome */
     top: 0
     left: -16px
     right: -16px

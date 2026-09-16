@@ -1,9 +1,10 @@
 import fs from 'node:fs'
 import { join, resolve } from 'node:path'
 import { globSync } from 'tinyglobby'
-import md from 'markdown-ast'
+import markdownIt from 'markdown-it'
 
 import { parseFrontMatter } from './md/md-parse-utils.js'
+import { sharedMdOptions } from './md/md-rules.js'
 import { capitalize, slugify } from './utils.js'
 
 const apiRE = /<DocApi .*file="([^"]+)".*\n/
@@ -30,6 +31,11 @@ const mdPagesList = globSync('**/*.md', { cwd: mdPagesDir })
 function getJsonSize(content) {
   return (content.length / 1024).toFixed(2) + 'kb'
 }
+
+// the very pipeline that renders the pages, so a fence the site treats as
+// code can never reach the index as prose. Typography stays off: smart
+// quotes would make the indexed text stop matching what a reader types.
+const mdParser = markdownIt({ ...sharedMdOptions, typographer: false })
 
 const levelName = 'l'
 
@@ -88,73 +94,41 @@ const addItem = (entries, item) => {
   )
 }
 
-const processNode = (node, prefix = '') => {
-  const text = []
-  let type = 'page-content'
+/**
+ * The prose an inline token holds. Emphasis, links and the rest are
+ * structure rather than words, so only their text survives; inline code
+ * does count as content, since a page documenting `<img>` has to stay
+ * findable by it. Raw HTML contributes nothing - it is layout, and it is
+ * what used to reach the index as searchable text.
+ */
+function inlineText(token) {
+  let out = ''
 
-  if (Array.isArray(node)) {
-    node.forEach(leaf => {
-      const data = processNode(leaf, prefix)
-      text.push(data.text)
-    })
-  } else if (node.type === 'link') {
-    const data = processNode(node.block)
-    text.push(data.text)
-  } else if (node.type === 'list' || node.type === 'quote') {
-    const data = processNode(node.block, ' ')
-    text.push(data.text)
-  } else if (
-    node.type === 'bold' ||
-    node.type === 'italic' ||
-    node.type === 'strike'
-  ) {
-    const data = processNode(node.block)
-    text.push(data.text)
-  } else if (node.type === 'title') {
-    type = 'page-link'
-    const data = processNode(node.block)
-    data.type = type
-    data.rank = parseRank(node.rank)
-    return data
-  } else if (node.type === 'image' || node.type === 'codeBlock') {
-    text.push('')
-  } else if (node.type === 'codeSpan') {
-    text.push(prefix + node.code)
-  } else if (
-    node.type === 'text' ||
-    node.type === 'break' ||
-    node.type === 'codeSpan'
-  ) {
-    text.push(prefix + node.text)
-  } else if (node.type === 'linkDef') {
-    // do nothing
-  } else {
-    // unknown/unprocessed node type
-    console.error('Unprocessed:', node)
+  for (const child of token.children || []) {
+    if (child.type === 'text' || child.type === 'code_inline') {
+      out += child.content
+    } else if (child.type === 'softbreak' || child.type === 'hardbreak') {
+      out += ' '
+    }
   }
 
-  return { text: text.join(' ').replaceAll('\n', ''), type }
+  return out
 }
 
-const processMarkdown = (syntaxTree, entries, entry) => {
+// the heading pipeline derives the rendered id from every child's raw
+// content, so the anchor has to be built from the same string
+const rawInlineText = token =>
+  (token.children || []).reduce((acc, child) => acc + child.content, '')
+
+const processMarkdown = (tokens, entries, entry) => {
   const contents = []
   let type = 'page-content'
   let parent = { ...entry }
 
   const handleAnchor = () => {
-    const joiner = type === 'page-list' ? '' : ' '
     if (contents.length !== 0) {
       const text = contents
-        .join(joiner)
-        // .replace(/\n/g, ' ')
-        .replaceAll(/<[^>]*\/>/g, '') // remove self-closing tags
-        .replaceAll('<br>', '\n')
-        .replaceAll('|', '')
-        .replaceAll('---', '')
-        .replaceAll('::: tip', '')
-        .replaceAll('::: warning', '')
-        .replaceAll('::: danger', '')
-        .replaceAll(':::', '')
+        .join(' ')
         .replaceAll(/\s\s+/g, ' ') // change multi-space to 1 space
         .trim()
 
@@ -162,11 +136,6 @@ const processMarkdown = (syntaxTree, entries, entry) => {
         // if text is empty, it's a link (ie: H2) with no
         // content, but it will be a parent (ie: to an H3)
         type = 'page-link'
-      } else if (type === 'page-list') {
-        // page-list is needed because lists have no breaks
-        // when the text is joined, we need it done with a space
-        // here, we translate back to page-content
-        type = 'page-content'
       }
 
       // handle text from previous
@@ -180,22 +149,40 @@ const processMarkdown = (syntaxTree, entries, entry) => {
     }
   }
 
-  syntaxTree.forEach(node => {
-    const val = processNode(node)
-
-    if (val.type === 'page-link') {
+  tokens.forEach((token, index) => {
+    if (token.type === 'heading_open') {
       handleAnchor()
+
+      const inline = tokens[index + 1]
+
       parent = {
         ...parent,
-        [levelName + val.rank]: val.text,
-        anchor: slugify(val.text),
-        type: val.type
+        [levelName + parseRank(Number(token.tag.slice(1)))]:
+          inlineText(inline).trim(),
+        anchor: slugify(rawInlineText(inline)),
+        type: 'page-link'
       }
-    } else {
-      contents.push(val.text)
-    }
 
-    type = val.type
+      // a heading is a place to navigate to whether or not it introduces
+      // prose, so it always opens a section of its own
+      contents.push('')
+      type = 'page-link'
+    } else if (token.type === 'inline') {
+      // the inline of a heading was consumed with it above
+      if (tokens[index - 1]?.type === 'heading_open') return
+
+      contents.push(inlineText(token))
+      type = 'page-content'
+    } else if (
+      token.type === 'fence' ||
+      token.type === 'code_block' ||
+      token.type === 'html_block'
+    ) {
+      // code and raw HTML are structure the renderer owns, so they carry
+      // no prose to search through - but a heading introducing nothing
+      // else is still an anchor worth finding, so it keeps its entry
+      contents.push('')
+    }
   })
 
   // handle last bits on the page
@@ -219,7 +206,9 @@ function processPage(page, entries) {
     keys,
     content: frontMatter.data.desc,
     type: 'page-link',
-    anchor: 'introduction'
+    // a page opting out of the title heading renders no #introduction to
+    // scroll to, so its entry has to lead to the page itself
+    anchor: frontMatter.data.heading === false ? '' : 'introduction'
   })
 
   // handle API card (deep heading)
@@ -246,11 +235,7 @@ function processPage(page, entries) {
 
   addItem(entries, entryItem)
 
-  // get markdown ast
-  const ast = md(frontMatter.content)
-
-  // process ast
-  processMarkdown(ast, entries, entryItem)
+  processMarkdown(mdParser.parse(frontMatter.content, {}), entries, entryItem)
 }
 
 // -- Begin processing

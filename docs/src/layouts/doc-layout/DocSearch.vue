@@ -11,23 +11,45 @@
     >
       <input
         class="col"
+        type="search"
         name="search"
         ref="inputRef"
         placeholder="Search Quasar v2..."
+        aria-label="Search Quasar documentation"
+        role="combobox"
+        aria-autocomplete="list"
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        :aria-expanded="popupVisible ? 'true' : 'false'"
+        :aria-controls="hasListbox ? 'doc-search-listbox' : void 0"
+        :aria-activedescendant="popupVisible ? activeId || void 0 : void 0"
         v-model="terms"
         @keydown="onKeydown"
+        @mousedown="onInputMousedown"
+        @focus="onInputFocus"
+        @mouseup="onInputMouseup"
       />
 
-      <q-icon
+      <button
+        v-if="terms.length !== 0"
         class="doc-search__icon cursor-pointer"
-        :name="icon.name"
-        size="24px"
-        @click="icon.onClick"
-      />
+        type="button"
+        aria-label="Clear search"
+        @click="resetSearch"
+      >
+        <q-icon name="clear" size="24px" />
+      </button>
+      <q-icon v-else class="doc-search__icon" name="search" size="24px" />
       <q-no-ssr v-if="keysLabel">
-        <kbd class="doc-search__kbd q-ma-none">{{ keysLabel }}</kbd>
+        <kbd class="doc-search__kbd q-ma-none" aria-hidden="true">{{
+          keysLabel
+        }}</kbd>
       </q-no-ssr>
     </div>
+
+    <div class="doc-sr-only" role="status">{{ statusMessage }}</div>
 
     <div :class="resultsClass">
       <template v-if="results">
@@ -72,12 +94,6 @@ const terms = ref('')
 const results = ref(null)
 const activeId = ref(null)
 
-const icon = computed(() =>
-  terms.value.length !== 0
-    ? { name: 'clear', onClick: resetSearch }
-    : { name: 'search', onClick: () => {} }
-)
-
 const keysLabel = computed(() =>
   $q.platform.is.desktop ? ($q.platform.is.mac ? '⌘K' : 'Ctrl+K') : null
 )
@@ -98,6 +114,15 @@ function onFocusout() {
 }
 
 const classes = computed(() => (hasFocus.value ? 'doc-search--focused' : null))
+
+const popupVisible = computed(() => hasFocus.value && results.value !== null)
+const hasListbox = computed(
+  () => results.value !== null && results.value.masterComponent === void 0
+)
+const statusMessage = computed(() =>
+  popupVisible.value ? results.value.status : ''
+)
+
 const resultsClass = computed(
   () =>
     'doc-search__results rounded-borders rounded-borders overflow-auto' +
@@ -192,7 +217,10 @@ const supportedHitTypes = ['page-content', 'page-link']
 
 function parseResults(hits) {
   if (hits.length === 0) {
-    return { masterComponent: markRaw(ResultEmpty) }
+    return {
+      masterComponent: markRaw(ResultEmpty),
+      status: 'No results found'
+    }
   }
 
   const acc = {
@@ -232,6 +260,8 @@ function parseResults(hits) {
     hit.id = id
     acc.ids.push(id)
   })
+
+  acc.status = `${acc.entries.length} result${acc.entries.length === 1 ? '' : 's'} available`
 
   return acc
 }
@@ -299,7 +329,10 @@ function onResultSuccess(response) {
 }
 
 function onResultError() {
-  results.value = { masterComponent: markRaw(ResultError) }
+  results.value = {
+    masterComponent: markRaw(ResultError),
+    status: 'Could not connect with the search service'
+  }
 }
 
 watch(terms, val => {
@@ -317,6 +350,26 @@ watch(terms, val => {
 function onClick() {
   inputRef.value.focus()
   onFocusin()
+}
+
+// focusing the field selects what it holds, so a new search can be typed
+// straight away; a click that focuses it would then land its mouseup on the
+// selection and collapse it to a caret, so that one mouseup is swallowed
+let clickFocuses = false
+
+function onInputMousedown() {
+  clickFocuses = document.activeElement !== inputRef.value
+}
+
+function onInputFocus() {
+  inputRef.value.select()
+}
+
+function onInputMouseup(e) {
+  if (clickFocuses) {
+    clickFocuses = false
+    e.preventDefault()
+  }
 }
 
 function onGlobalKeydown(e) {
@@ -353,11 +406,20 @@ body.desktop
   width: 400px
   height: 43px
 
+  // the clear control is a native <button> for accessibility
+  button.doc-search__icon
+    border: 0
+    padding: 0
+    margin: 0
+    background: none
+    color: inherit
+    line-height: 0
+
   &__field
     height: inherit
     width: inherit
     cursor: text
-    transition: box-shadow $header-quick-transition, background-color $header-quick-transition
+    transition: box-shadow $header-quick-transition
 
   input
     font-size: $font-size

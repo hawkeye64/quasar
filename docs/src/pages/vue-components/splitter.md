@@ -1,5 +1,5 @@
 ---
-title: QSplitter
+title: Splitter
 desc: The QSplitter Vue component allow containers to be split vertically and/or horizontally through a draggable separator bar.
 keys: QSplitter
 examples: QSplitter
@@ -15,9 +15,8 @@ The QSplitter component allow containers to be split vertically and/or horizonta
 
 ## Usage
 
-::: warning
-The use of the `before` and `after` slots is required.
-:::
+> [!WARNING]
+> The use of the `before` and `after` slots is required.
 
 Click and drag on the splitter separator bar to see results.
 
@@ -33,10 +32,6 @@ Click and drag on the splitter separator bar to see results.
 
 <DocExample title="Custom dragging limits (50-100)" file="Limits" />
 
-### Keyboard navigation <q-badge label="v2.25+" />
-
-QSplitter follows the [WAI-ARIA window splitter pattern](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/): the separator bar is a Tab stop exposed to assistive technology as a `separator` with the model as its value. While it has focus, the arrow keys matching the splitter's orientation (left/right, or up/down when in `horizontal` mode) move it by 1% (or 10px when `unit` is set to pixels), while <kbd>Home</kbd>/<kbd>End</kbd> jump to the model's limits. Arrow keys account for the `reverse` prop and RTL language packs, so a given key always moves the separator in the direction it points to. Pressing <kbd>Enter</kbd> collapses the model-controlled panel to its minimum limit, and pressing it again restores the previous position.
-
 ### Model units
 
 By default, the CSS `unit` used is '%' (percentage). But you can also use 'px' (pixels), as in the example below.
@@ -51,9 +46,8 @@ By default, the model is connected to the `before` slot size. But you can revers
 
 ### Adding content to separator
 
-::: tip
-If you use images as content for the separator slot, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
-:::
+> [!TIP]
+> If you use images as content for the separator slot, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
 
 <DocExample title="Adding to separator" file="SeparatorSlot" />
 
@@ -72,3 +66,13 @@ A QSplitter can be embedded in another QSplitter's `before` and/or `after` slots
 <DocExample title="Image Fun" file="ImageFun" />
 
 <DocExample title="Reactive Images" file="ReactiveImages" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+The separator bar implements the [WAI-ARIA window splitter pattern](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/): it carries `role="separator"` with an `aria-orientation` matching the splitter's direction, `aria-controls` pointing at the panel the model resizes, and `aria-valuemin`/`aria-valuemax`/`aria-valuenow` tracking the split as it moves. A disabled QSplitter exposes `aria-disabled` on the separator and removes it from the Tab order.
+
+Its accessible name defaults to the `label.resize` entry of the [Quasar Language Pack](/options/quasar-language-packs), since a separator's children are presentational in ARIA — whatever you put in the `separator` slot can never name it. Use the `separator-aria-label` prop (v2.25+) to replace that generic name with one that says which panels are being resized, which is what you want as soon as a page holds more than one splitter.
+
+### Keyboard navigation
+
+QSplitter follows the [WAI-ARIA window splitter pattern](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/): the separator bar is a Tab stop exposed to assistive technology as a `separator` with the model as its value. While it has focus, the arrow keys matching the splitter's orientation (left/right, or up/down when in `horizontal` mode) move it by 1% (or 10px when `unit` is set to pixels), while <kbd>Home</kbd>/<kbd>End</kbd> jump to the model's limits. Arrow keys account for the `reverse` prop and RTL language packs, so a given key always moves the separator in the direction it points to. Pressing <kbd>Enter</kbd> collapses the model-controlled panel to its minimum limit, and pressing it again restores the previous position.

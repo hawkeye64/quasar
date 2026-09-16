@@ -104,6 +104,12 @@ const components = [
     path: 'dialog'
   },
   {
+    name: 'Drawer',
+    description: 'The sidebar panels of your layout',
+    tag: 'navigation',
+    to: '/layout/drawer'
+  },
+  {
     name: 'Editor WYSIWYG',
     description: 'To write text and style it directly',
     tag: 'other',
@@ -222,7 +228,7 @@ const components = [
   {
     name: 'Pagination',
     description: 'To navigate content on multiple pages',
-    tag: ['navigation']
+    tag: 'navigation'
   },
   {
     name: 'Parallax',
@@ -391,6 +397,11 @@ const components = [
 
 const directives = [
   {
+    name: 'Close Popup',
+    description: 'Close the parent QDialog or QMenu on click',
+    tag: 'directive'
+  },
+  {
     name: 'Intersection',
     description: 'Handle elements coming into the view',
     tag: 'directive'
@@ -536,6 +547,11 @@ const composables = [
     tag: 'composable'
   },
   {
+    name: 'useIntersection',
+    description: 'Detect when an element enters or leaves the viewport',
+    tag: 'composable'
+  },
+  {
     name: 'useInterval',
     description: 'Similar to setInterval() but with additional features',
     tag: 'composable'
@@ -573,6 +589,11 @@ const utils = [
   {
     name: 'Date utils',
     description: 'Easily handle date objects',
+    tag: 'util'
+  },
+  {
+    name: 'Color utils',
+    description: 'Manipulate colors and app brand colors',
     tag: 'util'
   },
   {
@@ -615,15 +636,14 @@ const composableNameToKebabCase = composableName =>
   composableName.replaceAll(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
 
 export const quasarElements = [
-  ...components.map(entry => {
-    const kebab = componentNameToKebabCase(entry.name)
-    return {
-      ...entry,
-      category: 'vue-components',
-      img: `/components/${kebab}.jpg`,
-      to: `/vue-components/${entry.path || kebab}`
-    }
-  }),
+  ...components.map(entry => ({
+    ...entry,
+    category: 'vue-components',
+    // entries with an explicit `to` live outside /vue-components (layout family)
+    to:
+      entry.to ||
+      `/vue-components/${entry.path || componentNameToKebabCase(entry.name)}`
+  })),
 
   ...directives.map(entry => ({
     ...entry,
@@ -654,8 +674,23 @@ export const quasarElements = [
   description: entry.description,
   category: entry.category,
   tag: entry.tag,
-  img: entry.img,
   haystack:
     `${entry.name} ${entry.description} ${entry.short || ''}`.toLowerCase(),
   to: entry.to
 }))
+
+export const tagIcon = {
+  button: 'smart_button',
+  input: 'edit_note',
+  loading: 'hourglass_top',
+  media: 'image',
+  navigation: 'explore',
+  panel: 'web_asset',
+  scroll: 'swap_vert',
+  table: 'table_chart',
+  other: 'widgets',
+  directive: 'swap_calls',
+  plugin: 'extension',
+  composable: 'developer_mode',
+  util: 'build'
+}

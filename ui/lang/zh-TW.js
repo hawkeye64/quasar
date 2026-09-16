@@ -15,6 +15,11 @@ export default {
     search: '搜尋',
     filter: '篩選',
     refresh: '更新',
+    minimum: '最小值',
+    maximum: '最大值',
+    range: '範圍',
+    noValue: '無值',
+    resize: '調整大小',
     expand: label => (label ? `展開"${label}"` : '擴張'),
     collapse: label => (label ? `折疊"${label}"` : '坍塌')
   },
@@ -38,13 +43,17 @@ export default {
     firstDayOfWeek: 0, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: false,
     pluralDay: '日',
-    prevMonth: '上个月',
-    nextMonth: '下个月',
+    prevMonth: '上個月',
+    nextMonth: '下個月',
     prevYear: '上一年',
     nextYear: '下一年',
     today: '今天',
-    prevRangeYears: range => `以前${range}年`,
-    nextRangeYears: range => `接下来${range}年`
+    prevRangeYears: range => `前${range}年`,
+    nextRangeYears: range => `後${range}年`,
+    hour: '小時',
+    minute: '分鐘',
+    second: '秒',
+    now: '目前時間'
   },
   table: {
     noData: '沒有資料',
@@ -55,15 +64,41 @@ export default {
     allRows: '全部',
     pagination: (start, end, total) =>
       start + '〜' + end + ' 列，共 ' + total + ' 列',
-    columns: '欄位'
+    columns: '欄位',
+    selectAllRows: '選擇所有列',
+    selectRow: '選擇列'
   },
   pagination: {
+    label: '分頁',
     first: '首頁',
     prev: '上一頁',
     next: '下一頁',
     last: '最後一頁'
   },
+  carousel: {
+    prevSlide: '上一張投影片',
+    nextSlide: '下一張投影片'
+  },
+  colorPicker: {
+    spectrum: '光譜',
+    tune: '調整',
+    palette: '調色盤',
+    value: '顏色值',
+    hue: '色相',
+    alpha: '不透明度',
+    saturation: '飽和度',
+    brightness: '亮度'
+  },
+  uploader: {
+    addFiles: '選擇檔案',
+    upload: '上傳檔案',
+    abort: '中止上傳',
+    removeQueued: '移除佇列中的檔案',
+    removeUploaded: '移除已上傳的檔案',
+    removeFile: '移除檔案'
+  },
   editor: {
+    toolbar: '編輯器工具列',
     url: '網址',
     bold: '粗體',
     italic: '斜體',

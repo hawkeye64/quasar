@@ -32,9 +32,65 @@ const hasCordovaBin = hasBin('cordova')
 const fixtureMarkers = {
   // playground-*/src/pages/index/(index).vue — the index page button
   indexPageContent: 'Go to Second Page',
+  // playground-js/src/components/JsxGreeting.jsx +
+  // playground-ts/src/components/JsxGreeting.tsx, rendered on the index
+  // page: proves build.vueJsx compiled the JSX/TSX against Vue's runtime
+  jsxGreeting: 'Greetings from JSX',
   // playground-ts/src/stores/example-store.ts — rendered on the index
   // page, proving store state made it through SSR/SSG rendering
-  storeGreeting: 'Greetings from Pinia'
+  storeGreeting: 'Greetings from Pinia',
+  // playground-ts/src/stores/example-store.ts: the serialized form of the
+  // store's Map, proving non-JSON types survive state serialization
+  storeMapState: 'new Map([["ssr","map-survives-serialization"]])',
+  // playground-js/src/components/SharedStyleBadge.js +
+  // playground-ts/src/components/SharedStyleBadge.ts, rendered on both
+  // the second page and the catch-all one, so its CSS lands in a chunk
+  // shared by the two page chunks
+  sharedStyleContent: 'Styles from a shared chunk',
+  // playground-*/src/components/SharedStyleBadge.css — the only rule in it
+  sharedStyleCssRule: '.shared-style-badge',
+  // playground-*/src/pages/index/second.vue — the page's own scoped rule,
+  // which must load after the shared chunk's CSS
+  secondPageCssRule: '.second-page-style'
+}
+
+// The CSS of a chunk shared by several pages must be linked from the
+// rendered HTML: its owner module is not an SFC, so it never registers
+// itself on ssrContext.modules and can only be reached by completing the
+// page chunk's static import graph.
+// See https://github.com/quasarframework/quasar/issues/18171
+const expectSharedChunkCss = (html, clientDir, repro = '') => {
+  expect(html, repro).toContain(fixtureMarkers.sharedStyleContent)
+
+  const hrefList = [...html.matchAll(/<link\b[^>]*>/g)]
+    .filter(([tag]) => tag.includes('stylesheet'))
+    .map(([tag]) => tag.match(/href="?([^"\s>]+)"?/)?.[1])
+
+  // each stylesheet is linked once — the HTML shell already carries the
+  // entry CSS, so the render must not emit it a second time
+  expect(hrefList, repro).toEqual([...new Set(hrefList)])
+
+  const cssContentList = hrefList.map(href =>
+    readFileSync(join(clientDir, href.replace(/^\//, '')), 'utf8')
+  )
+
+  const indexOfRule = rule =>
+    cssContentList.findIndex(content => content.includes(rule))
+
+  const sharedIndex = indexOfRule(fixtureMarkers.sharedStyleCssRule)
+  expect(sharedIndex, `the shared chunk CSS is not linked${repro}`).not.toBe(-1)
+
+  // Vite's own preload helper loads a chunk's imports before the chunk's
+  // own CSS, so a page reached through client-side navigation cascades
+  // that way; a server-rendered page must not order it differently
+  const secondPageIndex = indexOfRule(fixtureMarkers.secondPageCssRule)
+  expect(secondPageIndex, `the page's own CSS is not linked${repro}`).not.toBe(
+    -1
+  )
+  expect(
+    sharedIndex,
+    `the shared chunk CSS must be linked before the page's own${repro}`
+  ).toBeLessThan(secondPageIndex)
 }
 
 // The full per-playground pipeline, driving every mode through the real
@@ -304,12 +360,29 @@ export function definePlaygroundSuite({ playgroundDir, scriptExt }) {
 
   stepTest('serves the SSR production build', async () => {
     const port = await getFreePort()
-    const html = await testSsrProdServer(join(playgroundDir, 'dist/ssr'), port)
+    const html = await testSsrProdServer(
+      join(playgroundDir, 'dist/ssr'),
+      port,
+      {
+        onReady: async origin => {
+          const response = await fetch(`${origin}/second`, {
+            headers: { accept: 'text/html' }
+          })
+          expect(response.status).toBe(200)
+
+          expectSharedChunkCss(
+            await response.text(),
+            join(playgroundDir, 'dist/ssr/client')
+          )
+        }
+      }
+    )
 
     expect(html).toMatch(/<div id="?q-app"?>/)
     // page content present in the payload proves actual server-side
     // rendering (a client-side rendered shell ships an empty q-app div)
     expect(html).toContain(fixtureMarkers.indexPageContent)
+    expect(html).toContain(fixtureMarkers.jsxGreeting)
     // preload tags are rendered by default — the no-preload-routes step
     // below asserts their absence, so pin their presence here
     expect(html).toContain('modulepreload')
@@ -318,6 +391,7 @@ export function definePlaygroundSuite({ playgroundDir, scriptExt }) {
       // the store got used during the render and its state serialized
       expect(html).toContain(fixtureMarkers.storeGreeting)
       expect(html).toContain('__INITIAL_STATE__')
+      expect(html).toContain(fixtureMarkers.storeMapState)
     } else {
       expect(html).not.toContain('__INITIAL_STATE__')
     }
@@ -432,10 +506,18 @@ export function definePlaygroundSuite({ playgroundDir, scriptExt }) {
     const indexHtml = readFileSync(indexFile, 'utf8')
     expect(indexHtml, repro).toMatch(/<div id="?q-app"?>/)
     expect(indexHtml, repro).toContain(fixtureMarkers.indexPageContent)
+    expect(indexHtml, repro).toContain(fixtureMarkers.jsxGreeting)
+
+    const secondHtml = readFileSync(
+      join(playgroundDir, 'dist/ssg/second/index.html'),
+      'utf8'
+    )
+    expectSharedChunkCss(secondHtml, join(playgroundDir, 'dist/ssg'), repro)
 
     if (hasStore) {
       // store-driven content is statically rendered too
       expect(indexHtml, repro).toContain(fixtureMarkers.storeGreeting)
+      expect(indexHtml, repro).toContain(fixtureMarkers.storeMapState)
     }
   })
 
@@ -564,32 +646,69 @@ export function definePlaygroundSuite({ playgroundDir, scriptExt }) {
     }
   )
 
-  stepTest('adds Capacitor mode non-interactively', async () => {
-    // building Capacitor requires adding a native platform (and its
-    // toolchain), so e2e coverage stops at the mode installation
-    removeModeDir('capacitor')
+  stepTest(
+    'adds Capacitor mode non-interactively, deps aliased cross-mode',
+    async () => {
+      // building Capacitor requires adding a native platform (and its
+      // toolchain), so e2e coverage stops at the mode installation
+      removeModeDir('capacitor')
 
-    const { code, output, repro } = await runQuasar(
-      [
-        'mode',
-        'add',
-        'capacitor',
-        '--app-id',
-        'org.quasar.e2e',
-        '--app-name',
-        'Quasar E2E'
-      ],
-      playgroundDir
-    )
-    expect(code, output + repro).toBe(0)
+      const { code, output, repro } = await runQuasar(
+        [
+          'mode',
+          'add',
+          'capacitor',
+          '--app-id',
+          'org.quasar.e2e',
+          '--app-name',
+          'Quasar E2E'
+        ],
+        playgroundDir
+      )
+      expect(code, output + repro).toBe(0)
 
-    const capacitorConfig = readFileSync(
-      join(playgroundDir, `src-capacitor/capacitor.config.${scriptExt}`),
-      'utf8'
-    )
-    expect(capacitorConfig, repro).toContain("appId: 'org.quasar.e2e'")
-    expect(capacitorConfig, repro).toContain("appName: 'Quasar E2E'")
-  })
+      const capacitorConfig = readFileSync(
+        join(playgroundDir, `src-capacitor/capacitor.config.${scriptExt}`),
+        'utf8'
+      )
+      expect(capacitorConfig, repro).toContain("appId: 'org.quasar.e2e'")
+      expect(capacitorConfig, repro).toContain("appName: 'Quasar E2E'")
+
+      // /src-capacitor deps must resolve from /src in EVERY mode (#17681),
+      // proven by building for a mode other than Capacitor with a boot file
+      // statically importing one; same backup/restore protocol as the
+      // config: self-heal a killed run's leftover first, remove in finally
+      const bootFile = join(
+        playgroundDir,
+        `src/boot/e2e-capacitor-deps.${scriptExt}`
+      )
+      rmSync(bootFile, { force: true })
+
+      await withModifiedConfig(
+        { from: 'boot: [],', to: "boot: ['e2e-capacitor-deps']," },
+        async () => {
+          writeFileSync(
+            bootFile,
+            // written by test/playground-suite.js Capacitor step; never committed
+            "import { defineBoot } from '#q-app'\n" +
+              "import { App } from '@capacitor/app'\n\n" +
+              'export default defineBoot(() => {\n' +
+              '  if (import.meta.env.QUASAR_CAPACITOR_MODE) {\n' +
+              '    App.getInfo()\n' +
+              '  }\n' +
+              '})\n'
+          )
+
+          try {
+            const res = await runQuasar(['build'], playgroundDir)
+            expect(res.code, res.output + res.repro).toBe(0)
+          } finally {
+            rmSync(bootFile, { force: true })
+          }
+        }
+      )
+    }
+  )
 
   stepTest(
     'adds Cordova mode non-interactively',
@@ -637,11 +756,13 @@ export function definePlaygroundSuite({ playgroundDir, scriptExt }) {
     expect(html).toMatch(/<div id="?q-app"?>/)
     // dev-mode requests are server-rendered too
     expect(html).toContain(fixtureMarkers.indexPageContent)
+    expect(html).toContain(fixtureMarkers.jsxGreeting)
     expect(html).toContain('/@vite/client')
 
     if (hasStore) {
       expect(html).toContain(fixtureMarkers.storeGreeting)
       expect(html).toContain('__INITIAL_STATE__')
+      expect(html).toContain(fixtureMarkers.storeMapState)
     }
   })
 
@@ -720,11 +841,32 @@ export function definePlaygroundSuite({ playgroundDir, scriptExt }) {
     // Warm the Electron binary first (electron >= 43 downloads it lazily
     // on first launch), so the settle window below measures the app
     // actually starting instead of the download.
-    const warmup = await run(
-      process.execPath,
-      ['node_modules/electron/install.js'],
-      join(playgroundDir, 'src-electron')
-    )
+    // Every upstream release invalidates the local binary cache, turning
+    // this into a multi-minute download that reports nothing: the
+    // downloader's progress bar is TTY-gated and a vitest worker has no
+    // TTY, so no child output can ever surface it. Without the heartbeat
+    // below the step just sits there and reads as a hung dev server.
+    // An already-cached binary exits install.js immediately, well before
+    // the first tick, so warm runs stay silent.
+    const warmupStartedAt = Date.now()
+    const warmupHeartbeat = setInterval(() => {
+      const elapsedSec = Math.round((Date.now() - warmupStartedAt) / 1000)
+      console.log(
+        `  still warming the Electron binary — ${elapsedSec}s elapsed; a new upstream release re-downloads it`
+      )
+    }, 15_000)
+
+    let warmup
+    try {
+      warmup = await run(
+        process.execPath,
+        ['node_modules/electron/install.js'],
+        join(playgroundDir, 'src-electron')
+      )
+    } finally {
+      clearInterval(warmupHeartbeat)
+    }
+
     expect(warmup.code, warmup.output + warmup.repro).toBe(0)
 
     const port = await getFreePort()

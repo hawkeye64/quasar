@@ -15,6 +15,11 @@ export default {
     search: 'সন্ধান',
     filter: 'ছাঁকনি',
     refresh: 'সতেজ',
+    minimum: 'সর্বনিম্ন',
+    maximum: 'সর্বোচ্চ',
+    range: 'পরিসর',
+    noValue: 'কোনো মান নেই',
+    resize: 'আকার পরিবর্তন করুন',
     expand: label => (label ? `"${label}" প্রসারিত করুন` : 'বিস্তৃত করা'),
     collapse: label => (label ? `"${label}" সঙ্কুচিত করুন` : 'সঙ্কুচিত')
   },
@@ -38,7 +43,11 @@ export default {
     nextYear: 'পরের বছর',
     today: 'আজ',
     prevRangeYears: range => `পূর্ববর্তী ${range} বছর`,
-    nextRangeYears: range => `পরবর্তী ${range} বছর`
+    nextRangeYears: range => `পরবর্তী ${range} বছর`,
+    hour: 'ঘণ্টা',
+    minute: 'মিনিট',
+    second: 'সেকেন্ড',
+    now: 'বর্তমান সময়'
   },
   table: {
     noData: 'কোন তথ্য নেই',
@@ -47,19 +56,45 @@ export default {
     selectedRecords: rows =>
       rows === 1
         ? '১ টি রেকর্ড নির্বাচিত'
-        : (rows === 0 ? '' : rows) + ' রেকর্ড নির্বাচিত',
+        : (rows === 0 ? 'কোনো' : rows) + ' রেকর্ড নির্বাচিত',
     recordsPerPage: 'প্রতি পৃষ্ঠায় রেকর্ড:',
     allRows: 'সব',
     pagination: (start, end, total) => start + '-' + end + ' মধ্যে ' + total,
-    columns: 'কলাম'
+    columns: 'কলাম',
+    selectAllRows: 'সব সারি নির্বাচন করুন',
+    selectRow: 'সারি নির্বাচন করুন'
   },
   pagination: {
+    label: 'পৃষ্ঠাবিন্যাস',
     first: 'প্রথম পৃষ্ঠা',
     prev: 'পূর্ববর্তী পৃষ্ঠা',
     next: 'পরবর্তী পৃষ্ঠা',
     last: 'শেষ পৃষ্ঠা'
   },
+  carousel: {
+    prevSlide: 'পূর্ববর্তী স্লাইড',
+    nextSlide: 'পরবর্তী স্লাইড'
+  },
+  colorPicker: {
+    spectrum: 'বর্ণালী',
+    tune: 'সমন্বয়',
+    palette: 'প্যালেট',
+    value: 'রঙের মান',
+    hue: 'বর্ণ',
+    alpha: 'অস্বচ্ছতা',
+    saturation: 'স্যাচুরেশন',
+    brightness: 'উজ্জ্বলতা'
+  },
+  uploader: {
+    addFiles: 'ফাইল বাছুন',
+    upload: 'ফাইল আপলোড করুন',
+    abort: 'আপলোড বাতিল করুন',
+    removeQueued: 'অপেক্ষমাণ ফাইল সরান',
+    removeUploaded: 'আপলোড করা ফাইল সরান',
+    removeFile: 'ফাইল সরান'
+  },
   editor: {
+    toolbar: 'সম্পাদকের টুলবার',
     url: 'ইউ আর এল',
     bold: 'মোটা',
     italic: 'বাঁকা',

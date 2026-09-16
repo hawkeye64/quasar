@@ -1,8 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { h } from 'vue'
 
 import { getRouter } from 'testing/runtime/router.js'
+import QBtn from '../btn/QBtn.js'
 import QPagination from './QPagination.js'
+import langEn from '../../../lang/en-US.js'
+import Lang from '../../plugins/lang/Lang.js'
 
 let activeWrapper
 
@@ -30,7 +34,7 @@ function getPageLabels(wrapper) {
 }
 
 function getActiveButton(wrapper) {
-  return wrapper.get('.q-btn[aria-current="true"]')
+  return wrapper.get('.q-btn[aria-current="page"]')
 }
 
 function getInput(wrapper) {
@@ -767,6 +771,173 @@ describe('[QPagination API]', () => {
         wrapper.vm.setByOffset(99)
 
         expect(wrapper.emitted('update:modelValue')).toStrictEqual([[10]])
+      })
+    })
+  })
+
+  describe('[Generic]', () => {
+    test('renders the page numbers in the language pack digits', () => {
+      const formatNumber = value =>
+        value.replaceAll(/\d/g, digit => 'abcdefghij'[digit])
+      const plainLabels = getPageLabels(mountPagination())
+
+      Lang.set({ ...langEn, formatNumber })
+
+      try {
+        const wrapper = mountPagination()
+
+        expect(getPageLabels(wrapper)).toEqual(plainLabels.map(formatNumber))
+        expect(getActiveButton(wrapper).attributes('aria-label')).toBe(
+          formatNumber('5')
+        )
+
+        // the input stays numeric
+        expect(
+          getInput(mountPagination({ input: true })).attributes('placeholder')
+        ).toBe('5 / 10')
+      } finally {
+        Lang.set(langEn)
+      }
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('names its navigation landmark', () => {
+      // two unnamed navigation landmarks on a page are indistinguishable
+      const wrapper = mountPagination()
+
+      expect(wrapper.attributes('role')).toBe('navigation')
+      expect(wrapper.attributes('aria-label')).toBe(
+        getLangLabel(wrapper, 'label')
+      )
+    })
+  })
+
+  describe('[Slots]', () => {
+    describe('[(slot)ellipsis]', () => {
+      const ellipsisOptions = {
+        modelValue: 10,
+        max: 20,
+        maxPages: 5,
+        boundaryNumbers: true,
+        ellipses: true
+      }
+
+      // the default ellipsis buttons navigate to the first hidden
+      // page on each side: just outside the visible middle pages
+      function getHiddenPages(wrapper) {
+        const pages = getPageLabels(wrapper).map(Number)
+        return [pages[0] - 1, pages.at(-1) + 1]
+      }
+
+      test('renders the content', () => {
+        const scopes = []
+        const wrapper = mountPagination(ellipsisOptions, {
+          slots: {
+            ellipsis: scope => {
+              scopes.push(scope)
+              return h('span', { class: 'my-ellipsis' }, scope.side)
+            }
+          }
+        })
+
+        expect(wrapper.text()).not.toContain('…')
+        expect(
+          wrapper.findAll('.my-ellipsis').map(el => el.text())
+        ).toStrictEqual(['start', 'end'])
+
+        expect(scopes).toHaveLength(2)
+        for (const scope of scopes) {
+          expect(scope).toStrictEqual({
+            side: expect.$any(['start', 'end']),
+            page: expect.any(Number),
+            btnProps: expect.any(Object),
+            onClick: expect.any(Function)
+          })
+        }
+
+        expect(scopes.map(scope => scope.page)).toStrictEqual(
+          getHiddenPages(wrapper)
+        )
+      })
+
+      test('btnProps replicate the default button without its click handler', async () => {
+        const wrapper = mountPagination(
+          { ...ellipsisOptions, 'onUpdate:modelValue': () => {} },
+          {
+            slots: {
+              ellipsis: scope =>
+                h(QBtn, { class: 'my-ellipsis', ...scope.btnProps })
+            }
+          }
+        )
+
+        const custom = wrapper.findAll('.my-ellipsis')
+        expect(custom).toHaveLength(2)
+
+        const btn = custom[0]
+        expect(btn.text()).toBe('…')
+        expect(btn.attributes('aria-label')).toBe(
+          String(getHiddenPages(wrapper)[0])
+        )
+        expect(btn.classes()).toContain('q-btn--flat')
+
+        await btn.trigger('click')
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+        await wrapper.setProps({ disable: true })
+        expect(btn.attributes('aria-disabled')).toBe('true')
+      })
+
+      test('onClick performs the default navigation', async () => {
+        const wrapper = mountPagination(
+          { ...ellipsisOptions, 'onUpdate:modelValue': () => {} },
+          {
+            slots: {
+              ellipsis: scope =>
+                h(QBtn, {
+                  class: 'my-ellipsis',
+                  ...scope.btnProps,
+                  onClick: scope.onClick
+                })
+            }
+          }
+        )
+
+        const [start, end] = wrapper.findAll('.my-ellipsis')
+
+        await start.trigger('click')
+        await end.trigger('click')
+
+        expect(wrapper.emitted('update:modelValue')).toStrictEqual(
+          getHiddenPages(wrapper).map(page => [page])
+        )
+      })
+
+      test('exposes the router target when to-fn is set', async () => {
+        const router = await getRouter('/page/:page')
+        const scopes = []
+
+        const wrapper = mountPagination(
+          { ...ellipsisOptions, toFn: page => `/page/${page}` },
+          {
+            global: { plugins: [router] },
+            slots: {
+              ellipsis: scope => {
+                scopes.push(scope)
+                return null
+              }
+            }
+          }
+        )
+
+        expect(scopes.map(scope => scope.to)).toStrictEqual(
+          getHiddenPages(wrapper).map(page => `/page/${page}`)
+        )
+        for (const scope of scopes) {
+          expect(scope.btnProps).not.toHaveProperty('to')
+          expect(scope.btnProps).not.toHaveProperty('onClick')
+        }
       })
     })
   })

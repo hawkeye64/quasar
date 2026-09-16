@@ -1,5 +1,6 @@
-import { computed, getCurrentInstance, h } from 'vue'
+import { computed, h } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -70,8 +71,8 @@ export default /*#__PURE__*/ createComponent({
   },
 
   setup(props, { slots }) {
-    const vm = getCurrentInstance()
-    const isDark = useDark(props, vm.proxy.$q)
+    const $q = useQuasar()
+    const isDark = useDark(props, $q)
 
     const style = computed(() => {
       const size =
@@ -88,7 +89,7 @@ export default /*#__PURE__*/ createComponent({
 
     const classes = computed(
       () =>
-        `q-skeleton q-skeleton--${isDark.value ? 'dark' : 'light'} q-skeleton--type-${props.type}` +
+        `q-skeleton q-skeleton--${isDark() ? 'dark' : 'light'} q-skeleton--type-${props.type}` +
         (props.animation !== 'none'
           ? ` q-skeleton--anim q-skeleton--anim-${props.animation}`
           : '') +

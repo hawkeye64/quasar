@@ -9,13 +9,15 @@ import {
   vi
 } from 'vitest'
 
-import { defineComponent, h } from 'vue'
+import { KeepAlive, defineComponent, h } from 'vue'
+import { useRoute } from 'vue-router'
 
 import QDialog from './QDialog.js'
 import useFullscreen, {
   useFullscreenProps
 } from '../../composables/private.use-fullscreen/use-fullscreen.js'
 import { getRouter } from 'testing/runtime/router.js'
+import { client } from '../../plugins/platform/Platform.js'
 import DialogWrapper from './test/DialogWrapper.vue'
 
 const FullscreenChild = defineComponent({
@@ -46,17 +48,59 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-async function triggerBackdropClick(localWrapper) {
+async function triggerBackdropPress(localWrapper) {
   await localWrapper
     .findComponent({ name: 'QPortal' })
     .find('.q-dialog__backdrop')
-    .trigger('click')
+    .trigger('mousedown')
 }
 
 async function triggerEscKey(localWrapper) {
   const portal = await localWrapper.findComponent({ name: 'QPortal' })
   await portal.trigger('keydown', { keyCode: 27 })
   await portal.trigger('keyup', { keyCode: 27 })
+}
+
+// iOS reports the soft keyboard only through the visual viewport: the
+// layout viewport (innerHeight) keeps its size, the visual one shrinks
+// and may scroll within it
+function mockIosVisualViewport() {
+  const originalIos = client.is.ios
+  const mocked = []
+
+  client.is.ios = true
+
+  const restore = () => {
+    client.is.ios = originalIos
+    mocked.forEach(key => {
+      delete window.visualViewport[key]
+    })
+  }
+
+  const setViewport = async ({ offsetTop = 0, height, scale = 1 }) => {
+    Object.entries({ offsetTop, height, scale }).forEach(([key, value]) => {
+      Object.defineProperty(window.visualViewport, key, {
+        configurable: true,
+        value
+      })
+      mocked.push(key)
+    })
+
+    window.visualViewport.dispatchEvent(new Event('resize'))
+    await flushPromises()
+  }
+
+  return { restore, setViewport }
+}
+
+async function getShownInner(props) {
+  wrapper = mount(QDialog, {
+    props: { modelValue: true, ...props },
+    slots: { default: () => 'content' }
+  })
+  await flushPromises()
+
+  return wrapper.findComponent({ name: 'QPortal' }).get('.q-dialog__inner')
 }
 
 function createFocusEl() {
@@ -169,7 +213,7 @@ describe('[QDialog API]', () => {
 
     describe('[(prop)persistent]', () => {
       test.each([
-        ['Backdrop click', triggerBackdropClick],
+        ['Backdrop press', triggerBackdropPress],
         ['ESC key', triggerEscKey]
       ])('handles %s correctly', async (_, trigger) => {
         wrapper = mount(QDialog, {
@@ -247,7 +291,7 @@ describe('[QDialog API]', () => {
         wrapper.vm.show()
         await flushPromises()
 
-        await triggerBackdropClick(wrapper)
+        await triggerBackdropPress(wrapper)
 
         await flushPromises()
         await vi.runAllTimers()
@@ -260,7 +304,7 @@ describe('[QDialog API]', () => {
         await flushPromises()
         await vi.runAllTimers()
 
-        await triggerBackdropClick(wrapper)
+        await triggerBackdropPress(wrapper)
 
         await flushPromises()
         await vi.runAllTimers()
@@ -654,7 +698,7 @@ describe('[QDialog API]', () => {
         await flushPromises()
         await vi.runAllTimers()
 
-        await triggerBackdropClick(wrapper)
+        await triggerBackdropPress(wrapper)
 
         await flushPromises()
 
@@ -668,7 +712,7 @@ describe('[QDialog API]', () => {
         await wrapper.setProps({ noShake: false })
         await flushPromises()
 
-        await triggerBackdropClick(wrapper)
+        await triggerBackdropPress(wrapper)
 
         expect(
           wrapper
@@ -870,6 +914,33 @@ describe('[QDialog API]', () => {
 
         const [evt] = eventList.hide[0]
         expect(evt).toBe(event)
+      })
+
+      test('receives the keyup event when dismissed through ESC key', async () => {
+        wrapper = mount(QDialog, {
+          props: {
+            modelValue: true,
+            'onUpdate:modelValue': val => {
+              wrapper.setProps({ modelValue: val })
+            }
+          }
+        })
+
+        await flushPromises()
+        await vi.runAllTimers()
+
+        await triggerEscKey(wrapper)
+
+        await flushPromises()
+        await vi.runAllTimers()
+
+        const eventList = wrapper.emitted()
+        expect(eventList).toHaveProperty('hide')
+        expect(eventList.hide).toHaveLength(1)
+
+        const [evt] = eventList.hide[0]
+        expect(evt.type).toBe('keyup')
+        expect(evt.keyCode).toBe(27)
       })
     })
 
@@ -1102,6 +1173,230 @@ describe('[QDialog API]', () => {
 
         expect(wrapper.vm.contentEl).toBeInstanceOf(Element)
       })
+    })
+  })
+
+  describe('[Generic]', () => {
+    test('applies dynamic class changes to the inner root element', async () => {
+      wrapper = mount(QDialog, {
+        props: { modelValue: true, class: 'my-class-a' },
+        slots: { default: () => 'content' }
+      })
+      await flushPromises()
+
+      const root = wrapper.findComponent({ name: 'QPortal' }).get('.q-dialog')
+
+      expect(root.classes()).toContain('my-class-a')
+
+      // attrs is not reactive, so the class must reach the element
+      // through the render path - a computed would go stale here
+      await wrapper.setProps({ class: 'my-class-b' })
+
+      expect(root.classes()).toContain('my-class-b')
+      expect(root.classes()).not.toContain('my-class-a')
+    })
+
+    test('ignores non-primary button presses on the backdrop', async () => {
+      wrapper = mount(QDialog)
+
+      wrapper.vm.show()
+      await flushPromises()
+
+      const portal = wrapper.findComponent({ name: 'QPortal' })
+
+      // MouseEvent.button is read-only, so trigger() cannot set it
+      const rightPress = () =>
+        portal
+          .get('.q-dialog__backdrop')
+          .element.dispatchEvent(
+            new MouseEvent('mousedown', { button: 2, bubbles: true })
+          )
+
+      rightPress()
+      await flushPromises()
+      await vi.runAllTimers()
+
+      expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(true)
+
+      await wrapper.setProps({ persistent: true })
+
+      rightPress()
+      await flushPromises()
+
+      expect(portal.get('.q-dialog__inner').classes()).not.toContain(
+        'q-animate--scale'
+      )
+      expect(wrapper.emitted()).not.toHaveProperty('shake')
+    })
+
+    describe('iOS soft keyboard', () => {
+      const KEYBOARD_HEIGHT = 300
+      const REVEAL_SCROLL = 40
+
+      test.each([
+        [
+          'standard',
+          { top: `${REVEAL_SCROLL}px`, bottom: `${KEYBOARD_HEIGHT}px` }
+        ],
+        ['left', { top: `${REVEAL_SCROLL}px`, bottom: `${KEYBOARD_HEIGHT}px` }],
+        ['top', { top: `${REVEAL_SCROLL}px`, bottom: '' }],
+        ['bottom', { top: '', bottom: `${KEYBOARD_HEIGHT}px` }]
+      ])(
+        'keeps a "%s" dialog inside the visual viewport while the keyboard is open',
+        async (position, expected) => {
+          const { restore, setViewport } = mockIosVisualViewport()
+
+          try {
+            const inner = await getShownInner({ position })
+            const visibleHeight =
+              window.innerHeight - KEYBOARD_HEIGHT - REVEAL_SCROLL
+
+            expect(inner.classes()).not.toContain('q-dialog__inner--keyboard')
+
+            // the keyboard opens and iOS scrolls the visual viewport a bit
+            await setViewport({
+              offsetTop: REVEAL_SCROLL,
+              height: visibleHeight
+            })
+
+            expect(inner.classes()).toContain('q-dialog__inner--keyboard')
+            expect(inner.element.style.top).toBe(expected.top)
+            expect(inner.element.style.bottom).toBe(expected.bottom)
+            expect(
+              inner.element.style.getPropertyValue('--q-dialog-viewport-height')
+            ).toBe(`${visibleHeight}px`)
+
+            // the keyboard closes
+            await setViewport({ height: window.innerHeight })
+
+            expect(inner.classes()).not.toContain('q-dialog__inner--keyboard')
+            expect(inner.element.style.top).toBe('')
+            expect(inner.element.style.bottom).toBe('')
+            expect(
+              inner.element.style.getPropertyValue('--q-dialog-viewport-height')
+            ).toBe('')
+          } finally {
+            restore()
+          }
+        }
+      )
+
+      test('leaves a pinch-zoomed dialog alone', async () => {
+        const { restore, setViewport } = mockIosVisualViewport()
+
+        try {
+          const inner = await getShownInner()
+
+          await setViewport({
+            offsetTop: REVEAL_SCROLL,
+            height: window.innerHeight / 2,
+            scale: 2
+          })
+
+          expect(inner.classes()).not.toContain('q-dialog__inner--keyboard')
+          expect(inner.element.style.top).toBe('')
+          expect(inner.element.style.bottom).toBe('')
+        } finally {
+          restore()
+        }
+      })
+
+      test('stops following the visual viewport once hidden and picks up an already open keyboard when shown', async () => {
+        const { restore, setViewport } = mockIosVisualViewport()
+        const removeSpy = vi.spyOn(window.visualViewport, 'removeEventListener')
+
+        try {
+          await getShownInner({ position: 'bottom' })
+
+          await wrapper.setProps({ modelValue: false })
+          await flushPromises()
+
+          for (const evt of ['scroll', 'resize']) {
+            expect(removeSpy).toHaveBeenCalledWith(
+              evt,
+              expect.any(Function),
+              expect.anything()
+            )
+          }
+
+          await setViewport({ height: window.innerHeight - KEYBOARD_HEIGHT })
+
+          await wrapper.setProps({ modelValue: true })
+          await flushPromises()
+
+          const inner = wrapper
+            .findComponent({ name: 'QPortal' })
+            .get('.q-dialog__inner')
+
+          expect(inner.classes()).toContain('q-dialog__inner--keyboard')
+          expect(inner.element.style.bottom).toBe(`${KEYBOARD_HEIGHT}px`)
+        } finally {
+          restore()
+        }
+      })
+
+      test('does not track the visual viewport off iOS', async () => {
+        const { restore, setViewport } = mockIosVisualViewport()
+        client.is.ios = false
+
+        try {
+          const inner = await getShownInner({ position: 'bottom' })
+
+          await setViewport({ height: window.innerHeight - KEYBOARD_HEIGHT })
+
+          expect(inner.classes()).not.toContain('q-dialog__inner--keyboard')
+          expect(inner.element.style.bottom).toBe('')
+        } finally {
+          restore()
+        }
+      })
+    })
+
+    test('finishes a pending hide when its keep-alive page deactivates', async () => {
+      const router = await getRouter(['/home', '/account'])
+      const onHide = vi.fn()
+      const getPortalEl = () =>
+        document.body.querySelector('[id^="q-portal--dialog"]')
+
+      const KeptAlivePage = defineComponent({
+        name: 'KeptAlivePage',
+        setup() {
+          return () => h(QDialog, { modelValue: true, onHide }, () => 'content')
+        }
+      })
+
+      const Host = defineComponent({
+        name: 'Host',
+        setup() {
+          const route = useRoute()
+
+          return () =>
+            h(KeepAlive, null, {
+              default: () => (route.path === '/home' ? h(KeptAlivePage) : null)
+            })
+        }
+      })
+
+      await router.push('/home')
+
+      wrapper = mount(Host, {
+        global: {
+          plugins: [router]
+        }
+      })
+      await flushPromises()
+      await vi.runAllTimers()
+
+      expect(getPortalEl()).not.toBe(null)
+
+      // routing away hides the dialog and deactivates the page holding it
+      // within the same tick, which cancels the hide transition's timer
+      await router.push('/account')
+      await flushPromises()
+      await vi.runAllTimers()
+
+      expect(onHide).toHaveBeenCalledTimes(1)
+      expect(getPortalEl()).toBe(null)
     })
   })
 })

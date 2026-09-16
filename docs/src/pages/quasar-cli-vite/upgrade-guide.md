@@ -3,10 +3,11 @@ title: Upgrade Guide for Quasar CLI with Vite
 desc: (@quasar/app-vite) How to upgrade Quasar CLI with Vite from older versions to the latest one.
 ---
 
-::: warning Important!
-This guide refers to upgrading a @quasar/app-vite v2 project to @quasar/app-vite v3.
-For older versions, please refer to [https://legacy-app.quasar.dev](https://legacy-app.quasar.dev).
-:::
+> [!WARNING]
+> **Important!**
+>
+> This guide refers to upgrading a @quasar/app-vite v2 project to @quasar/app-vite v3.
+> For older versions, please refer to [https://legacy-app.quasar.dev](https://legacy-app.quasar.dev).
 
 ## A note to App Extensions owners
 
@@ -20,9 +21,8 @@ api.compatibleWith(
 )
 ```
 
-::: warning
-The changes to the engine behind App Extensions will only be compatible with @quasar/app-vite v3+ going forward. You will have to drop support for @quasar/app-vite v2 and @quasar/app-webpack (any version).
-:::
+> [!WARNING]
+> The changes to the engine behind App Extensions will only be compatible with @quasar/app-vite v3+ going forward. You will have to drop support for @quasar/app-vite v2 and @quasar/app-webpack (any version).
 
 Removed `api.engine`, `api.hasVite`, `api.hasWebpack` and `api.hasLint`.
 
@@ -263,22 +263,20 @@ We've also massively upgraded the dev setup for AEs. You might want to do a top 
 
 ## Start the upgrade
 
-::: tip
-If you are unsure that you won't skip by mistake any of the recommended changes, you can scaffold a new project folder with the @quasar/app-vite v3 at any time and then easily start porting your app from there.
-<br><br>
-
-```tabs
-<<| bash PNPM |>>
-pnpm create quasar@latest
-<<| bash Yarn |>>
-yarn create quasar
-<<| bash NPM |>>
-npm init quasar@latest
-<<| bash Bun |>>
-bun create quasar@latest
-```
-
-:::
+> [!TIP]
+> If you are unsure that you won't skip by mistake any of the recommended changes, you can scaffold a new project folder with the @quasar/app-vite v3 at any time and then easily start porting your app from there.
+> <br><br>
+>
+> ```tabs
+> <<| bash PNPM |>>
+> pnpm create quasar@latest
+> <<| bash Yarn |>>
+> yarn create quasar
+> <<| bash NPM |>>
+> npm init quasar@latest
+> <<| bash Bun |>>
+> bun create quasar@latest
+> ```
 
 ### PNPM related
 
@@ -341,30 +339,30 @@ In an effort to better align with the Vue ecosystem, Quasar CLI now injects only
 | `boot/`       | Removed  | Replace code using it by `@/boot/`                                                                                      |
 | `stores/`     | Removed  | Replace code using it by `@/stores/`                                                                                    |
 
-::: tip Alternative to alias changes
-Should you want, you can inject the old aliases yourself and avoid the necessary changes above:
-<br><br>
-
-```js /quasar.config file
-import { defineConfig } from '#q-app'
-
-export default defineConfig(ctx => ({
-  build: {
-    alias: {
-      src: ctx.appPaths.srcDir,
-      app: ctx.appPaths.appDir,
-      components: ctx.appPaths.resolve.src('components'),
-      layouts: ctx.appPaths.resolve.src('layouts'),
-      pages: ctx.appPaths.resolve.src('pages'),
-      assets: ctx.appPaths.resolve.src('assets'),
-      boot: ctx.appPaths.resolve.src('boot'),
-      stores: ctx.appPaths.resolve.src('stores')
-    }
-  }
-}))
-```
-
-:::
+> [!TIP]
+> **Alternative to alias changes**
+>
+> Should you want, you can inject the old aliases yourself and avoid the necessary changes above:
+> <br><br>
+>
+> ```js /quasar.config file
+> import { defineConfig } from '#q-app'
+>
+> export default defineConfig(ctx => ({
+>   build: {
+>     alias: {
+>       src: ctx.appPaths.srcDir,
+>       app: ctx.appPaths.appDir,
+>       components: ctx.appPaths.resolve.src('components'),
+>       layouts: ctx.appPaths.resolve.src('layouts'),
+>       pages: ctx.appPaths.resolve.src('pages'),
+>       assets: ctx.appPaths.resolve.src('assets'),
+>       boot: ctx.appPaths.resolve.src('boot'),
+>       stores: ctx.appPaths.resolve.src('stores')
+>     }
+>   }
+> }))
+> ```
 
 Do a global search for `process.env` and replace with `import.meta.env`. For the Quasar supplied constants, you will need to prefix them with `QUASAR_` too. Here's a list:
 
@@ -765,7 +763,7 @@ Make sure to update your `/quasar.config` file with the newest specs in order to
 - Switched from `process.env` to the modern `import.meta.env`. [Link](/quasar-cli-vite/handling-import-meta-env)
 - /quasar.config > build > vueOptionsAPI is now `false` by default. Check other Vue 3 packages and components. If they use the `Options` API, you will need to set this to true.
 - /quasar.config > build > polyfillModulePreload (removed and now defaulting to Vite's own config for this)
-- /index.html -> new [HTML Constant Replacement](/quasar-cli-vite/handling-import-meta-env#html-constant-replacement). `<% if (process.env.X) %>` will no longer work.
+- /index.html -> new [HTML Constant Replacement](/quasar-cli-vite/handling-import-meta-env#the-index-html-file). `<% if (process.env.X) %>` will no longer work.
 - New [dotenv files support](/quasar-cli-vite/handling-import-meta-env#more-on-dotenv-files), including for the `/quasar.config` file itself. By default, Quasar CLI will only look for `.env` and `.env.local`, but you can add other files as well to support the ones with prod/dev/mode suffixes.
 - /quasar.config > `env` is now used by the new dotenv support. Dropped `build > rawDefine` as well. Use the new build > `define` & `defineEnv` instead. [Link](/quasar-cli-vite/handling-import-meta-env#adding-to-import-meta-env)
 - Boot files & preFetch > redirect() usage has changed. Need to return immediately after calling it. No longer supporting throwing an error (or returning a Promise) with the `{ url }` syntax. Directly use `redirect()` instead.
@@ -1240,9 +1238,8 @@ You may want to add a CSP meta tag in your `/index.html`. This is especially use
 </html>
 ```
 
-::: tip
-This works great with Oxlint and Oxfmt. However, the above might need a bit of tweaking when using ESLint and vite-plugin-checker.
-:::
+> [!TIP]
+> This works great with Oxlint and Oxfmt. However, the above might need a bit of tweaking when using ESLint and vite-plugin-checker.
 
 ## Final Note
 

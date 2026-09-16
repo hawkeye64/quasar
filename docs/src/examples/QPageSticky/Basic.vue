@@ -9,6 +9,7 @@
       <q-header reveal elevated>
         <q-toolbar>
           <q-btn
+            aria-label="Toggle left drawer"
             flat
             round
             dense
@@ -19,6 +20,7 @@
           <q-toolbar-title> <strong>Quasar</strong> Framework </q-toolbar-title>
 
           <q-btn
+            aria-label="Toggle right drawer"
             flat
             round
             dense
@@ -31,6 +33,7 @@
       <q-footer reveal elevated>
         <q-toolbar>
           <q-btn
+            aria-label="Toggle left drawer"
             flat
             round
             dense
@@ -41,6 +44,7 @@
           <q-toolbar-title> <strong>Quasar</strong> Framework </q-toolbar-title>
 
           <q-btn
+            aria-label="Toggle right drawer"
             flat
             round
             dense
@@ -51,6 +55,7 @@
       </q-footer>
 
       <q-drawer
+        aria-label="Left drawer"
         v-model="drawerLeft"
         :width="150"
         :breakpoint="700"
@@ -66,6 +71,7 @@
       </q-drawer>
 
       <q-drawer
+        aria-label="Right drawer"
         side="right"
         v-model="drawerRight"
         bordered
@@ -92,22 +98,52 @@
 
           <!-- place QPageSticky at end of page -->
           <q-page-sticky position="top-left" :offset="[18, 18]">
-            <q-btn round color="accent" icon="arrow_back" class="rotate-45" />
+            <q-btn
+              aria-label="Sticky top left"
+              round
+              color="accent"
+              icon="arrow_back"
+              class="rotate-45"
+            />
           </q-page-sticky>
           <q-page-sticky position="top" :offset="[0, 18]">
-            <q-btn round color="accent" icon="arrow_back" class="rotate-90" />
+            <q-btn
+              aria-label="Sticky top"
+              round
+              color="accent"
+              icon="arrow_back"
+              class="rotate-90"
+            />
           </q-page-sticky>
           <q-page-sticky position="top-right" :offset="[18, 18]">
-            <q-btn round color="accent" icon="arrow_upward" class="rotate-45" />
+            <q-btn
+              aria-label="Sticky top right"
+              round
+              color="accent"
+              icon="arrow_upward"
+              class="rotate-45"
+            />
           </q-page-sticky>
           <q-page-sticky position="right" :offset="[18, 0]">
-            <q-btn round color="accent" icon="arrow_upward" class="rotate-90" />
+            <q-btn
+              aria-label="Sticky right"
+              round
+              color="accent"
+              icon="arrow_upward"
+              class="rotate-90"
+            />
           </q-page-sticky>
           <q-page-sticky position="left" :offset="[18, 0]">
-            <q-btn round color="accent" icon="arrow_back" />
+            <q-btn
+              aria-label="Sticky left"
+              round
+              color="accent"
+              icon="arrow_back"
+            />
           </q-page-sticky>
           <q-page-sticky position="bottom-left" :offset="[18, 18]">
             <q-btn
+              aria-label="Sticky bottom left"
               round
               color="accent"
               icon="arrow_forward"
@@ -116,6 +152,7 @@
           </q-page-sticky>
           <q-page-sticky position="bottom" :offset="[0, 18]">
             <q-btn
+              aria-label="Sticky bottom"
               round
               color="accent"
               icon="arrow_forward"
@@ -124,6 +161,7 @@
           </q-page-sticky>
           <q-page-sticky position="bottom-right" :offset="[18, 18]">
             <q-btn
+              aria-label="Sticky bottom right"
               round
               color="accent"
               icon="arrow_forward"

@@ -168,12 +168,17 @@ const rows = [
     /* bg color is important for th; just specify one */
     background-color: #00b4ff
 
-  td:first-child
+  /* the tbody:not() part keeps the td rules off the hidden
+    q-virtual-scroll__padding filler rows, should you also
+    enable virtual-scroll; styling those breaks scrolling */
+  tbody:not(.q-virtual-scroll__padding) td:first-child
     background-color: #00b4ff
 
   th:first-child,
-  td:first-child
+  tbody:not(.q-virtual-scroll__padding) td:first-child
     position: sticky
     left: 0
     z-index: 1
+    /* covers any sub-pixel gap between sticky cells */
+    box-shadow: 0 -1px 0 #00b4ff
 </style>

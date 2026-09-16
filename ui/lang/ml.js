@@ -15,6 +15,11 @@ export default {
     search: 'തിരയുക',
     filter: 'അരിക്കുക',
     refresh: 'പുതുക്കുക',
+    minimum: 'കുറഞ്ഞത്',
+    maximum: 'കൂടിയത്',
+    range: 'പരിധി',
+    noValue: 'മൂല്യമില്ല',
+    resize: 'വലുപ്പം മാറ്റുക',
     expand: label => (label ? `"${label}" വികസിപ്പിക്കുക` : 'വികസിപ്പിക്കുക'),
     collapse: label => (label ? `"${label}" ചുരുക്കുക` : 'ചുരുക്കുക')
   },
@@ -35,7 +40,11 @@ export default {
     nextYear: 'അടുത്ത വർഷം',
     today: 'ഇന്നേദിവസം',
     prevRangeYears: range => `മുമ്പത്തെ ${range} വർഷം`,
-    nextRangeYears: range => `അടുത്തത് ${range} വർഷം`
+    nextRangeYears: range => `അടുത്ത ${range} വർഷം`,
+    hour: 'മണിക്കൂർ',
+    minute: 'മിനിറ്റ്',
+    second: 'സെക്കൻഡ്',
+    now: 'നിലവിലെ സമയം'
   },
   table: {
     noData: 'ഡാറ്റ ലഭ്യമല്ല',
@@ -51,15 +60,41 @@ export default {
     allRows: 'എല്ലാം',
     pagination: (start, end, total) =>
       start + '-' + end + ' മൊത്തം ' + total + ' ൽ നിന്നും',
-    columns: 'നിരകൾ'
+    columns: 'നിരകൾ',
+    selectAllRows: 'എല്ലാ വരികളും തിരഞ്ഞെടുക്കുക',
+    selectRow: 'വരി തിരഞ്ഞെടുക്കുക'
   },
   pagination: {
+    label: 'പേജ് വിഭജനം',
     first: 'ആദ്യ പേജ്',
     prev: 'മുമ്പത്തെ പേജ്',
     next: 'അടുത്ത പേജ്',
     last: 'അവസാന പേജ്'
   },
+  carousel: {
+    prevSlide: 'മുൻ സ്ലൈഡ്',
+    nextSlide: 'അടുത്ത സ്ലൈഡ്'
+  },
+  colorPicker: {
+    spectrum: 'വർണ്ണരാജി',
+    tune: 'ക്രമീകരണം',
+    palette: 'നിറപ്പലക',
+    value: 'നിറത്തിന്റെ മൂല്യം',
+    hue: 'വർണ്ണച്ഛായ',
+    alpha: 'അതാര്യത',
+    saturation: 'സാച്ചുറേഷൻ',
+    brightness: 'തെളിച്ചം'
+  },
+  uploader: {
+    addFiles: 'ഫയലുകൾ തിരഞ്ഞെടുക്കുക',
+    upload: 'ഫയലുകൾ അപ്‌ലോഡ് ചെയ്യുക',
+    abort: 'അപ്‌ലോഡ് റദ്ദാക്കുക',
+    removeQueued: 'കാത്തിരിക്കുന്ന ഫയലുകൾ നീക്കുക',
+    removeUploaded: 'അപ്‌ലോഡ് ചെയ്ത ഫയലുകൾ നീക്കുക',
+    removeFile: 'ഫയൽ നീക്കുക'
+  },
   editor: {
+    toolbar: 'എഡിറ്റർ ടൂൾബാർ',
     url: 'യുആർഎൽ',
     bold: 'ബോൾഡ്',
     italic: 'ഇറ്റാലിക്',
@@ -73,11 +108,11 @@ export default {
     toggleFullscreen: 'ഫുൾസ്ക്രീൻ ടോഗിൾ ചെയ്യുക',
     quote: 'ഉദ്ധരിക്കുക',
     left: 'ഇടത്തേക്ക്',
-    center: 'മധ്യഭാഗത്ത് ',
+    center: 'മധ്യഭാഗത്ത്',
     right: 'വലത്തേക്ക്',
     justify: 'ജസ്റ്റിഫൈ',
     print: 'പ്രിന്റ്',
-    outdent: 'ഇൻഡെൻറേഷൻ കുറയ്ക്കുക ',
+    outdent: 'ഇൻഡെൻറേഷൻ കുറയ്ക്കുക',
     indent: 'ഇൻഡെൻറേഷൻ വർദ്ധിപ്പിക്കുക',
     removeFormat: 'ഫോർമാറ്റിംഗ് നീക്കം ചെയ്യുക',
     formatting: 'ഫോർമാറ്റിംഗ്',

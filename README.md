@@ -2,15 +2,22 @@
 
 # Quasar Framework
 
-> Build high-performance Vue.js user interfaces in record time: responsive Single Page Apps, SSR Apps, SSG Apps, PWAs, browser extensions, hybrid mobile apps and Electron apps. If you want, all using the same codebase!
+> Enterprise-ready. AI-ready. The cross-platform Vue.js framework: build high-performance, accessible Single Page Apps, SSR Apps, SSG Apps, PWAs, browser extensions, hybrid mobile apps and Electron apps, all from the same codebase, with documentation and API your AI coding agent reads offline.
 
-<img src="https://img.shields.io/npm/v/quasar?label=quasar"> <img src="https://img.shields.io/npm/v/%40quasar/app-vite?label=@quasar/app-vite"> <img src="https://img.shields.io/npm/v/%40quasar/extras.svg?label=@quasar/extras"> <img src="https://img.shields.io/npm/v/%40quasar/vite-plugin.svg?label=@quasar/vite-plugin"> <img src="https://img.shields.io/npm/v/%40quasar/cli?label=@quasar/cli"> <img src="https://img.shields.io/npm/v/%40quasar/icongenie.svg?label=@quasar/icongenie">
+<img src="https://img.shields.io/npm/v/quasar?label=quasar"> <img src="https://img.shields.io/npm/v/%40quasar/app-vite?label=@quasar/app-vite"> <img src="https://img.shields.io/npm/v/%40quasar/extras.svg?label=@quasar/extras"> <img src="https://img.shields.io/npm/v/%40quasar/vite-plugin.svg?label=@quasar/vite-plugin"> <img src="https://img.shields.io/npm/v/%40quasar/cli?label=@quasar/cli"> <img src="https://img.shields.io/npm/v/%40quasar/icongenie.svg?label=@quasar/icongenie"> <img src="https://img.shields.io/npm/v/create-quasar?label=create-quasar"> <img src="https://img.shields.io/npm/v/%40quasar/mcp?label=@quasar/mcp">
 
 [![Join the chat at https://chat.quasar.dev](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://chat.quasar.dev)
 <a href="https://forum.quasar.dev" target="_blank"><img src="https://img.shields.io/badge/community-forum-brightgreen.svg"></a>
 [![https://good-labs.github.io/greater-good-affirmation/assets/images/badge.svg](https://good-labs.github.io/greater-good-affirmation/assets/images/badge.svg)](https://good-labs.github.io/greater-good-affirmation)
 
-[![Build types](https://github.com/quasarframework/quasar/actions/workflows/build-types.yml/badge.svg)](https://github.com/quasarframework/quasar/actions/workflows/build-types.yml)
+[![ui tests](https://github.com/quasarframework/quasar/actions/workflows/ui-tests.yml/badge.svg?branch=dev)](https://github.com/quasarframework/quasar/actions/workflows/ui-tests.yml)
+[![ui types](https://github.com/quasarframework/quasar/actions/workflows/ui-types.yml/badge.svg?branch=dev)](https://github.com/quasarframework/quasar/actions/workflows/ui-types.yml)
+[![app-vite tests](https://github.com/quasarframework/quasar/actions/workflows/app-vite-tests.yml/badge.svg?branch=dev)](https://github.com/quasarframework/quasar/actions/workflows/app-vite-tests.yml)
+[![cli tests](https://github.com/quasarframework/quasar/actions/workflows/cli-tests.yml/badge.svg?branch=dev)](https://github.com/quasarframework/quasar/actions/workflows/cli-tests.yml)
+[![create-quasar tests](https://github.com/quasarframework/quasar/actions/workflows/create-quasar-tests.yml/badge.svg?branch=dev)](https://github.com/quasarframework/quasar/actions/workflows/create-quasar-tests.yml)
+[![vite-plugin tests](https://github.com/quasarframework/quasar/actions/workflows/vite-plugin-tests.yml/badge.svg?branch=dev)](https://github.com/quasarframework/quasar/actions/workflows/vite-plugin-tests.yml)
+[![utils tests](https://github.com/quasarframework/quasar/actions/workflows/utils-tests.yml/badge.svg?branch=dev)](https://github.com/quasarframework/quasar/actions/workflows/utils-tests.yml)
+[![docs tests](https://github.com/quasarframework/quasar/actions/workflows/docs-tests.yml/badge.svg?branch=dev)](https://github.com/quasarframework/quasar/actions/workflows/docs-tests.yml)
 
 Please submit a PR to https://github.com/quasarframework/quasar-awesome with your website/app/Quasar tutorial/video etc. Thank you!
 

@@ -1,20 +1,33 @@
 <template>
-  <q-layout
-    class="doc-layout doc-technical"
-    view="hHh LpR fff"
-    @scroll="docStore.onPageScroll"
-  >
+  <q-layout class="doc-layout doc-technical" view="hHh LpR fff">
+    <a class="doc-skip-link" href="#doc-main-content">Skip to page content</a>
+
     <DocHeader />
 
     <q-page-container>
       <q-page :class="pageClass" key="q-page">
-        <router-view v-if="isFullscreen" key="page-fullscreen" />
-        <div v-else :class="pageContentClass" key="page-standard">
-          <div class="doc-layout__menu-container row justify-center">
+        <template v-if="isFullscreen">
+          <span id="doc-main-content" class="doc-skip-target" tabindex="-1" />
+          <router-view key="page-fullscreen" />
+        </template>
+        <div
+          v-else
+          class="doc-layout__page row no-wrap justify-start"
+          key="page-standard"
+        >
+          <div
+            class="doc-layout__menu-container row justify-center"
+            role="navigation"
+            aria-label="Main menu"
+          >
             <q-scroll-area class="doc-layout__menu q-ml-md">
               <DocPageMenu />
             </q-scroll-area>
           </div>
+          <!-- sits after the side menu, so skipping to it lands past the
+               menu rather than in front of it; every page renders one,
+               which a heading-derived target could not promise -->
+          <span id="doc-main-content" class="doc-skip-target" tabindex="-1" />
           <router-view />
         </div>
 
@@ -36,7 +49,7 @@
 
     <q-no-ssr>
       <DocDrawerMenu />
-      <DocDrawerToc />
+      <DocDrawerToc v-if="docStore.state.value.hasToc" />
     </q-no-ssr>
   </q-layout>
 </template>
@@ -59,11 +72,6 @@ const isFullscreen = computed(() => docStore.$route.meta.fullscreen === true)
 const pageClass = computed(
   () => `doc-layout__page-el--${isFullscreen.value ? 'fullscreen' : 'standard'}`
 )
-const pageContentClass = computed(
-  () =>
-    'doc-layout__page row no-wrap justify-start ' +
-    `doc-layout__page--${docStore.$route.meta.fullwidth === true ? 'fullwidth' : 'standard'}`
-)
 </script>
 
 <style lang="sass">
@@ -79,42 +87,33 @@ const pageContentClass = computed(
   &__page
     width: 100%
 
-    &--standard
-      /**
-          16px  - left menu margin
-        + 330px - left menu
-        + 1200px - page content
-        + 300px - toc menu
-       */
-      max-width: 2500px
+    /**
+        16px  - left menu margin
+      + 330px - left menu
+      + 1200px - page content
+      + 300px - toc menu
+      */
+    max-width: 2500px
 
-      .doc-page__content
+    .doc-page__content
+      width: auto
+      min-width: 0
+      flex: 10000 1 0%
+      max-width: 1200px
+
+      > div, > pre
+        margin-bottom: 22px
+
+    @media (max-width: 1845px)
+      justify-content: start
+      .doc-page__toc-container--flowing
+        display: none
+    @media (min-width: 1846px)
+      .doc-layout__menu-container
+        flex: 1 0 auto
         width: auto
         min-width: 0
-        flex: 10000 1 0%
-        max-width: 1200px
-
-        > div, > pre
-          margin-bottom: 22px
-
-      @media (max-width: 1845px)
-        justify-content: start
-        .doc-page__toc-container--flowing
-          display: none
-      @media (min-width: 1846px)
-        .doc-layout__menu-container
-          flex: 1 0 auto
-          width: auto
-          min-width: 0
-          max-width: 100%
-
-    &--fullwidth
-
-      .doc-page__content
-        width: 100%
-
-      .doc-page__toc-container
-        display: none
+        max-width: 100%
 
   &__page-el--standard
     display: flex
@@ -132,38 +131,6 @@ const pageContentClass = computed(
     .doc-page-menu
       padding: 32px 16px 32px 0 // page top padding
 
-  &__item.q-item,
-  &__item .q-item
-    letter-spacing: $letter-spacing-brand
-    border-radius: 10px
-    margin-top: 2px
-    min-height: 30px
-    padding: 0 4px 0 6px
-    color: $light-text
-    transition: none
-    &:hover
-      color: #000 !important // $header-btn-hover-color--light makes little difference
-
-    .q-item__section
-      padding-top: 2px
-      padding-bottom: 2px
-    &.q-item--dark
-      color: $dark-text
-      &:hover
-        color: $header-btn-hover-color--dark !important
-
-    .q-item__section--main ~ .q-item__section--side
-      padding-left: 4px
-
-  &__item .q-expansion-item > .q-expansion-item__container > .q-item .q-item__label
-    padding-left: 8.5px
-
-  &__item--active
-    color: $brand-primary !important
-    background: scale-color($primary, $lightness: 90%)
-    &.q-item--dark
-      background: scale-color($primary, $lightness: -50%)
-
 @media (max-width: 1300px)
   .doc-layout__menu,
   .doc-page__toc-container--flowing
@@ -173,6 +140,11 @@ const pageContentClass = computed(
     position: fixed
     left: -1000px
     top: 0
+    // off-screen is not gone: without this the menu keeps every one of its
+    // links in the tab order and in the accessibility tree, so narrow
+    // viewports tab through a sidebar nobody can see. Unlike display:none
+    // this still leaves QScrollArea a box to measure
+    visibility: hidden
 
 .doc-drawer
   // only show the shadow when the drawer is open

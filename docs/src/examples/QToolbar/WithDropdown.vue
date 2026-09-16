@@ -1,7 +1,14 @@
 <template>
   <div class="q-pa-md">
     <q-toolbar class="bg-primary text-white q-my-md shadow-2">
-      <q-btn flat round dense icon="menu" class="q-mr-sm" />
+      <q-btn
+        aria-label="Toggle drawer"
+        flat
+        round
+        dense
+        icon="menu"
+        class="q-mr-sm"
+      />
       <q-separator dark vertical inset />
       <q-btn stretch flat label="Link" />
 
@@ -10,13 +17,7 @@
       <q-btn-dropdown stretch flat label="Dropdown">
         <q-list>
           <q-item-label header>Folders</q-item-label>
-          <q-item
-            v-for="n in 3"
-            :key="`x.${n}`"
-            clickable
-            v-close-popup
-            tabindex="0"
-          >
+          <q-item v-for="n in 3" :key="`x.${n}`" clickable v-close-popup>
             <q-item-section avatar>
               <q-avatar icon="folder" color="secondary" text-color="white" />
             </q-item-section>
@@ -30,13 +31,7 @@
           </q-item>
           <q-separator inset spaced />
           <q-item-label header>Files</q-item-label>
-          <q-item
-            v-for="n in 3"
-            :key="`y.${n}`"
-            clickable
-            v-close-popup
-            tabindex="0"
-          >
+          <q-item v-for="n in 3" :key="`y.${n}`" clickable v-close-popup>
             <q-item-section avatar>
               <q-avatar icon="assignment" color="primary" text-color="white" />
             </q-item-section>

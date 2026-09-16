@@ -15,6 +15,7 @@
     font-weight: 500
     font-size: $table-th-font-size
     user-select: none
+    -webkit-user-select: none /* Safari, older Chrome */
     &.sortable
       cursor: pointer
       &:hover .q-table__sort-icon
@@ -268,8 +269,9 @@
     tr.selected td:after
       content: ''
 
-body.desktop .q-table > tbody > tr:not(.q-tr--no-hover):hover > td:not(.q-td--no-hover):before
-  content: ''
+@media (any-hover: hover)
+  .q-table > tbody > tr:not(.q-tr--no-hover):hover > td:not(.q-td--no-hover):before
+    content: ''
 
 /*
  * On dark background

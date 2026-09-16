@@ -1,4 +1,9 @@
 .q-select
+  // the value is nowrap (span.ellipsis), so without these the field grows past
+  // its parent instead of truncating -- main axis first, then the cross one (#18015)
+  min-width: 0
+  max-width: 100%
+
   &--without-input
     .q-field__control
       cursor: pointer
@@ -42,6 +47,17 @@
     > .scroll
       position: relative
       background: inherit
+
+  &__dialog-close
+    color: var(--q-primary)
+    background: transparent
+    align-self: stretch
+    border: 0
+    padding: 0 4px
+    font-size: $button-font-size
+    font-weight: $button-font-weight
+    text-decoration: none
+    cursor: pointer
 
 // addressbar always gets shown, so need to slim this down
 body.mobile:not(.native-mobile) .q-select__dialog

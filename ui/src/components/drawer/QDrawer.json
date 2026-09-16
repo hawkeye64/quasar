@@ -79,19 +79,19 @@
 
     "elevated": {
       "type": "Boolean",
-      "desc": "Adds a default shadow to the header",
+      "desc": "Adds a default shadow to the drawer",
       "category": "style"
     },
 
     "persistent": {
       "type": "Boolean",
-      "desc": "Prevents drawer from auto-closing when app's route changes; Also, an app route change won't hide it",
+      "desc": "Prevents drawer from auto-closing when app's route changes or when ESC key is pressed while in a dismissible state (below breakpoint or shown in overlay mode)",
       "category": "behavior"
     },
 
     "show-if-above": {
       "type": "Boolean",
-      "desc": "Forces drawer to be shown on screen on initial render if the layout width is above breakpoint, regardless of v-model; This is the default behavior when SSR/SSG is taken over by client on initial render",
+      "desc": "Forces drawer to be shown on screen if the layout width is above breakpoint, regardless of v-model; Applies on initial render and also whenever the layout width goes back above the breakpoint; This is the default behavior when SSR/SSG is taken over by client on initial render",
       "category": "behavior"
     },
 
@@ -125,6 +125,11 @@
   },
 
   "events": {
+    "escape-key": {
+      "addedIn": "v2.25",
+      "desc": "Emitted when ESC key is pressed while the drawer is in a dismissible state (below breakpoint or shown in overlay mode); Does not get emitted if the drawer is 'persistent'"
+    },
+
     "on-layout": {
       "desc": "Emitted when drawer toggles between occupying space on page or not",
       "params": {
@@ -161,6 +166,29 @@
           "desc": "New state"
         }
       }
+    },
+
+    "pan": {
+      "desc": "Emitted when the drawer is being panned/swiped",
+      "params": {
+        "state": {
+          "type": "Object",
+          "desc": "Contains information about the pan gesture",
+          "definition": {
+            "type": {
+              "type": "String",
+              "desc": "Type of pan gesture",
+              "values": ["'open'", "'close'"]
+            },
+            "stage": {
+              "type": "String",
+              "desc": "Stage of the pan gesture",
+              "values": ["'start'", "'end'", "'cancel'"]
+            }
+          }
+        }
+      },
+      "addedIn": "v2.32"
     }
   }
 }

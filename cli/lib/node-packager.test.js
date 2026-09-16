@@ -65,6 +65,13 @@ describe('[node-packager.js]', () => {
       expect(npm.getInstallParams('development')).toEqual(['install'])
     })
 
+    test('pnpm opts out of failing over unapproved build scripts', () => {
+      // pnpm >= 11 fails the command over unapproved build scripts anywhere
+      // in the tree, so every pnpm command opts out of that
+      expect(pnpm.extraEnv).toEqual({ PNPM_CONFIG_STRICT_DEP_BUILDS: 'false' })
+      expect(npm.extraEnv).toEqual({})
+    })
+
     test('build the add/remove package arguments', () => {
       expect(pnpm.getInstallPackageParams(['quasar'], false)).toEqual([
         'add',

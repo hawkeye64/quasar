@@ -1,11 +1,11 @@
 import {
   computed,
-  getCurrentInstance,
   h,
   onUnmounted,
   provide,
   reactive,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
@@ -14,8 +14,14 @@ import { isRuntimeSsrPreHydration } from '../../plugins/platform/Platform.js'
 import QScrollObserver from '../scroll-observer/QScrollObserver.js'
 import QResizeObserver from '../resize-observer/QResizeObserver.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
+
 import { createComponent } from '../../utils/private.create/create.js'
 import { getScrollbarWidth } from '../../utils/scroll/scroll.js'
+import {
+  addPreventScrollReleaseListener,
+  removePreventScrollReleaseListener
+} from '../../utils/scroll/prevent-scroll.js'
 import { hMergeSlot } from '../../utils/private.render/render.js'
 import { layoutKey } from '../../utils/private.symbols/symbols.js'
 
@@ -38,11 +44,9 @@ export default /*#__PURE__*/ createComponent({
   },
 
   setup(props, { slots, emit }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
+    const $q = useQuasar()
 
-    const rootRef = ref(null)
+    const rootRef = shallowRef(null)
 
     // page related
     const height = ref($q.screen.height)
@@ -83,19 +87,32 @@ export default /*#__PURE__*/ createComponent({
         : null
     )
 
-    function onPageScroll(data) {
-      if (props.container || !document.qScrollPrevented) {
-        const info = {
-          position: data.position.top,
-          direction: data.direction,
-          directionChanged: data.directionChanged,
-          inflectionPoint: data.inflectionPoint.top,
-          delta: data.delta.top
-        }
+    let suppressedScroll = null
 
-        scroll.value = info
-        if (props.onScroll !== void 0) emit('scroll', info)
+    function onPageScroll(data) {
+      const info = {
+        position: data.position.top,
+        direction: data.direction,
+        directionChanged: data.directionChanged,
+        inflectionPoint: data.inflectionPoint.top,
+        delta: data.delta.top
       }
+
+      if (props.container || !document.qScrollPrevented) {
+        suppressedScroll = null
+        applyPageScroll(info)
+      } else {
+        // scrolls under the lock stay invisible: the pinned (iOS) lock's
+        // own synthetic scroll-to-top (#7012) or an app navigation's
+        // scroll -- buffered, and applied only if the lock releases
+        // without restoring the position (#12994)
+        suppressedScroll = info
+      }
+    }
+
+    function applyPageScroll(info) {
+      scroll.value = info
+      if (props.onScroll !== void 0) emit('scroll', info)
     }
 
     function onPageResize(data) {
@@ -148,7 +165,12 @@ export default /*#__PURE__*/ createComponent({
       height,
       containerHeight,
       scrollbarWidth,
-      totalWidth: computed(() => width.value + scrollbarWidth.value),
+      // a standard layout is as wide as the window, which a page
+      // scrollbar never changes; a containerized one is as wide as its
+      // page plus its own scrollbar (#5606, #15506)
+      totalWidth: computed(() =>
+        props.container ? width.value + scrollbarWidth.value : $q.screen.width
+      ),
 
       rows: computed(() => {
         const rows = props.view.toLowerCase().split(' ')
@@ -186,11 +208,29 @@ export default /*#__PURE__*/ createComponent({
 
     provide(layoutKey, $layout)
 
+    if (!__QUASAR_SSR_SERVER__) {
+      const onScrollLockRelease = () => {
+        if (suppressedScroll !== null) {
+          const info = suppressedScroll
+          suppressedScroll = null
+          applyPageScroll(info)
+        }
+      }
+
+      addPreventScrollReleaseListener(onScrollLockRelease)
+
+      onUnmounted(() => {
+        removePreventScrollReleaseListener(onScrollLockRelease)
+      })
+    }
+
     // prevent scrollbar flicker while resizing window height
     // if no page scrollbar is already present
     if (!__QUASAR_SSR_SERVER__ && getScrollbarWidth() > 0) {
       let timer = null
-      const el = document.body
+      // the class must sit on the root element: scrollbar-width reaches the
+      // viewport scrollbar only from there, never from body (#17122)
+      const el = document.documentElement
 
       const restoreScrollbar = () => {
         timer = null

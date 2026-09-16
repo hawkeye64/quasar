@@ -15,16 +15,14 @@ The QCarousel component allows you to display more information with less real es
 
 ## Usage
 
-::: tip
-If the QCarouselSlide content also has images and you want to use swipe actions to navigate, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
-:::
+> [!TIP]
+> If the QCarouselSlide content also has images and you want to use swipe actions to navigate, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
 
-::: danger Keep Alive
-
-- Please take notice of the Boolean `keep-alive` prop for QCarousel, if you need this behavior. Do NOT use Vue's native `<keep-alive>` component over QCarouselSlide.
-- Should you need the `keep-alive-include` or `keep-alive-exclude` props then the QCarouselSlide `name`s must be valid Vue component names (no spaces allowed, don't start with a number etc).
-
-:::
+> [!CAUTION]
+> **Keep Alive**
+>
+> - Please take notice of the Boolean `keep-alive` prop for QCarousel, if you need this behavior. Do NOT use Vue's native `<keep-alive>` component over QCarouselSlide.
+> - Should you need the `keep-alive-include` or `keep-alive-exclude` props then the QCarouselSlide `name`s must be valid Vue component names (no spaces allowed, don't start with a number etc).
 
 ### Basic
 
@@ -61,11 +59,17 @@ For a full list of properties of the `navigation-icon` slot, please consult the 
 
 <DocExample title="Custom navigation" file="CustomNavigation" />
 
-### Keyboard navigation <q-badge label="v2.25+" />
+### Accessibility <q-badge label="v2.25+" />
+
+The navigation buttons (or thumbnails) render as a [`tablist`](https://www.w3.org/TR/wai-aria-1.2/#tablist) with `aria-orientation` matching the carousel direction; each of them is a `tab` with a roving tabindex, `aria-selected` and its slide's `name` as accessible name, while each slide is a `tabpanel`. The previous/next arrows are buttons with localized accessible names from the [Quasar Language Pack](/options/quasar-language-packs).
+
+Two limits to design around: a swipe-only carousel — no `arrows` and no `navigation`/`thumbnails` — offers no keyboard way at all to change slides, so always enable at least one of them. And `autoplay` does not pause on hover or focus, so when using it provide a pause control (e.g. a button toggling the `autoplay` prop) — [WCAG 2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html) requires a way to stop the movement.
+
+#### Keyboard navigation
 
 The navigation buttons (and the thumbnails, when using the `thumbnails` prop) follow the [WAI-ARIA carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/) with a tabbed interface: they form a single Tab stop, while the arrow keys move focus within them and also select the newly focused slide, wrapping around at either end. Horizontal carousels use <kbd>Arrow Left</kbd> and <kbd>Arrow Right</kbd> (reversed in RTL mode); vertical ones use <kbd>Arrow Up</kbd> and <kbd>Arrow Down</kbd>. <kbd>Home</kbd> or <kbd>End</kbd> jumps to the first or last slide.
 
-Each navigation element gets its slide's `name` as the accessible label — pick meaningful slide names, or supply your own labels through the `navigation-icon` slot (spread its `btnProps`, which include the ARIA attributes, then override what you need).
+Each navigation element gets its slide's `name` as the accessible label — pick meaningful slide names, or supply your own labels through the `navigation-icon` slot (spread its `btnProps`, which include the ARIA attributes, then override what you need). The previous/next arrows (`arrows` prop) carry localized accessible names from the [Quasar Language Pack](/options/quasar-language-packs) (`carousel.prevSlide` / `carousel.nextSlide`).
 
 ### Auto padding
 
@@ -87,9 +91,8 @@ In the example below there are thumbnails being generated automatically. Thumbna
 
 <DocExample title="Thumbnails" file="Thumbnails" />
 
-::: tip
-Don't use the property `navigation` along with `thumbnails` as the first supercedes the latter so the thumbnails will not be displayed.
-:::
+> [!TIP]
+> Don't use the property `navigation` along with `thumbnails` as the first supercedes the latter so the thumbnails will not be displayed.
 
 ### Infinite and autoplay
 

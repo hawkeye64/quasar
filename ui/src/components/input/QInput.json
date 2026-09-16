@@ -19,8 +19,8 @@
 
     "model-modifiers": {
       "type": "Object",
-      "desc": "Modifiers supplied by Vue for the component's v-model binding",
-      "examples": ["{ trim: true }"],
+      "desc": "Modifiers supplied by Vue for the component's v-model binding; 'lazy' defers the model update until the change event/blur, while 'trim' and 'number' are applied by Vue itself",
+      "examples": ["{ trim: true }", "{ lazy: true }"],
       "internal": true
     },
 
@@ -59,9 +59,7 @@
     },
 
     "maxlength": {
-      "type": ["String", "Number"],
-      "desc": "Specify a max length of model",
-      "category": "model"
+      "extends": "maxlength"
     },
 
     "autogrow": {
@@ -71,26 +69,15 @@
     },
 
     "input-class": {
-      "type": ["String", "Array", "Object"],
-      "tsType": "VueClassProp",
-      "desc": "Class definitions to be attributed to the underlying input tag",
-      "examples": ["'my-special-class'", "{ 'my-special-class': true }"],
-      "category": "style"
+      "extends": "input-class"
     },
 
     "input-style": {
-      "type": ["String", "Array", "Object"],
-      "tsType": "VueStyleProp",
-      "desc": "Style definitions to be attributed to the underlying input tag",
-      "examples": [
-        "'background-color: #ff0000'",
-        "{ backgroundColor: '#ff0000' }"
-      ],
-      "category": "style"
+      "extends": "input-style"
     },
 
     "name": {
-      "desc": "Used to specify the name of the control; Useful if dealing with forms; If not specified, it takes the value of 'for' prop, if it exists"
+      "extends": "field-name"
     }
   },
 
@@ -140,8 +127,7 @@
     "nativeEl": {
       "type": "Element",
       "tsType": "QInputNativeElement",
-      "desc": "The native input/textarea DOM Element",
-      "addedIn": "v2.10.1"
+      "desc": "The native input/textarea DOM Element"
     }
   }
 }

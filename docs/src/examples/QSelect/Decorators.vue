@@ -23,7 +23,7 @@
         :dense="dense"
         :options-dense="denseOpts"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="event" />
         </template>
       </q-select>
@@ -35,9 +35,12 @@
         :dense="dense"
         :options-dense="denseOpts"
       >
-        <template v-slot:append>
+        <template #append>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+            <img
+              alt="Quasar logo"
+              src="https://cdn.quasar.dev/logo-v2/svg/logo.svg"
+            />
           </q-avatar>
         </template>
       </q-select>
@@ -52,10 +55,10 @@
         :dense="dense"
         :options-dense="denseOpts"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="place" @click.stop.prevent />
         </template>
-        <template v-slot:append>
+        <template #append>
           <q-icon
             name="close"
             @click.stop.prevent="model = ''"
@@ -63,7 +66,7 @@
           />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-select>
 
       <q-select
@@ -78,11 +81,11 @@
         :dense="dense"
         :options-dense="denseOpts"
       >
-        <template v-slot:before>
+        <template #before>
           <q-icon name="flight_takeoff" />
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon
             v-if="model !== ''"
             name="close"
@@ -92,7 +95,7 @@
           <q-icon name="search" @click.stop.prevent />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-select>
 
       <q-select
@@ -106,13 +109,16 @@
         :dense="dense"
         :options-dense="denseOpts"
       >
-        <template v-slot:before>
+        <template #before>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/img/avatar5.jpg" />
+            <img
+              alt="User avatar"
+              src="https://cdn.quasar.dev/img/avatar5.jpg"
+            />
           </q-avatar>
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon
             v-if="model !== ''"
             name="close"
@@ -122,9 +128,9 @@
           <q-icon name="schedule" @click.stop.prevent />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
 
-        <template v-slot:after>
+        <template #after>
           <q-btn round dense flat icon="send" />
         </template>
       </q-select>
@@ -140,13 +146,13 @@
         :dense="dense"
         :options-dense="denseOpts"
       >
-        <template v-slot:before>
+        <template #before>
           <q-icon name="event" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-btn round dense flat icon="add" @click.stop.prevent />
         </template>
       </q-select>

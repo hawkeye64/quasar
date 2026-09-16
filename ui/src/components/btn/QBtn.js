@@ -4,7 +4,7 @@ import {
   getCurrentInstance,
   h,
   onBeforeUnmount,
-  ref,
+  shallowRef,
   withDirectives
 } from 'vue'
 
@@ -13,6 +13,7 @@ import QSpinner from '../spinner/QSpinner.js'
 
 import Ripple from '../../directives/ripple/Ripple.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useBtn, { useBtnProps } from './use-btn.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
@@ -52,6 +53,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
+    const $q = useQuasar()
 
     const {
       classes,
@@ -64,8 +66,8 @@ export default /*#__PURE__*/ createComponent({
       isActionable
     } = useBtn(props)
 
-    const rootRef = ref(null)
-    const blurTargetRef = ref(null)
+    const rootRef = shallowRef(null)
+    const blurTargetRef = shallowRef(null)
 
     let localTouchTargetEl = null,
       avoidMouseRipple,
@@ -115,7 +117,7 @@ export default /*#__PURE__*/ createComponent({
           onMousedown
         }
 
-        if (proxy.$q.platform.has.touch) {
+        if ($q.platform.has.touch) {
           const suffix = props.onTouchstart !== void 0 ? '' : 'Passive'
 
           acc[`onTouchstart${suffix}`] = onTouchstart
@@ -258,9 +260,6 @@ export default /*#__PURE__*/ createComponent({
     function onPressEnd(e) {
       // is it already destroyed?
       if (rootRef.value === null) return
-
-      // needed for IE (because it emits blur when focusing button from focus helper)
-      if (e?.type === 'blur' && document.activeElement === rootRef.value) return
 
       if (e?.type === 'keyup') {
         if (keyboardTarget === rootRef.value && isKeyCode(e, [13, 32])) {

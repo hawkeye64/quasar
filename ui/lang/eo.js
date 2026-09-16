@@ -15,6 +15,11 @@ export default {
     search: 'Serĉi',
     filter: 'Filtri',
     refresh: 'Reŝargi',
+    minimum: 'Minimumo',
+    maximum: 'Maksimumo',
+    range: 'Intervalo',
+    noValue: 'Neniu valoro',
+    resize: 'Regrandigi',
     expand: label => (label ? `Vastigi "${label}"` : 'Vastigi'),
     collapse: label => (label ? `Kolapsi "${label}"` : 'Kolapso')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Antaŭa jaro',
     nextYear: 'Venontjare',
     today: 'Hodiaŭ',
-    prevRangeYears: range => `Antaŭ ${range} jaroj`,
-    nextRangeYears: range => `Post ${range} jaroj`
+    prevRangeYears: range => `Antaŭaj ${range} jaroj`,
+    nextRangeYears: range => `Venontaj ${range} jaroj`,
+    hour: 'Horo',
+    minute: 'Minuto',
+    second: 'Sekundo',
+    now: 'Nuna tempo'
   },
   table: {
     noData: 'Neniu datumo afiŝenda',
@@ -51,15 +60,41 @@ export default {
     recordsPerPage: 'Linioj po paĝoj:',
     allRows: 'Ĉiuj',
     pagination: (start, end, total) => start + '-' + end + ' el ' + total,
-    columns: 'Kolumnoj'
+    columns: 'Kolumnoj',
+    selectAllRows: 'Elekti ĉiujn liniojn',
+    selectRow: 'Elekti linion'
   },
   pagination: {
+    label: 'Paĝigo',
     first: 'Unua paĝo',
     prev: 'Antaŭa paĝo',
     next: 'Sekva paĝo',
     last: 'Lasta paĝo'
   },
+  carousel: {
+    prevSlide: 'Antaŭa lumbildo',
+    nextSlide: 'Sekva lumbildo'
+  },
+  colorPicker: {
+    spectrum: 'Spektro',
+    tune: 'Agordo',
+    palette: 'Paletro',
+    value: 'Kolora valoro',
+    hue: 'Nuanco',
+    alpha: 'Maldiafaneco',
+    saturation: 'Saturiĝo',
+    brightness: 'Heleco'
+  },
+  uploader: {
+    addFiles: 'Elekti dosierojn',
+    upload: 'Alŝuti dosierojn',
+    abort: 'Nuligi alŝuton',
+    removeQueued: 'Forigi atendantajn dosierojn',
+    removeUploaded: 'Forigi alŝutitajn dosierojn',
+    removeFile: 'Forigi dosieron'
+  },
   editor: {
+    toolbar: 'Ilobreto de la redaktilo',
     url: 'URL',
     bold: 'Grasa',
     italic: 'Kursiva',

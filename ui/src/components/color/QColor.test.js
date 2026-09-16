@@ -3,6 +3,13 @@ import { describe, expect, test } from 'vitest'
 import { nextTick } from 'vue'
 
 import QColor from './QColor.js'
+import langEn from '../../../lang/en-US.js'
+import {
+  hsvToRgb,
+  rgbToHex,
+  rgbToHsv,
+  textToRgb
+} from '../../utils/colors/colors.js'
 
 function mountColor(props = {}) {
   return mount(QColor, {
@@ -19,6 +26,10 @@ function getHeaderInput(wrapper) {
 
 function getPaletteCubes(wrapper) {
   return wrapper.findAll('.q-color-picker__cube')
+}
+
+function getSpectrum(wrapper) {
+  return wrapper.get('.q-color-picker__spectrum')
 }
 
 function getHeaderTabLabels(wrapper) {
@@ -361,6 +372,27 @@ describe('[QColor API]', () => {
 
         expect(wrapper.emitted('update:modelValue')).toBeUndefined()
       })
+
+      test('toggling it disarms the spectrum pan in place', async () => {
+        const wrapper = mountColor({ disable: true })
+        const spectrum = wrapper.get('.q-color-picker__spectrum')
+
+        await spectrum.trigger('mousedown', { button: 0 })
+
+        expect(spectrum.element.__qtouchpan.event).toBeUndefined()
+
+        await wrapper.setProps({ disable: false })
+
+        expect(wrapper.get('.q-color-picker__spectrum').element).toBe(
+          spectrum.element
+        )
+
+        await spectrum.trigger('mousedown', { button: 0 })
+
+        expect(spectrum.element.__qtouchpan.event).toBeDefined()
+
+        wrapper.unmount()
+      })
     })
 
     describe('[(prop)readonly]', () => {
@@ -442,6 +474,462 @@ describe('[QColor API]', () => {
 
         const [value] = eventList.change[0]
         expect(value).toBe('#ffcccc')
+      })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('names the internals the consumer cannot reach', () => {
+      const wrapper = mountColor({
+        modelValue: '#ff00ffcc',
+        formatModel: 'rgba'
+      })
+      const { colorPicker } = langEn
+
+      // view tabs are icon-only
+      const tabs = wrapper
+        .findAll('.q-color-picker__footer [role="tab"]')
+        .map(t => t.attributes('aria-label'))
+      expect(tabs).toStrictEqual([
+        colorPicker.spectrum,
+        colorPicker.tune,
+        colorPicker.palette
+      ])
+
+      // the header value field has no label element of its own
+      expect(
+        wrapper
+          .get('.q-color-picker__header-banner input')
+          .attributes('aria-label')
+      ).toBe(colorPicker.value)
+
+      // both sliders carry the slider role, so they need names
+      expect(
+        wrapper
+          .get('.q-color-picker__hue [role="slider"]')
+          .attributes('aria-label')
+      ).toBe(colorPicker.hue)
+      expect(
+        wrapper
+          .get('.q-color-picker__alpha [role="slider"]')
+          .attributes('aria-label')
+      ).toBe(colorPicker.alpha)
+    })
+
+    test('the view panels add no Tab stop of their own', async () => {
+      const wrapper = mountColor()
+
+      const tabs = wrapper.findAll('.q-color-picker__footer [role="tab"]')
+
+      for (const [index, view] of ['spectrum', 'tune', 'palette'].entries()) {
+        await tabs[index].trigger('click')
+
+        const panel = wrapper.get('[role="tabpanel"]')
+        expect(panel.classes()).toContain(`q-color-picker__${view}-tab`)
+        expect(panel.attributes('tabindex')).toBe('-1')
+      }
+    })
+
+    describe('palette swatches', () => {
+      // 12 swatches: the default 10-per-row layout leaves 2 on the second row
+      const swatches = [
+        '#ff0000',
+        '#00ff00',
+        '#0000ff',
+        '#ffff00',
+        '#ff00ff',
+        '#00ffff',
+        '#000000',
+        '#ffffff',
+        '#808080',
+        '#800000',
+        '#008000',
+        '#000080'
+      ]
+
+      function mountPalette(props = {}) {
+        return mount(QColor, {
+          attachTo: document.body,
+          props: {
+            modelValue: '#0000ff',
+            defaultView: 'palette',
+            palette: swatches,
+            ...props
+          }
+        })
+      }
+
+      function getTabStops(wrapper) {
+        return getPaletteCubes(wrapper)
+          .map((cube, index) =>
+            cube.attributes('tabindex') === '0' ? index : -1
+          )
+          .filter(index => index !== -1)
+      }
+
+      test('swatches are named buttons in a named group', () => {
+        const wrapper = mountPalette()
+
+        const group = wrapper.get('.q-color-picker__palette-rows')
+        expect(group.attributes('role')).toBe('group')
+        expect(group.attributes('aria-label')).toBe(langEn.colorPicker.palette)
+
+        const cubes = getPaletteCubes(wrapper)
+        expect(cubes).toHaveLength(swatches.length)
+        cubes.forEach((cube, index) => {
+          expect(cube.element.tagName).toBe('BUTTON')
+          expect(cube.attributes('type')).toBe('button')
+          expect(cube.attributes('aria-label')).toBe(swatches[index])
+        })
+
+        wrapper.unmount()
+      })
+
+      test('the swatch matching the model is pressed and owns the Tab stop', async () => {
+        // a duplicate of the model color: every copy is pressed, the
+        // first one owns the Tab stop
+        const wrapper = mountPalette({ palette: [...swatches, '#0000ff'] })
+
+        expect(getTabStops(wrapper)).toStrictEqual([2])
+        expect(
+          getPaletteCubes(wrapper).map(cube => cube.attributes('aria-pressed'))
+        ).toStrictEqual(
+          [...swatches, '#0000ff'].map(color =>
+            color === '#0000ff' ? 'true' : 'false'
+          )
+        )
+
+        // a model outside the palette falls back to the first swatch
+        await wrapper.setProps({ modelValue: '#123456' })
+        expect(getTabStops(wrapper)).toStrictEqual([0])
+        expect(
+          getPaletteCubes(wrapper).every(
+            cube => cube.attributes('aria-pressed') === 'false'
+          )
+        ).toBe(true)
+
+        wrapper.unmount()
+      })
+
+      test('arrow keys move focus without selecting; Home/End jump to the edges', async () => {
+        const wrapper = mountPalette()
+        const cubes = getPaletteCubes(wrapper)
+
+        cubes[2].element.focus()
+
+        await cubes[2].trigger('keydown', { keyCode: 39 })
+        expect(document.activeElement).toBe(cubes[3].element)
+        expect(getTabStops(wrapper)).toStrictEqual([3])
+
+        await cubes[3].trigger('keydown', { keyCode: 37 })
+        expect(document.activeElement).toBe(cubes[2].element)
+
+        await cubes[2].trigger('keydown', { keyCode: 35 })
+        expect(document.activeElement).toBe(cubes[11].element)
+
+        await cubes[11].trigger('keydown', { keyCode: 36 })
+        expect(document.activeElement).toBe(cubes[0].element)
+
+        // the edges are not wrapped
+        await cubes[0].trigger('keydown', { keyCode: 37 })
+        expect(document.activeElement).toBe(cubes[0].element)
+
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+        wrapper.unmount()
+      })
+
+      test('Up/Down move by one visual row', async () => {
+        const wrapper = mountPalette()
+        const cubes = getPaletteCubes(wrapper)
+
+        cubes[1].element.focus()
+
+        await cubes[1].trigger('keydown', { keyCode: 40 })
+        expect(document.activeElement).toBe(cubes[11].element)
+
+        await cubes[11].trigger('keydown', { keyCode: 38 })
+        expect(document.activeElement).toBe(cubes[1].element)
+
+        // no swatch below the first row's tail
+        await cubes[5].trigger('keydown', { keyCode: 40 })
+        expect(document.activeElement).toBe(cubes[1].element)
+
+        wrapper.unmount()
+      })
+
+      test('Left/Right follow the visual direction in RTL', async () => {
+        const wrapper = mountPalette()
+        const cubes = getPaletteCubes(wrapper)
+
+        wrapper.vm.$q.lang.rtl = true
+
+        try {
+          cubes[2].element.focus()
+
+          await cubes[2].trigger('keydown', { keyCode: 37 })
+          expect(document.activeElement).toBe(cubes[3].element)
+        } finally {
+          wrapper.vm.$q.lang.rtl = false
+          wrapper.unmount()
+        }
+      })
+
+      test('a disabled or readonly palette has no Tab stop', async () => {
+        const wrapper = mountPalette({ readonly: true })
+
+        expect(getTabStops(wrapper)).toStrictEqual([])
+
+        await wrapper.setProps({ readonly: false, disable: true })
+        expect(getTabStops(wrapper)).toStrictEqual([])
+
+        await wrapper.setProps({ disable: false })
+        expect(getTabStops(wrapper)).toStrictEqual([2])
+
+        wrapper.unmount()
+      })
+    })
+
+    describe('spectrum panel', () => {
+      const { colorPicker } = langEn
+
+      // the hue stays put while the keyboard walks the spectrum, so
+      // every expected model derives from the start color's hue
+      function hexAt(startColor, s, v) {
+        const { h } = rgbToHsv(textToRgb(startColor))
+        return rgbToHex(hsvToRgb({ h, s, v }))
+      }
+
+      function valueText(s, v) {
+        return `${colorPicker.saturation} ${s}%, ${colorPicker.brightness} ${v}%`
+      }
+
+      function mountSpectrum(props = {}) {
+        return mount(QColor, {
+          attachTo: document.body,
+          props: { modelValue: '#ff0000', ...props }
+        })
+      }
+
+      function lastModel(wrapper) {
+        return wrapper.emitted('update:modelValue').at(-1)[0]
+      }
+
+      test('the panel is a named slider spelling out saturation and brightness', async () => {
+        const wrapper = mountSpectrum({ modelValue: '#808080' })
+        const spectrum = getSpectrum(wrapper)
+        const { s, v } = rgbToHsv(textToRgb('#808080'))
+
+        expect(spectrum.attributes('role')).toBe('slider')
+        expect(spectrum.attributes('tabindex')).toBe('0')
+        expect(spectrum.attributes('aria-label')).toBe(colorPicker.spectrum)
+        expect(spectrum.attributes('aria-valuemin')).toBe('0')
+        expect(spectrum.attributes('aria-valuemax')).toBe('100')
+        expect(spectrum.attributes('aria-valuenow')).toBe(String(s))
+        expect(spectrum.attributes('aria-valuetext')).toBe(valueText(s, v))
+
+        // no color yet: the numbers would mislead
+        await wrapper.setProps({ modelValue: '' })
+        expect(spectrum.attributes('aria-valuetext')).toBe(langEn.label.noValue)
+
+        wrapper.unmount()
+      })
+
+      test('arrows step saturation and brightness by one, ten with Shift', async () => {
+        const wrapper = mountSpectrum()
+        const spectrum = getSpectrum(wrapper)
+
+        spectrum.element.focus()
+
+        await spectrum.trigger('keydown', { keyCode: 37 })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 99, 100))
+
+        await spectrum.trigger('keydown', { keyCode: 40 })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 99, 99))
+
+        await spectrum.trigger('keydown', { keyCode: 37, shiftKey: true })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 89, 99))
+
+        await spectrum.trigger('keydown', { keyCode: 40, shiftKey: true })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 89, 89))
+
+        await spectrum.trigger('keydown', { keyCode: 39 })
+        await spectrum.trigger('keydown', { keyCode: 38 })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 90, 90))
+
+        expect(spectrum.attributes('aria-valuenow')).toBe('90')
+        expect(spectrum.attributes('aria-valuetext')).toBe(valueText(90, 90))
+
+        wrapper.unmount()
+      })
+
+      test('Home/End set the saturation, PageUp/PageDown step the brightness by ten', async () => {
+        const wrapper = mountSpectrum()
+        const spectrum = getSpectrum(wrapper)
+
+        spectrum.element.focus()
+
+        await spectrum.trigger('keydown', { keyCode: 36 })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 0, 100))
+
+        await spectrum.trigger('keydown', { keyCode: 35 })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 100, 100))
+
+        await spectrum.trigger('keydown', { keyCode: 34 })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 100, 90))
+
+        await spectrum.trigger('keydown', { keyCode: 33 })
+        expect(lastModel(wrapper)).toBe(hexAt('#ff0000', 100, 100))
+
+        wrapper.unmount()
+      })
+
+      test('the edges are clamped and change fires once, on keyup', async () => {
+        const wrapper = mountSpectrum()
+        const spectrum = getSpectrum(wrapper)
+
+        spectrum.element.focus()
+
+        // already at full saturation and brightness
+        await spectrum.trigger('keydown', { keyCode: 39 })
+        await spectrum.trigger('keydown', { keyCode: 38 })
+        await spectrum.trigger('keyup', { keyCode: 38 })
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+        expect(wrapper.emitted('change')).toBeUndefined()
+
+        // key repeat: two steps, one change
+        await spectrum.trigger('keydown', { keyCode: 40 })
+        await spectrum.trigger('keydown', { keyCode: 40 })
+        expect(wrapper.emitted('update:modelValue')).toHaveLength(2)
+        expect(wrapper.emitted('change')).toBeUndefined()
+
+        await spectrum.trigger('keyup', { keyCode: 40 })
+        expect(wrapper.emitted('change')).toStrictEqual([
+          [hexAt('#ff0000', 100, 98)]
+        ])
+
+        wrapper.unmount()
+      })
+
+      test('Left/Right follow the visual direction in RTL', async () => {
+        const wrapper = mountSpectrum({ modelValue: '#808080' })
+        const spectrum = getSpectrum(wrapper)
+        const { v } = rgbToHsv(textToRgb('#808080'))
+
+        wrapper.vm.$q.lang.rtl = true
+
+        try {
+          spectrum.element.focus()
+
+          await spectrum.trigger('keydown', { keyCode: 37 })
+          expect(lastModel(wrapper)).toBe(hexAt('#808080', 1, v))
+        } finally {
+          wrapper.vm.$q.lang.rtl = false
+          wrapper.unmount()
+        }
+      })
+
+      test('a disabled or readonly spectrum has no Tab stop and ignores keys', async () => {
+        const wrapper = mountSpectrum({ readonly: true })
+        const spectrum = getSpectrum(wrapper)
+
+        expect(spectrum.attributes('tabindex')).toBe('-1')
+        expect(spectrum.attributes('aria-readonly')).toBe('true')
+        expect(spectrum.attributes('aria-disabled')).toBeUndefined()
+
+        await spectrum.trigger('keydown', { keyCode: 40 })
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+        await wrapper.setProps({ readonly: false, disable: true })
+        expect(spectrum.attributes('tabindex')).toBe('-1')
+        expect(spectrum.attributes('aria-disabled')).toBe('true')
+        expect(spectrum.attributes('aria-readonly')).toBeUndefined()
+
+        await spectrum.trigger('keydown', { keyCode: 40 })
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+        await wrapper.setProps({ disable: false })
+        expect(spectrum.attributes('tabindex')).toBe('0')
+
+        wrapper.unmount()
+      })
+    })
+  })
+
+  describe('[Slots]', () => {
+    describe('[(slot)palette]', () => {
+      test('renders the content', () => {
+        let slotScope
+        const slotContent = 'some-slot-content'
+        const wrapper = mount(QColor, {
+          props: {
+            modelValue: 'some-string',
+            defaultView: 'palette'
+          },
+          slots: {
+            palette: scope => {
+              slotScope = scope
+              return slotContent
+            }
+          }
+        })
+
+        expect(wrapper.html()).toContain(slotContent)
+
+        expect(slotScope).toStrictEqual({
+          palette: expect.any(Array),
+          select: expect.any(Function),
+          editable: expect.any(Boolean)
+        })
+      })
+
+      test('replaces the default swatches and exposes the colors', () => {
+        const propVal = ['#019A9D', '#D9B801', 'rgb(23,120,0)']
+        let slotScope
+        const wrapper = mount(QColor, {
+          props: {
+            modelValue: '#ff0000',
+            defaultView: 'palette',
+            palette: propVal
+          },
+          slots: {
+            palette: scope => {
+              slotScope = scope
+              return 'swatches'
+            }
+          }
+        })
+
+        expect(getPaletteCubes(wrapper)).toHaveLength(0)
+        expect(slotScope.palette).toStrictEqual(propVal)
+        expect(slotScope.editable).toBe(true)
+      })
+
+      test('select() updates the model, unless disabled or readonly', async () => {
+        let slotScope
+        const wrapper = mount(QColor, {
+          props: {
+            modelValue: '#ff0000',
+            defaultView: 'palette'
+          },
+          slots: {
+            palette: scope => {
+              slotScope = scope
+              return 'swatches'
+            }
+          }
+        })
+
+        slotScope.select('#019A9D')
+        expect(wrapper.emitted('update:modelValue')).toStrictEqual([
+          ['#019a9d']
+        ])
+
+        await wrapper.setProps({ readonly: true })
+        expect(slotScope.editable).toBe(false)
+
+        slotScope.select('#D9B801')
+        expect(wrapper.emitted('update:modelValue')).toHaveLength(1)
       })
     })
   })

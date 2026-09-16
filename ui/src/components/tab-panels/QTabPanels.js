@@ -1,5 +1,6 @@
-import { computed, getCurrentInstance } from 'vue'
+import { computed, h, withDirectives } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -9,7 +10,6 @@ import usePanel, {
 } from '../../composables/private.use-panel/use-panel.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
-import { hDir } from '../../utils/private.render/render.js'
 
 export default /*#__PURE__*/ createComponent({
   name: 'QTabPanels',
@@ -22,27 +22,23 @@ export default /*#__PURE__*/ createComponent({
   emits: usePanelEmits,
 
   setup(props, { slots }) {
-    const vm = getCurrentInstance()
-    const isDark = useDark(props, vm.proxy.$q)
+    const $q = useQuasar()
+    const isDark = useDark(props, $q)
 
     const { updatePanelsList, getPanelContent, panelDirectives } = usePanel()
 
     const classes = computed(
       () =>
         'q-tab-panels q-panel-parent' +
-        (isDark.value ? ' q-tab-panels--dark q-dark' : '')
+        (isDark() ? ' q-tab-panels--dark q-dark' : '')
     )
 
     return () => {
       updatePanelsList(slots)
 
-      return hDir(
-        'div',
-        { class: classes.value },
-        getPanelContent(),
-        'pan',
-        props.swipeable,
-        () => panelDirectives.value
+      return withDirectives(
+        h('div', { class: classes.value }, getPanelContent()),
+        panelDirectives.value
       )
     }
   }

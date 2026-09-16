@@ -1,8 +1,9 @@
-import { computed, getCurrentInstance, h, ref, watch } from 'vue'
+import { computed, getCurrentInstance, h, ref, shallowRef, watch } from 'vue'
 
 import QDialog from '../dialog/QDialog.js'
 import QMenu from '../menu/QMenu.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useAnchor, {
   useAnchorProps
 } from '../../composables/private.use-anchor/use-anchor.js'
@@ -26,10 +27,10 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit, attrs }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const showing = ref(false)
-    const popupRef = ref(null)
+    const popupRef = shallowRef(null)
     const breakpoint = computed(() => Number.parseInt(props.breakpoint, 10))
 
     const { canShow } = useAnchor({ showing, avoidEmit: true })

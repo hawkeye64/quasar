@@ -15,6 +15,11 @@ export default {
     search: 'Қидириш',
     filter: 'Филтрлаш',
     refresh: 'Янгилаш',
+    minimum: 'Минимум',
+    maximum: 'Максимум',
+    range: 'Диапазон',
+    noValue: 'Қиймат йўқ',
+    resize: 'Ўлчамни ўзгартириш',
     expand: label => (label ? `"${label}" ни кенгайтириш` : 'ъКенгайтиришъ'),
     collapse: label => (label ? `"${label}" ни йиғиш` : 'ъЙиқилишъ')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Ўтган йили',
     nextYear: 'Кейинги йил',
     today: 'Бугун',
-    prevRangeYears: range => `Олдинги ${range} Йиллар`,
-    nextRangeYears: range => `Кейинги ${range} Йиллар`
+    prevRangeYears: range => `Олдинги ${range} йил`,
+    nextRangeYears: range => `Кейинги ${range} йил`,
+    hour: 'Соат',
+    minute: 'Дақиқа',
+    second: 'Сония',
+    now: 'Жорий вақт'
   },
   table: {
     noData: 'Маълумот топилмади',
@@ -53,15 +62,41 @@ export default {
     recordsPerPage: 'Сахифадаги қаторлар:',
     allRows: 'Барчаси',
     pagination: (start, end, total) => start + '-' + end + ' жами ' + total,
-    columns: 'Устунлар'
+    columns: 'Устунлар',
+    selectAllRows: 'Барча қаторларни танлаш',
+    selectRow: 'Қаторни танлаш'
   },
   pagination: {
+    label: 'Саҳифалаш',
     first: 'Биринчи саҳифа',
     prev: 'Олдинги саҳифа',
     next: 'Кейинги саҳифа',
     last: 'Сўнгги саҳифа'
   },
+  carousel: {
+    prevSlide: 'Олдинги слайд',
+    nextSlide: 'Кейинги слайд'
+  },
+  colorPicker: {
+    spectrum: 'Спектр',
+    tune: 'Созлаш',
+    palette: 'Палитра',
+    value: 'Ранг қиймати',
+    hue: 'Тус',
+    alpha: 'Хиралик',
+    saturation: 'Тўйинганлик',
+    brightness: 'Ёрқинлик'
+  },
+  uploader: {
+    addFiles: 'Файлларни танлаш',
+    upload: 'Файлларни юклаш',
+    abort: 'Юклашни тўхтатиш',
+    removeQueued: 'Навбатдаги файлларни ўчириш',
+    removeUploaded: 'Юкланган файлларни ўчириш',
+    removeFile: 'Файлни ўчириш'
+  },
   editor: {
+    toolbar: 'Муҳаррир асбоблар панели',
     url: 'УРЛ',
     bold: 'Қалин',
     italic: 'Курсив',

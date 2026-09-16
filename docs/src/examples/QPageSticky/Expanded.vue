@@ -9,6 +9,7 @@
       <q-header reveal elevated>
         <q-toolbar>
           <q-btn
+            aria-label="Toggle left drawer"
             flat
             round
             dense
@@ -19,6 +20,7 @@
           <q-toolbar-title> <strong>Quasar</strong> Framework </q-toolbar-title>
 
           <q-btn
+            aria-label="Toggle right drawer"
             flat
             round
             dense
@@ -29,6 +31,7 @@
       </q-header>
 
       <q-drawer
+        aria-label="Left drawer"
         v-model="drawerLeft"
         :width="150"
         :breakpoint="700"
@@ -44,6 +47,7 @@
       </q-drawer>
 
       <q-drawer
+        aria-label="Right drawer"
         side="right"
         v-model="drawerRight"
         bordered
@@ -73,6 +77,7 @@
             <q-toolbar class="bg-accent text-white">
               <q-avatar>
                 <img
+                  alt="Quasar logo"
                   src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg"
                 />
               </q-avatar>

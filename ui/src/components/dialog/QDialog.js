@@ -5,11 +5,13 @@ import {
   h,
   onBeforeUnmount,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useHistory from '../../composables/private.use-history/use-history.js'
-import useTimeout from '../../composables/use-timeout/use-timeout.js'
+import useTransitionEnd from '../../composables/private.use-transition-end/use-transition-end.js'
 import useTick from '../../composables/use-tick/use-tick.js'
 import useModelToggle, {
   useModelToggleEmits,
@@ -19,10 +21,12 @@ import useTransition, {
   useTransitionProps
 } from '../../composables/private.use-transition/use-transition.js'
 import usePortal from '../../composables/private.use-portal/use-portal.js'
+import usePortalRefocus from '../../composables/private.use-portal-refocus/use-portal-refocus.js'
 import usePreventScroll from '../../composables/private.use-prevent-scroll/use-prevent-scroll.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { childHasFocus } from '../../utils/dom/dom.js'
+import { listenOpts } from '../../utils/event/event.js'
 import { hSlot } from '../../utils/private.render/render.js'
 import {
   addEscapeKey,
@@ -98,22 +102,31 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit, attrs }) {
     const vm = getCurrentInstance()
+    const $q = useQuasar()
 
-    const innerRef = ref(null)
+    const rootElRef = shallowRef(null)
+    const innerRef = shallowRef(null)
     const showing = ref(false)
     const animating = ref(false)
+    // iOS keeps position:fixed content attached to the layout viewport,
+    // which the soft keyboard never shrinks: only the visual viewport gets
+    // shorter (and scrolls within the layout one to reveal a field focused
+    // by a user tap, never one focused programmatically, like autofocus).
+    // While the keyboard is up, the inner element is inset to the visual
+    // viewport so the dialog cannot end up under the keyboard.
+    const viewportInset = ref(null)
 
     let shakeTimeout = null,
-      refocusTarget = null,
       isMaximized = false,
-      avoidAutoClose = false
+      avoidAutoClose = false,
+      viewportTracked = false
 
     const hideOnRouteChange = computed(
       () => !props.persistent && !props.noRouteDismiss && !props.seamless
     )
 
     const { preventBodyScroll } = usePreventScroll()
-    const { registerTimeout } = useTimeout()
+    const { registerTransitionEnd } = useTransitionEnd(props)
     const { registerTick, removeTick } = useTick()
 
     const { transitionProps, transitionStyle } = useTransition(
@@ -124,15 +137,27 @@ export default /*#__PURE__*/ createComponent({
 
     const backdropStyle = computed(
       () =>
-        transitionStyle.value +
+        transitionStyle() +
         (props.backdropFilter !== void 0
           ? // Safari requires the -webkit prefix
             `;backdrop-filter:${props.backdropFilter};-webkit-backdrop-filter:${props.backdropFilter}`
           : '')
     )
 
-    const { showPortal, hidePortal, portalIsAccessible, renderPortal } =
-      usePortal(vm, innerRef, renderPortalContent, 'dialog')
+    const { showPortal, hidePortal, portalIsOpening, renderPortal } = usePortal(
+      vm,
+      innerRef,
+      renderPortalContent,
+      'dialog'
+    )
+
+    const {
+      captureRefocusTarget,
+      setRefocusTarget,
+      clearRefocusTarget,
+      restoreFocus,
+      adoptRefocusTarget
+    } = usePortalRefocus(props, () => !props.noFocus && portalIsOpening())
 
     const { hide } = useModelToggle({
       showing,
@@ -155,6 +180,7 @@ export default /*#__PURE__*/ createComponent({
         ` q-dialog__inner--${props.maximized ? 'maximized' : 'minimized'}` +
         ` q-dialog__inner--${props.position} ${positionClass[props.position]}` +
         (animating.value ? ' q-dialog__inner--animating' : '') +
+        (viewportInset.value !== null ? ' q-dialog__inner--keyboard' : '') +
         (props.fullWidth ? ' q-dialog__inner--fullwidth' : '') +
         (props.fullHeight ? ' q-dialog__inner--fullheight' : '') +
         (props.square ? ' q-dialog__inner--square' : '')
@@ -166,11 +192,11 @@ export default /*#__PURE__*/ createComponent({
       props.autoClose ? { onClick: onAutoClose } : {}
     )
 
-    const rootClasses = computed(() => [
-      'q-dialog fullscreen no-pointer-events ' +
-        `q-dialog--${useBackdrop.value ? 'modal' : 'seamless'}`,
-      attrs.class
-    ])
+    const rootClasses = computed(
+      () =>
+        'q-dialog fullscreen no-pointer-events ' +
+        `q-dialog--${useBackdrop.value ? 'modal' : 'seamless'}`
+    )
 
     watch(
       () => props.maximized,
@@ -191,17 +217,74 @@ export default /*#__PURE__*/ createComponent({
       }
     })
 
+    function updateViewportInset() {
+      const { offsetTop, height, scale } = window.visualViewport
+      const { innerHeight } = window
+
+      // while pinch-zoomed the visual viewport is always shorter than the
+      // layout one and iOS keeps the focused field in view by itself
+      if (Math.abs(scale - 1) > 0.01 || innerHeight - height < 1) {
+        viewportInset.value = null
+        return
+      }
+
+      const top = Math.round(offsetTop)
+      const bottom = Math.round(innerHeight - offsetTop - height)
+      const current = viewportInset.value
+
+      if (
+        current === null ||
+        current.top !== top ||
+        current.bottom !== bottom
+      ) {
+        viewportInset.value = { top, bottom, height: Math.round(height) }
+      }
+    }
+
+    function trackViewport(add) {
+      const fn = add ? 'addEventListener' : 'removeEventListener'
+
+      viewportTracked = add
+
+      // no visualViewport (an iOS-simulating test environment) only
+      // loses the keyboard inset
+      window.visualViewport?.[fn](
+        'resize',
+        updateViewportInset,
+        listenOpts.passive
+      )
+      window.visualViewport?.[fn](
+        'scroll',
+        updateViewportInset,
+        listenOpts.passive
+      )
+
+      if (add && window.visualViewport !== void 0) updateViewportInset()
+      else viewportInset.value = null
+    }
+
+    function getInnerStyle() {
+      const inset = viewportInset.value
+
+      if (inset === null) return transitionStyle()
+
+      return (
+        `${transitionStyle()};--q-dialog-viewport-height:${inset.height}px` +
+        (props.position !== 'bottom' ? `;top:${inset.top}px` : '') +
+        (props.position !== 'top' ? `;bottom:${inset.bottom}px` : '')
+      )
+    }
+
     function handleShow(evt) {
       addToHistory()
 
-      refocusTarget =
-        !props.noRefocus && document.activeElement !== null
-          ? document.activeElement
-          : null
+      captureRefocusTarget()
 
       updateMaximized(props.maximized)
       showPortal()
       animating.value = true
+
+      if ($q.platform.is.ios) trackViewport(true)
 
       if (props.noFocus) removeTick()
       else {
@@ -209,17 +292,13 @@ export default /*#__PURE__*/ createComponent({
         registerTick(focus)
       }
 
-      // should removeTimeout() if this gets removed
-      registerTimeout(() => {
-        if (vm.proxy.$q.platform.is.ios) {
+      registerTransitionEnd(() => {
+        if ($q.platform.is.ios) {
           if (!props.seamless && document.activeElement) {
             const { top, bottom } =
                 document.activeElement.getBoundingClientRect(),
               { innerHeight } = window,
-              height =
-                window.visualViewport !== void 0
-                  ? window.visualViewport.height
-                  : innerHeight
+              height = window.visualViewport?.height ?? innerHeight
 
             if (top > 0 && bottom > height / 2) {
               document.scrollingElement.scrollTop = Math.min(
@@ -244,7 +323,7 @@ export default /*#__PURE__*/ createComponent({
         showPortal(true) // done showing portal
         animating.value = false
         emit('show', evt)
-      }, props.transitionDuration)
+      })
     }
 
     function handleHide(evt) {
@@ -254,35 +333,25 @@ export default /*#__PURE__*/ createComponent({
       animating.value = true
       hidePortal()
 
-      if (refocusTarget !== null) {
-        const target =
-          (evt?.type.indexOf('key') === 0
-            ? refocusTarget.closest('[tabindex]:not([tabindex^="-"])')
-            : void 0) || refocusTarget
+      restoreFocus(evt)
 
-        refocusTarget = null
-        addFocusFn(() => {
-          if (target.isConnected) target.focus({ preventScroll: true })
-        })
-      }
-
-      // should removeTimeout() if this gets removed
-      registerTimeout(() => {
+      registerTransitionEnd(() => {
         hidePortal(true) // done hiding, now destroy
         animating.value = false
         emit('hide', evt)
-      }, props.transitionDuration)
+      })
     }
 
     function handleRouteChange() {
-      refocusTarget = null
+      clearRefocusTarget()
     }
 
     function focus(selector) {
       addFocusFn(() => {
         let node = innerRef.value
 
-        if (node === null) return
+        // the ref can hold a non-Element stub in non-browser test environments
+        if (node === null || node.contains === void 0) return
 
         if (selector !== void 0) {
           const target = node.querySelector(selector)
@@ -335,13 +404,13 @@ export default /*#__PURE__*/ createComponent({
       }
     }
 
-    function onEscapeKey() {
+    function onEscapeKey(evt) {
       if (!props.seamless) {
         if (props.persistent || props.noEscDismiss) {
           if (!props.maximized && !props.noShake) shake()
         } else {
           emit('escapeKey')
-          hide()
+          hide(evt)
         }
       }
     }
@@ -355,6 +424,8 @@ export default /*#__PURE__*/ createComponent({
       if (hiding || showing.value) {
         updateMaximized(false)
 
+        if (viewportTracked) trackViewport(false)
+
         if (!props.seamless) {
           preventBodyScroll(false)
           removeFocusout(onFocusChange)
@@ -363,7 +434,7 @@ export default /*#__PURE__*/ createComponent({
       }
 
       if (!hiding) {
-        refocusTarget = null
+        clearRefocusTarget()
       }
     }
 
@@ -394,7 +465,11 @@ export default /*#__PURE__*/ createComponent({
       }
     }
 
-    function onBackdropClick(e) {
+    function onBackdropPress(e) {
+      // only the primary button dismisses (matching the click event
+      // this used to rely on); a tap's compat mousedown reports button 0
+      if (e.button !== 0) return
+
       if (!props.persistent && !props.noBackdropDismiss) {
         hide(e)
       } else if (!props.noShake) {
@@ -403,10 +478,12 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function onFocusChange(evt) {
-      // the focus is not in a vue child component
+      // the focus is not in a vue child component;
+      // while opening, the autofocus has not landed yet. A hiding dialog
+      // never gets here: handleHide removes this handler synchronously
       if (
         !props.allowFocusOutside &&
-        portalIsAccessible.value &&
+        !portalIsOpening() &&
         !childHasFocus(innerRef.value, evt.target) &&
         !focusIsInDetachedFullscreen(innerRef.value, evt.target)
       ) {
@@ -420,9 +497,15 @@ export default /*#__PURE__*/ createComponent({
       shake,
 
       // private but needed by QSelect
-      __updateRefocusTarget(target) {
-        refocusTarget = target || null
-      }
+      __updateRefocusTarget: setRefocusTarget,
+
+      // private but needed by usePortalRefocus
+      __adoptRefocusTarget: adoptRefocusTarget,
+
+      // private but needed by usePortal: while aria-modal is set,
+      // assistive tech ignores content outside this element, so menu
+      // portals anchored inside the dialog must render within it
+      __getAriaModalEl: () => (useBackdrop.value ? rootElRef.value : null)
     })
 
     onBeforeUnmount(cleanup)
@@ -431,10 +514,13 @@ export default /*#__PURE__*/ createComponent({
       return h(
         'div',
         {
+          ref: rootElRef,
           role: 'dialog',
           'aria-modal': useBackdrop.value ? 'true' : 'false',
           ...attrs,
-          class: rootClasses.value
+          // render-path merge: attrs is not reactive, so a computed
+          // must not cache attrs.class (dynamic changes would go stale)
+          class: [rootClasses.value, attrs.class]
         },
         [
           h(
@@ -449,19 +535,19 @@ export default /*#__PURE__*/ createComponent({
                     class: 'q-dialog__backdrop fixed-full',
                     style: backdropStyle.value,
                     'aria-hidden': 'true',
-                    onClick: onBackdropClick
+                    onMousedown: onBackdropPress
                   })
                 : null
           ),
 
-          h(Transition, transitionProps.value, () =>
+          h(Transition, transitionProps(), () =>
             showing.value
               ? h(
                   'div',
                   {
                     ref: innerRef,
                     class: classes.value,
-                    style: transitionStyle.value,
+                    style: getInnerStyle(),
                     tabindex: -1,
                     ...onEvents.value
                   },

@@ -1,8 +1,9 @@
-import { computed, getCurrentInstance, h, ref, watch } from 'vue'
+import { Fragment, computed, getCurrentInstance, h, ref, watch } from 'vue'
 
 import QBtn from '../btn/QBtn.js'
 import QInput from '../input/QInput.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -110,9 +111,9 @@ export default /*#__PURE__*/ createComponent({
 
   emits: ['update:modelValue'],
 
-  setup(props, { emit }) {
+  setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
 
@@ -182,7 +183,9 @@ export default /*#__PURE__*/ createComponent({
 
     const attrs = computed(() => ({
       'aria-disabled': props.disable ? 'true' : 'false',
-      role: 'navigation'
+      role: 'navigation',
+      // an unnamed navigation landmark is indistinguishable from any other
+      'aria-label': $q.lang.pagination.label
     }))
 
     const btnDesignProp = computed(() => getBtnDesign(props, 'flat'))
@@ -297,20 +300,31 @@ export default /*#__PURE__*/ createComponent({
       if (isKeyCode(e, 13)) updateModel()
     }
 
-    function getBtn(cfg, page, active) {
+    // display-only: the model and the input stay numeric
+    function fmtNum(value) {
+      const str = String(value)
+      return $q.lang.formatNumber?.(str) ?? str
+    }
+
+    function getBtnData(cfg, page, active) {
       const data = {
-        'aria-label': page,
-        'aria-current': 'false',
+        'aria-label': fmtNum(page),
         ...btnProps.value,
         ...cfg
       }
 
       if (active) {
         Object.assign(data, {
-          'aria-current': 'true',
+          'aria-current': 'page',
           ...activeBtnProps.value
         })
       }
+
+      return data
+    }
+
+    function getBtn(cfg, page, active) {
+      const data = getBtnData(cfg, page, active)
 
       if (page !== void 0) {
         if (props.toFn !== void 0) {
@@ -323,6 +337,35 @@ export default /*#__PURE__*/ createComponent({
       }
 
       return h(QBtn, data)
+    }
+
+    function getEllipsis(side, page, style) {
+      const key = side === 'start' ? 'bes' : 'bee'
+      const cfg = {
+        style,
+        disable: props.disable,
+        label: '…',
+        ripple: false
+      }
+
+      if (slots.ellipsis === void 0) {
+        return getBtn({ key, ...cfg }, page)
+      }
+
+      const scope = {
+        side,
+        page,
+        btnProps: getBtnData(cfg, page),
+        onClick: () => {
+          set(page)
+        }
+      }
+
+      if (props.toFn !== void 0) {
+        scope.to = props.toFn(page)
+      }
+
+      return h(Fragment, { key }, slots.ellipsis(scope))
     }
 
     // expose public methods
@@ -397,7 +440,7 @@ export default /*#__PURE__*/ createComponent({
                 key: 'bns',
                 style,
                 disable: props.disable,
-                label: minProp.value
+                label: fmtNum(minProp.value)
               },
               minProp.value,
               minProp.value === props.modelValue
@@ -412,7 +455,7 @@ export default /*#__PURE__*/ createComponent({
                 key: 'bne',
                 style,
                 disable: props.disable,
-                label: maxProp.value
+                label: fmtNum(maxProp.value)
               },
               maxProp.value,
               maxProp.value === props.modelValue
@@ -421,33 +464,11 @@ export default /*#__PURE__*/ createComponent({
         }
 
         if (btnConfig.value.ellipsesStart) {
-          contentStart.push(
-            getBtn(
-              {
-                key: 'bes',
-                style,
-                disable: props.disable,
-                label: '…',
-                ripple: false
-              },
-              pgFrom - 1
-            )
-          )
+          contentStart.push(getEllipsis('start', pgFrom - 1, style))
         }
 
         if (btnConfig.value.ellipsesEnd) {
-          contentEnd.unshift(
-            getBtn(
-              {
-                key: 'bee',
-                style,
-                disable: props.disable,
-                label: '…',
-                ripple: false
-              },
-              pgTo + 1
-            )
-          )
+          contentEnd.unshift(getEllipsis('end', pgTo + 1, style))
         }
 
         for (let i = pgFrom; i <= pgTo; i++) {
@@ -457,7 +478,7 @@ export default /*#__PURE__*/ createComponent({
                 key: `bpg${i}`,
                 style,
                 disable: props.disable,
-                label: i
+                label: fmtNum(i)
               },
               i,
               i === props.modelValue
@@ -492,7 +513,7 @@ export default /*#__PURE__*/ createComponent({
                     dense: true,
                     value: newPage.value,
                     disable: props.disable,
-                    dark: isDark.value,
+                    dark: isDark(),
                     borderless: true,
                     inputClass: props.inputClass,
                     inputStyle: props.inputStyle,

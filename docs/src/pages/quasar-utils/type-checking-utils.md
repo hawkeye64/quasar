@@ -2,12 +2,10 @@
 title: Type Checking Utils (<is>)
 desc: A set of Quasar methods for type checking.
 keys: is.deepEqual,is.object,is.date,is.regexp,is.number
-badge: v2.8+
 ---
 
-::: tip
-For usage with the UMD build see [here](/start/umd#quasar-global-object).
-:::
+> [!TIP]
+> For usage with the UMD build see [here](/start/umd#quasar-global-object).
 
 ## is.deepEqual
 

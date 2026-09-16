@@ -490,11 +490,29 @@ describe('[QExpansionItem API]', () => {
         const wrapper = mountExpansionItem({ switchToggleSide: true })
         const switched = wrapper.findAll('.q-item__section')
 
-        // the toggle moves to the front and becomes the avatar section
-        expect(switched[0].classes()).toContain('q-item__section--avatar')
+        // the toggle moves to the front while remaining a side section
         expect(
           switched[0].find('.q-expansion-item__toggle-icon').exists()
         ).toBe(true)
+        expect(switched[0].classes()).toContain('q-item__section--side')
+        expect(switched[0].classes()).not.toContain('q-item__section--avatar')
+      })
+
+      test('keeps the sections color roles when switched', () => {
+        const wrapper = mountExpansionItem({
+          switchToggleSide: true,
+          icon: 'account_circle'
+        })
+
+        // the toggle stays a plain side section, the icon stays an avatar
+        // section, so QItem colors them the same on either side
+        expect(
+          getToggleIcon(wrapper).element.parentElement.classList
+        ).not.toContain('q-item__section--avatar')
+
+        expect(
+          wrapper.get('.q-expansion-item__icon-section').classes()
+        ).toContain('q-item__section--avatar')
       })
     })
 
@@ -543,6 +561,48 @@ describe('[QExpansionItem API]', () => {
           first.unmount()
           second.unmount()
         }
+      })
+
+      test('settles a sibling that also started opened', async () => {
+        const errorHandler = vi.fn()
+        const onAfterHide = vi.fn()
+
+        // both claim the group while mounting, before Vue has assigned
+        // the losing item's content ref
+        activeWrapper = mount(
+          {
+            render: () => [
+              h(
+                QExpansionItem,
+                {
+                  label: 'First',
+                  group: 'my-group',
+                  defaultOpened: true,
+                  onAfterHide
+                },
+                () => h('div', 'First content')
+              ),
+              h(
+                QExpansionItem,
+                { label: 'Second', group: 'my-group', defaultOpened: true },
+                () => h('div', 'Second content')
+              )
+            ]
+          },
+          { global: { config: { errorHandler } } }
+        )
+        await flushPromises()
+
+        expect(errorHandler).not.toHaveBeenCalled()
+
+        const [first, second] = activeWrapper.findAllComponents(QExpansionItem)
+
+        // the last claim wins, the first one is hidden without a slide
+        expect(isExpanded(first)).toBe(false)
+        expect(getContent(first).isVisible()).toBe(false)
+        expect(onAfterHide).toHaveBeenCalledTimes(1)
+        expect(isExpanded(second)).toBe(true)
+        expect(getContent(second).isVisible()).toBe(true)
       })
 
       test('leaves the items of other groups alone', async () => {
@@ -747,11 +807,7 @@ describe('[QExpansionItem API]', () => {
     describe('[(event)after-show]', () => {
       test('is emitting', async () => {
         vi.useFakeTimers()
-        // the slide transition has to run for real for this one
-        const wrapper = mountExpansionItem(
-          { duration: 10 },
-          { global: { stubs: { transition: false } } }
-        )
+        const wrapper = mountExpansionItem({ duration: 10 })
 
         wrapper.vm.show()
         await flushPromises()
@@ -764,10 +820,10 @@ describe('[QExpansionItem API]', () => {
     describe('[(event)after-hide]', () => {
       test('is emitting', async () => {
         vi.useFakeTimers()
-        const wrapper = mountExpansionItem(
-          { defaultOpened: true, duration: 10 },
-          { global: { stubs: { transition: false } } }
-        )
+        const wrapper = mountExpansionItem({
+          defaultOpened: true,
+          duration: 10
+        })
 
         wrapper.vm.hide()
         await flushPromises()

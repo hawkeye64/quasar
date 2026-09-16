@@ -7,7 +7,7 @@
       </div>
 
       <q-input dark v-model="text" :readonly="readonly" :disable="disable">
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="event" />
         </template>
       </q-input>
@@ -19,7 +19,7 @@
         :readonly="readonly"
         :disable="disable"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="event" />
         </template>
       </q-input>
@@ -31,9 +31,12 @@
         :readonly="readonly"
         :disable="disable"
       >
-        <template v-slot:append>
+        <template #append>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo-dark.svg" />
+            <img
+              alt="Quasar logo"
+              src="https://cdn.quasar.dev/logo-v2/svg/logo-dark.svg"
+            />
           </q-avatar>
         </template>
       </q-input>
@@ -48,14 +51,14 @@
         :readonly="readonly"
         :disable="disable"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="place" />
         </template>
-        <template v-slot:append>
+        <template #append>
           <q-icon name="close" @click="text = ''" class="cursor-pointer" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-input>
 
       <q-input
@@ -65,7 +68,7 @@
         :readonly="readonly"
         :disable="disable"
       >
-        <template v-slot:append>
+        <template #append>
           <q-icon name="search" />
         </template>
       </q-input>

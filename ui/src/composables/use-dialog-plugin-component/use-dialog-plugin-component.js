@@ -1,6 +1,7 @@
-import { getCurrentInstance, ref } from 'vue'
+import { getCurrentInstance, shallowRef } from 'vue'
 
 import getEmitsObject from '../../utils/private.get-emits-object/get-emits-object.js'
+import { getDismissReason } from '../../utils/private.dialog/dismiss-reason.js'
 
 // To be used for the custom component
 // used on a Dialog plugin
@@ -13,9 +14,12 @@ export default function useDialogPluginComponent() {
   // <q-dialog ref="dialogRef" ...
   // make sure that the setup() in which this
   // function is called returns dialogRef variable
-  const dialogRef = ref(null)
+  const dialogRef = shallowRef(null)
+
+  let dismissReason = null
 
   function show() {
+    dismissReason = null
     dialogRef.value.show()
   }
   function hide() {
@@ -27,8 +31,13 @@ export default function useDialogPluginComponent() {
     hide()
   }
 
-  function onDialogHide() {
-    emit('hide')
+  function onDialogCancel() {
+    dismissReason = 'cancel'
+    hide()
+  }
+
+  function onDialogHide(evt) {
+    emit('hide', dismissReason !== null ? dismissReason : getDismissReason(evt))
   }
 
   // expose public methods required by Dialog plugin
@@ -38,7 +47,7 @@ export default function useDialogPluginComponent() {
     dialogRef,
     onDialogHide,
     onDialogOK,
-    onDialogCancel: hide
+    onDialogCancel
   }
 }
 

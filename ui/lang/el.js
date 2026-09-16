@@ -15,6 +15,11 @@ export default {
     search: 'Αναζήτηση',
     filter: 'Φίλτρο',
     refresh: 'Ανανέωση',
+    minimum: 'Ελάχιστο',
+    maximum: 'Μέγιστο',
+    range: 'Εύρος',
+    noValue: 'Καμία τιμή',
+    resize: 'Αλλαγή μεγέθους',
     expand: label => (label ? `Επέκταση "${label}"` : 'Επεκτείνουν'),
     collapse: label => (label ? `Σύμπτυξη "${label}"` : 'Κατάρρευση')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Προηγούμενο έτος',
     nextYear: 'Προσεχές έτος',
     today: 'Σήμερα',
-    prevRangeYears: range => `Προηγούμενο ${range} χρόνια`,
-    nextRangeYears: range => `Επόμενο ${range} χρόνια`
+    prevRangeYears: range => `Προηγούμενα ${range} χρόνια`,
+    nextRangeYears: range => `Επόμενα ${range} χρόνια`,
+    hour: 'Ώρα',
+    minute: 'Λεπτό',
+    second: 'Δευτερόλεπτο',
+    now: 'Τρέχουσα ώρα'
   },
   table: {
     noData: 'Χωρίς δεδομένα',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Εγγραφές ανα σελίδα:',
     allRows: 'Όλες',
     pagination: (start, end, total) => start + '-' + end + ' από ' + total,
-    columns: 'Στήλες'
+    columns: 'Στήλες',
+    selectAllRows: 'Επιλογή όλων των γραμμών',
+    selectRow: 'Επιλογή γραμμής'
   },
   pagination: {
+    label: 'Σελιδοποίηση',
     first: 'Πρώτη σελίδα',
     prev: 'Προηγούμενη σελίδα',
     next: 'Επόμενη σελίδα',
     last: 'Τελευταία σελίδα'
   },
+  carousel: {
+    prevSlide: 'Προηγούμενη διαφάνεια',
+    nextSlide: 'Επόμενη διαφάνεια'
+  },
+  colorPicker: {
+    spectrum: 'Φάσμα',
+    tune: 'Ρύθμιση',
+    palette: 'Παλέτα',
+    value: 'Τιμή χρώματος',
+    hue: 'Απόχρωση',
+    alpha: 'Αδιαφάνεια',
+    saturation: 'Κορεσμός',
+    brightness: 'Φωτεινότητα'
+  },
+  uploader: {
+    addFiles: 'Επιλογή αρχείων',
+    upload: 'Μεταφόρτωση αρχείων',
+    abort: 'Ακύρωση μεταφόρτωσης',
+    removeQueued: 'Αφαίρεση αρχείων σε αναμονή',
+    removeUploaded: 'Αφαίρεση μεταφορτωμένων αρχείων',
+    removeFile: 'Αφαίρεση αρχείου'
+  },
   editor: {
+    toolbar: 'Γραμμή εργαλείων επεξεργαστή',
     url: 'Διεύθυνση URL', // Needs Translation
     bold: 'Έντονα',
     italic: 'Πλάγια',

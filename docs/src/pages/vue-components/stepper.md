@@ -19,22 +19,19 @@ They're usually useful when the user has to follow steps to complete a process, 
 The `QStepperNavigation` component allows you to place buttons within `QStepper` or `QStep` to
 navigate through the steps. It is up to you to add whatever buttons you require.
 
-::: tip
-To use global navigation, you must add it to the `QStepper` "navigation" slot.
-:::
+> [!TIP]
+> To use global navigation, you must add it to the `QStepper` "navigation" slot.
 
 ## Usage
 
-::: tip
-If the QStep content also has images and you want to use swipe actions to navigate, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
-:::
+> [!TIP]
+> If the QStep content also has images and you want to use swipe actions to navigate, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
 
-::: danger Keep Alive
-
-- Please take notice of the Boolean `keep-alive` prop for QStepper, if you need this behavior. Do NOT use Vue's native `<keep-alive>` component over QStep.
-- Should you need the `keep-alive-include` or `keep-alive-exclude` props then the QStep `name`s must be valid Vue component names (no spaces allowed, don't start with a number etc).
-
-:::
+> [!CAUTION]
+> **Keep Alive**
+>
+> - Please take notice of the Boolean `keep-alive` prop for QStepper, if you need this behavior. Do NOT use Vue's native `<keep-alive>` component over QStep.
+> - Should you need the `keep-alive-include` or `keep-alive-exclude` props then the QStep `name`s must be valid Vue component names (no spaces allowed, don't start with a number etc).
 
 ### Horizontal
 
@@ -44,6 +41,12 @@ If the QStep content also has images and you want to use swipe actions to naviga
 
 <DocExample title="Vertical" file="TypeVertical" />
 
+### Responsive
+
+The `vertical` prop can change at runtime. The steps and whatever they hold stay mounted across the switch, so a form the user is filling in keeps its state when the stepper adapts to the viewport.
+
+<DocExample title="Vertical below the md breakpoint" file="Responsive" />
+
 ### Header navigation
 
 <DocExample title="Non-linear header navigation" file="NonLinearNavigation" />
@@ -52,7 +55,7 @@ If the QStep content also has images and you want to use swipe actions to naviga
 
 ### Accessibility <q-badge label="v2.25+" />
 
-The active step's header carries `aria-current="step"` so screen readers announce the user's position in the process, and each step's content renders as a `group` labeled with the step's `title`. Navigable headers (see the `header-nav` prop) are exposed as buttons.
+The active step's header carries `aria-current="step"` so screen readers announce the user's position in the process, and each step's content renders as a `group` labeled with the step's `title`. Navigable headers (see the `header-nav` prop) are exposed as buttons. A `disable`d step stays part of that set: its header keeps the `button` role and announces itself as unavailable through `aria-disabled="true"`, while `tabindex="-1"` keeps it out of the tab order and neither click nor keyboard can activate it — the same shape [QBtn](/vue-components/button#accessibility) and [QChip](/vue-components/chip#accessibility) use for their disabled states. A step that opts out of header navigation (or a stepper without it) claims no role at all, since it is not a control in the first place.
 
 ### Header options
 
@@ -60,10 +63,9 @@ The active step's header carries `aria-current="step"` so screen readers announc
 
 <DocExample title="Alternative labels" file="AlternativeLabels" />
 
-::: tip
-You can also connect `contracted` prop to `$q.screen` to create a responsive behavior, like `:contracted="$q.screen.lt.md"`.
-More info: [Quasar Screen Plugin](/options/screen-plugin).
-:::
+> [!TIP]
+> You can also connect `contracted` prop to `$q.screen` to create a responsive behavior, like `:contracted="$q.screen.lt.md"`.
+> More info: [Quasar Screen Plugin](/options/screen-plugin).
 
 <DocExample title="Contracted" file="Contracted" />
 

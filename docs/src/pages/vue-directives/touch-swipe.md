@@ -1,7 +1,7 @@
 ---
-title: Touch Swipe Directive
+title: v-touch-swipe directive
 desc: Vue directive which triggers an event when the user swipes with the finger or mouse on a component or element.
-keys: touch-swipe
+keys: touch-swipe,v-touch-swipe
 examples: TouchSwipe
 related:
   - /vue-directives/touch-repeat
@@ -21,9 +21,8 @@ We will be describing `v-touch-swipe` on the lines below.
 
 Swipe with your mouse on the area below to see it in action. If using a mouse, you need to do it quick.
 
-::: tip
-If your content also has images, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
-:::
+> [!TIP]
+> If your content also has images, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
 
 <DocExample title="All directions" file="Basic" />
 
@@ -59,6 +58,14 @@ When you want to inhibit TouchSwipe, you can do so by stopping propagation of th
 
 However, if you are using `capture` or `mouseCapture` modifiers then events will first reach the TouchHold directive then the inner content, so TouchSwipe will still trigger.
 
-## Note on HMR
+### Events after TouchSwipe triggers
 
-Due to performance reasons, not all of the modifiers are reactive. Some require a window/page/component refresh to get updated. Please check the API card for the modifiers which are not marked as reactive.
+Once a swipe is recognized, the directive consumes the events that follow it, so that a swipe does not also count as a tap or as a click, be it on the element itself or on any of its parents. It stops every subsequent `touchmove` / `mousemove` and then the event that ends the gesture: `touchend` for touch events and `mouseup` for mouse events.
+
+This means that `@touchmove`, `@touchend` and `@mouseup` listeners on the element will not be called after a swipe has been recognized. They are still called when the movement does not qualify as a swipe. Should you need them in both cases, listen for them in the capture phase:
+
+```html
+<div v-touch-swipe="userHasSwiped" @touchend.capture="userHasLifted">
+  <!-- ...content -->
+</div>
+```

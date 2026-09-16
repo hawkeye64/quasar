@@ -15,6 +15,11 @@ export default {
     search: 'Rechercher',
     filter: 'Filtrer',
     refresh: 'Rafraîchir',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Plage',
+    noValue: 'Aucune valeur',
+    resize: 'Redimensionner',
     expand: label => (label ? `Développer "${label}"` : 'Développer'),
     collapse: label => (label ? `Réduire "${label}"` : 'Effondrement')
   },
@@ -40,8 +45,12 @@ export default {
     prevYear: 'Année précédente',
     nextYear: 'Année suivante',
     today: "Aujourd'hui",
-    prevRangeYears: range => `Précédent ${range} années`,
-    nextRangeYears: range => `Suivant ${range} années`
+    prevRangeYears: range => `${range} années précédentes`,
+    nextRangeYears: range => `${range} années suivantes`,
+    hour: 'Heure',
+    minute: 'Minute',
+    second: 'Seconde',
+    now: 'Heure actuelle'
   },
   table: {
     noData: 'Aucune donnée à afficher',
@@ -57,15 +66,41 @@ export default {
     recordsPerPage: 'Lignes par page :',
     allRows: 'Tous',
     pagination: (start, end, total) => start + '-' + end + ' sur ' + total,
-    columns: 'Colonnes'
+    columns: 'Colonnes',
+    selectAllRows: 'Sélectionner toutes les lignes',
+    selectRow: 'Sélectionner la ligne'
   },
   pagination: {
+    label: 'Pagination',
     first: 'Première page',
     prev: 'Page précédente',
     next: 'Page suivante',
     last: 'Dernière page'
   },
+  carousel: {
+    prevSlide: 'Diapositive précédente',
+    nextSlide: 'Diapositive suivante'
+  },
+  colorPicker: {
+    spectrum: 'Spectre',
+    tune: 'Réglage',
+    palette: 'Palette',
+    value: 'Valeur de la couleur',
+    hue: 'Teinte',
+    alpha: 'Opacité',
+    saturation: 'Saturation',
+    brightness: 'Luminosité'
+  },
+  uploader: {
+    addFiles: 'Choisir des fichiers',
+    upload: 'Téléverser les fichiers',
+    abort: 'Annuler le téléversement',
+    removeQueued: 'Supprimer les fichiers en attente',
+    removeUploaded: 'Supprimer les fichiers téléversés',
+    removeFile: 'Supprimer le fichier'
+  },
   editor: {
+    toolbar: "Barre d'outils de l'éditeur",
     url: 'URL',
     bold: 'Gras',
     italic: 'Italique',

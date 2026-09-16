@@ -20,9 +20,8 @@ Notice we are using an object for the selection, which holds values for both the
 
 ### Standard
 
-::: warning
-You are responsible for accommodating the space around QRange so that the label and marker labels won't overlap the other content on your page. You can use CSS margin or padding for this purpose.
-:::
+> [!WARNING]
+> You are responsible for accommodating the space around QRange so that the label and marker labels won't overlap the other content on your page. You can use CSS margin or padding for this purpose.
 
 <DocExample title="Standard" file="Standard" />
 
@@ -30,11 +29,21 @@ You are responsible for accommodating the space around QRange so that the label 
 
 <DocExample title="Vertical orientation" file="Vertical" />
 
-### With inner min/max <q-badge label="v2.4+" />
+### With inner min/max
 
 Sometimes you need to restrict the model value to an interval inside of the track's length. For this purpose, use `inner-min` and `inner-max` props. First prop needs to be higher or equal to `min` prop while the latter needs to be lower or equal to the `max` prop.
 
 <DocExample title="Inner min/max" file="InnerMinMax" />
+
+### Range width limits <q-badge label="v2.26+" />
+
+Use the `min-range` and `max-range` props to constrain the width of the selection (the difference between the model's `max` and `min`). Think of picking an event's duration: at least 15 minutes long, but placed anywhere within the hour.
+
+External model values that would break these limits get coerced (in the same way `inner-min`/`inner-max` act), with the model's `min` acting as the anchor. Should the two props conflict, `min-range` wins.
+
+<DocExample title="Minimum width" file="MinimumRange" />
+
+<DocExample title="Maximum width" file="MaximumRange" />
 
 ### With step
 
@@ -64,17 +73,18 @@ The example below is better highlighting how QRange handles label positioning so
 
 <DocExample title="Markers" file="Markers" />
 
-### Marker labels <q-badge label="v2.4+" />
+### Marker labels
 
 <DocExample title="Marker labels" file="MarkerLabels" />
 
-::: tip TIP on slots
-In order to use the marker label slots (see below), you must enable them by using the `marker-labels` prop.
-:::
+> [!TIP]
+> **TIP on slots**
+>
+> In order to use the marker label slots (see below), you must enable them by using the `marker-labels` prop.
 
 <DocExample title="Marker label slots" file="MarkerLabelSlots" />
 
-### Other customizations <q-badge label="v2.4+" />
+### Other customizations
 
 <DocExample title="Color customizations" file="RangeColoring" />
 
@@ -127,3 +137,11 @@ When dealing with a native form which has an `action` and a `method` (eg. when u
 The submitted value contains the minimum and maximum values separated by a pipe (`min|max`).
 
 <DocExample title="Native form" file="NativeForm" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QRange follows the [WAI-ARIA multi-thumb slider pattern](https://www.w3.org/WAI/ARIA/apg/patterns/slider-multithumb/): each thumb is its own `role="slider"` element exposing `aria-valuemin`/`aria-valuemax`/`aria-valuenow` (each thumb's limit follows the other one, mirroring how the values clamp against each other), `aria-orientation` and `aria-disabled`/`aria-readonly`, wrapped in a `role="group"` container. The thumbs are named "Minimum"/"Maximum" through the [Quasar Language Pack](/options/quasar-language-packs) (`label.minimum`/`label.maximum`) — override them per instance with the `left-thumb-aria-label`/`right-thumb-aria-label` props. A `left-label-value`/`right-label-value` (e.g. "20%") also becomes its thumb's `aria-valuetext`, so screen readers announce the same formatted value sighted users see. A thumb whose model side is `null` sits on its limit but reports a localized "No value" as `aria-valuetext`, so an untouched range is not announced as a full selection.
+
+The keyboard behavior matches [QSlider](/vue-components/slider#accessibility): <kbd>Tab</kbd> reaches each thumb in turn, the <kbd>Arrow</kbd> keys step whichever thumb has focus (RTL/`reverse`/`vertical`-aware), <kbd>PageUp</kbd> / <kbd>PageDown</kbd> jump by 10 steps and <kbd>Home</kbd> / <kbd>End</kbd> go straight to the focused thumb's limits, on every platform.
+
+With `drag-range`, the track container is an additional Tab stop whose keys move the entire selected window, preserving its width; with `drag-only-range` it is the only one, so the slider semantics (localized "Range" name, the minimum as `aria-valuenow`, both formatted values as `aria-valuetext`) move onto it instead of the thumbs.

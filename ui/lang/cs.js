@@ -15,6 +15,11 @@ export default {
     search: 'Hledat',
     filter: 'Filtrovat',
     refresh: 'Obnovit',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Rozsah',
+    noValue: 'Bez hodnoty',
+    resize: 'Změnit velikost',
     expand: label => (label ? `Rozbalit "${label}"` : 'Rozšířit'),
     collapse: label => (label ? `Sbalit "${label}"` : 'Kolaps')
   },
@@ -29,13 +34,17 @@ export default {
     firstDayOfWeek: 1, // 0-6, 0 - Sunday, 1 Monday, ...
     format24h: true,
     pluralDay: 'dny',
-    prevMonth: '"Předchozí měsíc',
+    prevMonth: 'Předchozí měsíc',
     nextMonth: 'Příští měsíc',
     prevYear: 'Předchozí rok',
     nextYear: 'Příští rok',
     today: 'Dnes',
-    prevRangeYears: range => `Předchozí ${range} roky`,
-    nextRangeYears: range => `Další ${range} roky`
+    prevRangeYears: range => `Předchozích ${range} let`,
+    nextRangeYears: range => `Dalších ${range} let`,
+    hour: 'Hodina',
+    minute: 'Minuta',
+    second: 'Sekunda',
+    now: 'Aktuální čas'
   },
   table: {
     noData: 'Žádná data k dispozici',
@@ -64,15 +73,41 @@ export default {
     recordsPerPage: 'Počet řádků na stránku:',
     allRows: 'Všechny',
     pagination: (start, end, total) => start + '-' + end + ' z ' + total,
-    columns: 'Sloupce'
+    columns: 'Sloupce',
+    selectAllRows: 'Vybrat všechny řádky',
+    selectRow: 'Vybrat řádek'
   },
   pagination: {
+    label: 'Stránkování',
     first: 'První stránka',
     prev: 'Předchozí stránka',
     next: 'Další stránka',
     last: 'Poslední stránka'
   },
+  carousel: {
+    prevSlide: 'Předchozí snímek',
+    nextSlide: 'Další snímek'
+  },
+  colorPicker: {
+    spectrum: 'Spektrum',
+    tune: 'Doladění',
+    palette: 'Paleta',
+    value: 'Hodnota barvy',
+    hue: 'Odstín',
+    alpha: 'Krytí',
+    saturation: 'Sytost',
+    brightness: 'Jas'
+  },
+  uploader: {
+    addFiles: 'Vybrat soubory',
+    upload: 'Nahrát soubory',
+    abort: 'Přerušit nahrávání',
+    removeQueued: 'Odebrat čekající soubory',
+    removeUploaded: 'Odebrat nahrané soubory',
+    removeFile: 'Odebrat soubor'
+  },
   editor: {
+    toolbar: 'Panel nástrojů editoru',
     url: 'URL',
     bold: 'Tučně',
     italic: 'Kurzíva',

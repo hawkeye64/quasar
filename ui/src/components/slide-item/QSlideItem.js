@@ -4,12 +4,13 @@ import {
   h,
   onBeforeUnmount,
   onBeforeUpdate,
-  ref,
+  shallowRef,
   withDirectives
 } from 'vue'
 
 import TouchPan from '../../directives/touch-pan/TouchPan.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -43,12 +44,12 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
     const { getCache } = useRenderCache()
 
-    const contentRef = ref(null)
+    const contentRef = shallowRef(null)
 
     let timer = null,
       pan = {},
@@ -64,7 +65,7 @@ export default /*#__PURE__*/ createComponent({
     const classes = computed(
       () =>
         'q-slide-item q-item-type overflow-hidden' +
-        (isDark.value ? ' q-slide-item--dark q-dark' : '')
+        (isDark() ? ' q-slide-item--dark q-dark' : '')
     )
 
     function reset() {

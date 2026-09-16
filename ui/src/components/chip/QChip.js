@@ -1,19 +1,21 @@
-import { computed, getCurrentInstance, h } from 'vue'
+import { computed, h, withDirectives } from 'vue'
 
 import QIcon from '../icon/QIcon.js'
 
 import Ripple from '../../directives/ripple/Ripple.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
-import useSize, {
+import {
+  createSizeStyle,
   useSizeProps
 } from '../../composables/private.use-size/use-size.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
-import { hDir, hMergeSlotSafely } from '../../utils/private.render/render.js'
+import { hMergeSlotSafely } from '../../utils/private.render/render.js'
 
 function preventSpace(e) {
   if (e.keyCode === 32) stopAndPrevent(e)
@@ -26,6 +28,8 @@ export const defaultSizes = {
   lg: 20,
   xl: 24
 }
+
+const getSizeStyle = /*#__PURE__*/ createSizeStyle(defaultSizes)
 
 export default /*#__PURE__*/ createComponent({
   name: 'QChip',
@@ -56,7 +60,15 @@ export default /*#__PURE__*/ createComponent({
 
     square: Boolean,
     outline: Boolean,
-    clickable: Boolean,
+    clickable: {
+      type: Boolean,
+      default: null
+    },
+    // declared as a prop (and "click" left out of emits, as the API
+    // validator forbids declaring both) so the presence of a click
+    // listener is observable: it implies clickability when the
+    // clickable prop is not set
+    onClick: Function,
     removable: Boolean,
 
     removeAriaLabel: String,
@@ -70,15 +82,12 @@ export default /*#__PURE__*/ createComponent({
     }
   },
 
-  emits: ['update:modelValue', 'update:selected', 'remove', 'click'],
+  emits: ['update:modelValue', 'update:selected', 'remove'],
 
   setup(props, { slots, emit }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
-    const sizeStyle = useSize(props, defaultSizes)
 
     const hasLeftIcon = computed(() => props.selected || props.icon !== void 0)
 
@@ -92,9 +101,13 @@ export default /*#__PURE__*/ createComponent({
       () => props.iconRemove || $q.iconSet.chip.remove
     )
 
-    const isClickable = computed(
-      () => !props.disable && (props.clickable || props.selected !== null)
+    const isActionable = computed(
+      () =>
+        (props.clickable === null
+          ? props.onClick !== void 0
+          : props.clickable) || props.selected !== null
     )
+    const isClickable = computed(() => !props.disable && isActionable.value)
 
     const classes = computed(() => {
       const text = props.outline
@@ -113,24 +126,30 @@ export default /*#__PURE__*/ createComponent({
           ? ' q-chip--clickable cursor-pointer non-selectable q-hoverable'
           : '') +
         (props.square ? ' q-chip--square' : '') +
-        (isDark.value ? ' q-chip--dark q-dark' : '')
+        (isDark() ? ' q-chip--dark q-dark' : '')
       )
     })
 
     const attributes = computed(() => {
       const chip = props.disable
-        ? { tabindex: -1, 'aria-disabled': 'true' }
+        ? { role: 'button', tabindex: -1, 'aria-disabled': 'true' }
         : {
-            tabindex: props.tabindex || 0,
             role: 'button',
-            'aria-pressed': props.selected ? 'true' : 'false'
+            tabindex: props.tabindex || 0,
+            // aria-pressed only for actual toggle chips —
+            // plain action chips must not announce as (unpressed) toggles
+            ...(props.selected !== null
+              ? { 'aria-pressed': props.selected ? 'true' : 'false' }
+              : {})
           }
 
       const remove = {
-        ...chip,
         role: 'button',
         'aria-hidden': 'false',
-        'aria-label': props.removeAriaLabel || $q.lang.label.remove
+        'aria-label': props.removeAriaLabel || $q.lang.label.remove,
+        ...(props.disable
+          ? { tabindex: -1, 'aria-disabled': 'true' }
+          : { tabindex: props.tabindex || 0 })
       }
 
       return { chip, remove }
@@ -219,27 +238,30 @@ export default /*#__PURE__*/ createComponent({
     return () => {
       if (!props.modelValue) return
 
-      const data = {
-        class: classes.value,
-        style: sizeStyle.value
+      const data = { class: classes.value }
+      if (props.size !== void 0) {
+        data.style = getSizeStyle(props.size)
+      }
+
+      if (isActionable.value) {
+        // a disabled actionable chip keeps its role (perceivable,
+        // announced as dimmed) but leaves the tab order
+        Object.assign(data, attributes.value.chip)
       }
 
       if (isClickable.value) {
-        Object.assign(data, attributes.value.chip, {
+        Object.assign(data, {
           onClick,
           onKeydown: preventSpace,
           onKeyup
         })
       }
 
-      return hDir(
-        'div',
-        data,
-        getContent(),
-        'ripple',
-        props.ripple !== false && !props.disable,
-        () => [[Ripple, props.ripple]]
-      )
+      // same shape as QBtn: Ripple stays attached and is switched off through
+      // its value, so toggling disable never re-creates the content
+      return withDirectives(h('div', data, getContent()), [
+        [Ripple, props.disable || props.ripple === false ? false : props.ripple]
+      ])
     }
   }
 })

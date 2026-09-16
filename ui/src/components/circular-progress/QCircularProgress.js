@@ -1,6 +1,7 @@
-import { computed, getCurrentInstance, h } from 'vue'
+import { computed, h } from 'vue'
 
-import useSize from '../../composables/private.use-size/use-size.js'
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
+import { getSizeStyle } from '../../composables/private.use-size/use-size.js'
 import { useCircularCommonProps } from './circular-progress.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
@@ -32,19 +33,21 @@ export default /*#__PURE__*/ createComponent({
   },
 
   setup(props, { slots }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
-    const sizeStyle = useSize(props)
+    const $q = useQuasar()
 
     const svgStyle = computed(() => {
+      // the indeterminate spin used to override this transform anyway
+      // (it lived on the svg); now that it spins the circle instead,
+      // the base transform must not reappear underneath it
+      if (props.indeterminate) return null
+
       const angle = ($q.lang.rtl ? -1 : 1) * props.angle
 
       return {
         transform:
           props.reverse !== ($q.lang.rtl === true)
-            ? `scale3d(-1, 1, 1) rotate3d(0, 0, 1, ${-90 - angle}deg)`
-            : `rotate3d(0, 0, 1, ${angle - 90}deg)`
+            ? `scaleX(-1) rotate(${-90 - angle}deg)`
+            : `rotate(${angle - 90}deg)`
       }
     })
 
@@ -167,7 +170,7 @@ export default /*#__PURE__*/ createComponent({
         'div',
         {
           class: `q-circular-progress q-circular-progress--${props.indeterminate ? 'in' : ''}determinate`,
-          style: sizeStyle.value,
+          style: getSizeStyle(props.size),
           role: 'progressbar',
           'aria-valuemin': props.min,
           'aria-valuemax': props.max,

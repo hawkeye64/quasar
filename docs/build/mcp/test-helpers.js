@@ -1,0 +1,21 @@
+/**
+ * Shared render helpers for emitter tests. Each call re-registers emitters
+ * from a clean slate so registrations never leak across test files.
+ */
+
+import { createAiMd } from './markdown/md.js'
+import { clearEmitters, createCtx, emitTokens } from './markdown/walker.js'
+import { registerProseEmitters } from './markdown/prose.js'
+
+function renderTokens(src, ctxOptions) {
+  const md = createAiMd()
+  const tokens = md.parse(src, {})
+  const ctx = createCtx({ sourcePath: 't.md', frontMatter: {}, ...ctxOptions })
+  return emitTokens(tokens, ctx)
+}
+
+export function renderProse(src, ctxOptions = {}) {
+  clearEmitters()
+  registerProseEmitters()
+  return renderTokens(src, ctxOptions)
+}

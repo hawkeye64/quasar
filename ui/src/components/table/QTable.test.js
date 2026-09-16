@@ -1,10 +1,16 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 
 import { getRouter } from 'testing/runtime/router.js'
 
 import QTable from './QTable.js'
+import QTh from './QTh.js'
+import QTd from './QTd.js'
 import QVirtualScroll from '../virtual-scroll/QVirtualScroll.js'
+import QSelect from '../select/QSelect.js'
+import TableWithPerColumnSlots from './test/TableWithPerColumnSlots.vue'
+import TableWithSwappableSlots from './test/TableWithSwappableSlots.vue'
 
 const defaultColumns = [
   {
@@ -51,6 +57,27 @@ function getColumnTexts(wrapper, colIndex = 0) {
   return wrapper
     .findAll('tbody tr')
     .map(row => row.findAll('td')[colIndex].text())
+}
+
+// a slot child that reports its own mount/unmount, so that a test can tell
+// a moved vnode (key honored) from a recreated one (key ignored)
+function getLifecycleTracker() {
+  const log = []
+
+  const component = defineComponent({
+    props: { rowId: { type: Number, required: true } },
+    mounted() {
+      log.push(`mount:${this.rowId}`)
+    },
+    unmounted() {
+      log.push(`unmount:${this.rowId}`)
+    },
+    render() {
+      return h('span', String(this.rowId))
+    }
+  })
+
+  return { log, component }
 }
 
 function getFirstThAriaSort(wrapper) {
@@ -262,6 +289,36 @@ describe('[QTable API]', () => {
         expect(wrapper.get('.q-table__middle').classes()).not.toContain(
           'scroll'
         )
+      })
+
+      test('type ComponentInstance has effect', async () => {
+        // the instance stands for its root element, the scroll container
+        const holder = mount(
+          {
+            // closed, as a script setup component is: its ref is the expose proxy
+            setup(_, { expose }) {
+              expose({})
+              return () => h('div', { class: 'scroll', style: 'height: 200px' })
+            }
+          },
+          { attachTo: document.body }
+        )
+        const wrapper = mountTable({
+          rows: getBigRows(50),
+          virtualScroll: true,
+          pagination: { rowsPerPage: 0 }
+        })
+
+        expect(wrapper.get('.q-table__middle').classes()).toContain('scroll')
+
+        await wrapper.setProps({ virtualScrollTarget: holder.vm })
+        await flushPromises()
+
+        expect(wrapper.get('.q-table__middle').classes()).not.toContain(
+          'scroll'
+        )
+
+        holder.unmount()
       })
     })
 
@@ -648,6 +705,94 @@ describe('[QTable API]', () => {
         expect(headerTexts()[0]).toContain('Dessert')
         expect(headerTexts()[1]).toContain('Calories')
       })
+
+      describe('(column)autoWidth', () => {
+        const autoWidthClass = 'q-table--col-auto-width'
+        const columns = [
+          { ...defaultColumns[0], autoWidth: true },
+          { ...defaultColumns[1], autoWidth: true, classes: 'my-cell' },
+          {
+            name: 'id',
+            label: 'Id',
+            field: 'id',
+            autoWidth: true,
+            classes: row => `my-row-${row.id}`
+          },
+          { name: 'wide', label: 'Wide', field: 'name' }
+        ]
+
+        function getCellClasses(wrapper, colIndex) {
+          return wrapper
+            .findAll('tbody tr')
+            .map(row => row.findAll('td')[colIndex].classes())
+        }
+
+        test('marks the header and body cells of the column', () => {
+          const wrapper = mountTable({ columns })
+          const headers = wrapper.findAll('thead th')
+
+          expect(headers[0].classes()).toContain(autoWidthClass)
+          expect(headers[3].classes()).not.toContain(autoWidthClass)
+
+          for (const cellClasses of getCellClasses(wrapper, 0)) {
+            expect(cellClasses).toContain(autoWidthClass)
+          }
+          for (const cellClasses of getCellClasses(wrapper, 3)) {
+            expect(cellClasses).not.toContain(autoWidthClass)
+          }
+        })
+
+        test('keeps the custom classes of the column', () => {
+          const wrapper = mountTable({ columns })
+          const rows = getRows()
+
+          expect(wrapper.findAll('thead th')[1].classes()).toContain(
+            autoWidthClass
+          )
+
+          getCellClasses(wrapper, 1).forEach(cellClasses => {
+            expect(cellClasses).toContain(autoWidthClass)
+            expect(cellClasses).toContain('my-cell')
+          })
+
+          getCellClasses(wrapper, 2).forEach((cellClasses, index) => {
+            expect(cellClasses).toContain(autoWidthClass)
+            expect(cellClasses).toContain(`my-row-${rows[index].id}`)
+          })
+        })
+
+        test('is honored by QTh and QTd fed with the slot props', () => {
+          const wrapper = mountTable(
+            { columns },
+            {
+              slots: {
+                header: scope =>
+                  h(
+                    'tr',
+                    scope.cols.map(col =>
+                      h(QTh, { key: col.name, props: scope }, () => col.label)
+                    )
+                  ),
+                body: scope =>
+                  h(
+                    'tr',
+                    scope.cols.map(col =>
+                      h(QTd, { key: col.name, props: scope }, () => col.value)
+                    )
+                  )
+              }
+            }
+          )
+
+          const headers = wrapper.findAll('thead th')
+          expect(headers[0].classes()).toContain(autoWidthClass)
+          expect(headers[3].classes()).not.toContain(autoWidthClass)
+
+          const cells = wrapper.get('tbody tr').findAll('td')
+          expect(cells[0].classes()).toContain(autoWidthClass)
+          expect(cells[3].classes()).not.toContain(autoWidthClass)
+        })
+      })
     })
 
     describe('[(prop)visible-columns]', () => {
@@ -668,6 +813,34 @@ describe('[QTable API]', () => {
         expect(headerTexts).toHaveLength(2)
         expect(headerTexts[0]).toContain('Dessert')
         expect(headerTexts[1]).toContain('Calories')
+      })
+
+      // toggling visibility must not patch one column's slot content
+      // against another column's (#16047)
+      test('per-column slot content survives toggling', async () => {
+        const rows = getRows()
+        const wrapper = mount(TableWithPerColumnSlots, {
+          props: {
+            rows,
+            columns: defaultColumns,
+            rowKey: 'id',
+            visibleColumns: ['name', 'calories']
+          }
+        })
+
+        expect(wrapper.get('thead th').classes()).toContain('header-name')
+        expect(wrapper.get('tbody td').classes()).toContain('cell-name')
+
+        await wrapper.setProps({ visibleColumns: ['calories'] })
+
+        const th = wrapper.get('thead th')
+        expect(th.classes()).toContain('header-calories')
+        expect(th.text()).toBe(defaultColumns[1].label)
+
+        const td = wrapper.get('tbody td')
+        expect(td.classes()).toContain('cell-calories')
+        expect(td.attributes('data-value')).toBe(String(rows[0].calories))
+        expect(td.text()).toBe(String(rows[0].calories))
       })
     })
 
@@ -1530,6 +1703,27 @@ describe('[QTable API]', () => {
         })
         expect(getColumnTexts(sorted)[0]).toBe('Cupcake')
       })
+
+      test('offers the controlled page size in the selector', async () => {
+        const wrapper = mountTable({
+          rowsPerPageOptions: [5, 10],
+          pagination: { page: 1, rowsPerPage: 5 },
+          'onUpdate:pagination': () => {}
+        })
+
+        const getOfferedSizes = () =>
+          wrapper
+            .findComponent(QSelect)
+            .props('options')
+            .map(opt => opt.value)
+
+        expect(getOfferedSizes()).toStrictEqual([5, 10])
+
+        await wrapper.setProps({ pagination: { page: 1, rowsPerPage: 3 } })
+
+        expect(wrapper.findAll('tbody tr')).toHaveLength(3)
+        expect(getOfferedSizes()).toStrictEqual([3, 5, 10])
+      })
     })
 
     describe('[(prop)rows-per-page-options]', () => {
@@ -1658,6 +1852,37 @@ describe('[QTable API]', () => {
 
         expect(slotScope).toStrictEqual(bodyCommonScopeShape)
       })
+
+      test('honors the key set on the slot content', async () => {
+        const { log, component } = getLifecycleTracker()
+
+        const wrapper = mountTable(
+          { grid: true, rowKey: 'id', pagination: { rowsPerPage: 0 } },
+          {
+            slots: {
+              item: scope => [
+                h(component, { key: scope.key, rowId: scope.row.id })
+              ]
+            }
+          }
+        )
+
+        expect(log).toEqual([
+          'mount:1',
+          'mount:2',
+          'mount:3',
+          'mount:4',
+          'mount:5',
+          'mount:6',
+          'mount:7'
+        ])
+
+        log.length = 0
+        await wrapper.setProps({ rows: getRows().filter(row => row.id !== 3) })
+
+        // the rows after the removed one keep their instances
+        expect(log).toEqual(['unmount:3'])
+      })
     })
 
     describe('[(slot)body]', () => {
@@ -1686,6 +1911,39 @@ describe('[QTable API]', () => {
           __trClass: expect.any(String),
           __trStyle: expect.any(String)
         })
+      })
+
+      test('honors the key set on the slot content', async () => {
+        const { log, component } = getLifecycleTracker()
+
+        const wrapper = mountTable(
+          { rowKey: 'id', pagination: { rowsPerPage: 0 } },
+          {
+            slots: {
+              body: scope => [
+                h('tr', { key: scope.key }, [
+                  h('td', [h(component, { rowId: scope.row.id })])
+                ])
+              ]
+            }
+          }
+        )
+
+        expect(log).toEqual([
+          'mount:1',
+          'mount:2',
+          'mount:3',
+          'mount:4',
+          'mount:5',
+          'mount:6',
+          'mount:7'
+        ])
+
+        log.length = 0
+        await wrapper.setProps({ rows: getRows().filter(row => row.id !== 3) })
+
+        // the rows after the removed one keep their instances
+        expect(log).toEqual(['unmount:3'])
       })
     })
 
@@ -1918,6 +2176,79 @@ describe('[QTable API]', () => {
           cols: expect.any(Array)
         })
       })
+
+      // emptying the rows must not patch a body row against the
+      // bottom-row slot's content (#16047)
+      test('survives the body rows emptying', async () => {
+        const wrapper = mount(TableWithSwappableSlots, {
+          props: { rows: getRows(), columns: defaultColumns, rowKey: 'id' }
+        })
+
+        expect(wrapper.get('tbody tr:first-child').classes()).toContain(
+          'body-row'
+        )
+        expect(wrapper.get('tbody tr:last-child').classes()).toContain(
+          'bottom-row'
+        )
+
+        await wrapper.setProps({ rows: [] })
+
+        const tr = wrapper.get('tbody tr')
+        expect(tr.classes()).toContain('bottom-row')
+        expect(tr.text()).toBe('totals')
+      })
+    })
+
+    describe('[(slot)footer]', () => {
+      test('renders the content', () => {
+        let slotScope
+        const slotContent = 'some-slot-content'
+        const wrapper = mountTable(
+          {},
+          {
+            slots: {
+              footer: scope => {
+                slotScope = scope
+                return slotContent
+              }
+            }
+          }
+        )
+
+        const footer = wrapper.get('tfoot')
+        expect(footer.text()).toContain(slotContent)
+        // the footer comes after the rows, as per the HTML spec
+        expect(
+          footer.element.previousElementSibling.tagName.toLowerCase()
+        ).toBe('tbody')
+
+        expect(slotScope).toStrictEqual({
+          cols: expect.any(Array)
+        })
+      })
+
+      test('renders the content when using virtual scroll', () => {
+        const slotContent = 'some-slot-content'
+        const wrapper = mountTable(
+          { virtualScroll: true },
+          {
+            slots: {
+              footer: () => slotContent
+            }
+          }
+        )
+
+        const footer = wrapper.getComponent(QVirtualScroll).get('tfoot')
+        expect(footer.text()).toContain(slotContent)
+        expect(
+          footer.element.previousElementSibling.tagName.toLowerCase()
+        ).toBe('tbody')
+      })
+
+      test('does not render a tfoot element when the slot is not used', () => {
+        const wrapper = mountTable()
+        expect(wrapper.find('tfoot').exists()).toBe(false)
+      })
     })
 
     describe('[(slot)top]', () => {
@@ -2050,6 +2381,31 @@ describe('[QTable API]', () => {
 
         expect(slotScope).toStrictEqual(marginalScopeShape)
       })
+
+      // gaining a selection must not patch the top-left slot's content
+      // against this slot's (#16047)
+      test('survives replacing the top-left slot', async () => {
+        const rows = getRows()
+        const wrapper = mount(TableWithSwappableSlots, {
+          props: {
+            rows,
+            columns: defaultColumns,
+            rowKey: 'id',
+            selection: 'multiple',
+            selected: []
+          }
+        })
+
+        const top = wrapper.get('.q-table__top')
+        expect(top.find('.top-left').exists()).toBe(true)
+        expect(top.find('.top-sel').exists()).toBe(false)
+
+        await wrapper.setProps({ selected: [rows[0]] })
+
+        expect(top.find('.top-left').exists()).toBe(false)
+        const sel = top.get('.top-sel')
+        expect(sel.text()).toBe('selection')
+      })
     })
 
     describe('[(slot)no-data]', () => {
@@ -2077,6 +2433,23 @@ describe('[QTable API]', () => {
           icon: expect.any(String),
           filter: 'find-me'
         })
+      })
+
+      // emptying the rows must not patch the bottom slot's content
+      // against this slot's (#16047)
+      test('survives replacing the bottom slot', async () => {
+        const wrapper = mount(TableWithSwappableSlots, {
+          props: { rows: getRows(), columns: defaultColumns, rowKey: 'id' }
+        })
+
+        expect(wrapper.find('.bottom-marginal').exists()).toBe(true)
+        expect(wrapper.find('.nodata-marginal').exists()).toBe(false)
+
+        await wrapper.setProps({ rows: [] })
+
+        expect(wrapper.find('.bottom-marginal').exists()).toBe(false)
+        const noData = wrapper.get('.nodata-marginal')
+        expect(noData.text()).toBe('empty')
       })
     })
   })
@@ -2559,6 +2932,54 @@ describe('[QTable API]', () => {
         expect(middle.scrollTop).toBe(firstRowEl.offsetTop)
         expect(wrapper.emitted('virtualScroll')[1][0].index).toBe(0)
       })
+
+      test('reports the rendered row range', async () => {
+        const getLastRenderedIndex = wrapper =>
+          wrapper.findAll('tbody tr').length - 1
+
+        // a partially filled last page (the fixture has 7 rows)
+        const wrapper = mountTable(
+          { pagination: { page: 2, rowsPerPage: 5 } },
+          { attrs: { style: 'height: 150px' } }
+        )
+
+        wrapper.vm.scrollTo(1)
+        await flushPromises()
+
+        expect(getLastRenderedIndex(wrapper)).toBeLessThan(4)
+        expect(wrapper.emitted('virtualScroll')[0][0]).toMatchObject({
+          index: 1,
+          from: 0,
+          to: getLastRenderedIndex(wrapper)
+        })
+
+        // "all rows"
+        wrapper.vm.setPagination({ page: 1, rowsPerPage: 0 })
+        await flushPromises()
+        wrapper.vm.scrollTo(0)
+        await flushPromises()
+
+        expect(wrapper.emitted('virtualScroll')[1][0].to).toBe(
+          getLastRenderedIndex(wrapper)
+        )
+
+        // a page size a controlling parent moved to
+        const controlled = mountTable(
+          {
+            pagination: { page: 1, rowsPerPage: 5 },
+            'onUpdate:pagination': () => {}
+          },
+          { attrs: { style: 'height: 150px' } }
+        )
+
+        await controlled.setProps({ pagination: { page: 1, rowsPerPage: 3 } })
+        controlled.vm.scrollTo(0)
+        await flushPromises()
+
+        expect(controlled.emitted('virtualScroll')[0][0].to).toBe(
+          getLastRenderedIndex(controlled)
+        )
+      })
     })
 
     describe('[(method)getCellValue]', () => {
@@ -2804,6 +3225,83 @@ describe('[QTable API]', () => {
           }
         })
       })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('the horizontally scrollable body is reachable by keyboard', () => {
+      // WCAG 2.1.1: a scrollable region needs a tab stop of its own
+      const wrapper = mountTable()
+
+      expect(wrapper.get('.q-table__middle').attributes('tabindex')).toBe('0')
+    })
+
+    test('names the selection checkboxes and their column header', () => {
+      const wrapper = mountTable({ selection: 'multiple', selected: [] })
+      const { table } = wrapper.vm.$q.lang
+
+      const header = wrapper.get('thead th.q-table--col-auto-width')
+      expect(header.attributes('aria-label')).toBe(table.selectAllRows)
+      expect(header.get('[role="checkbox"]').attributes('aria-label')).toBe(
+        table.selectAllRows
+      )
+
+      expect(
+        wrapper.get('tbody [role="checkbox"]').attributes('aria-label')
+      ).toBe(table.selectRow)
+    })
+
+    test('names its own loading progressbar', () => {
+      // the consumer never renders this element, so it cannot name it
+      const wrapper = mountTable({ loading: true })
+      const bar = wrapper.get('.q-table__linear-progress')
+
+      expect(bar.attributes('role')).toBe('progressbar')
+      expect(bar.attributes('aria-label')).toBe(
+        wrapper.vm.$q.lang.table.loading
+      )
+    })
+
+    function getRowsPerPageParts(wrapper) {
+      const target = wrapper.get(
+        '.q-table__select input[role="combobox"]'
+      ).element
+
+      return {
+        target,
+        visibleLabel: target
+          .closest('.q-table__control')
+          .querySelector('span.q-table__bottom-item').textContent
+      }
+    }
+
+    test('names the rows-per-page selection after its visible label', () => {
+      const { target, visibleLabel } = getRowsPerPageParts(mountTable())
+
+      expect(visibleLabel).not.toBe('')
+      expect(target.getAttribute('aria-label')).toBe(visibleLabel)
+    })
+
+    test('names the rows-per-page selection after a custom rows-per-page-label', () => {
+      const { target, visibleLabel } = getRowsPerPageParts(
+        mountTable({ rowsPerPageLabel: 'Desserts per page:' })
+      )
+
+      expect(visibleLabel).toBe('Desserts per page:')
+      expect(target.getAttribute('aria-label')).toBe(visibleLabel)
+    })
+
+    test('labels the pagination navigation buttons', () => {
+      const wrapper = mountTable() // 7 rows / 5 per page -> 2 pages
+
+      const labels = wrapper
+        .findAll('.q-table__bottom button')
+        .map(btn => btn.attributes('aria-label'))
+
+      expect(labels.length).toBeGreaterThan(0)
+      for (const label of labels) {
+        expect(label).toBeTruthy()
+      }
     })
   })
 })

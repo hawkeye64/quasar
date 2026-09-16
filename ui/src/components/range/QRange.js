@@ -1,5 +1,6 @@
-import { computed, getCurrentInstance, h, ref, watch } from 'vue'
+import { computed, h, ref, shallowRef, watch } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useSlider, {
   keyCodes,
   useSliderEmits,
@@ -30,6 +31,9 @@ export default /*#__PURE__*/ createComponent({
       validator: v => 'min' in v && 'max' in v
     },
 
+    minRange: Number,
+    maxRange: Number,
+
     dragRange: Boolean,
     dragOnlyRange: Boolean,
 
@@ -42,15 +46,16 @@ export default /*#__PURE__*/ createComponent({
     rightLabelValue: [String, Number],
 
     leftThumbColor: String,
-    rightThumbColor: String
+    rightThumbColor: String,
+
+    leftThumbAriaLabel: String,
+    rightThumbAriaLabel: String
   },
 
   emits: useSliderEmits,
 
   setup(props, { emit }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
+    const $q = useQuasar()
 
     // the model can also be null, which means the same thing
     // as having no value on either end of the range
@@ -60,20 +65,62 @@ export default /*#__PURE__*/ createComponent({
       updateValue,
       updatePosition,
       getDragging,
-      formAttrs: computed(() => ({
+      formAttrs: () => ({
         type: 'hidden',
         name: props.name,
         value: `${modelProp.value.min}|${modelProp.value.max}`
-      }))
+      })
     })
 
-    const rootRef = ref(null)
+    const rootRef = shallowRef(null)
     const curMinRatio = ref(0)
     const curMaxRatio = ref(0)
     const model = ref({ min: 0, max: 0 })
 
+    // "change" reports what an interaction actually changed: the values are
+    // snapshotted when the interaction starts (pointer via getDragging,
+    // keyboard on its first keydown) and compared at commit time, so an
+    // interaction that ends where it started stays silent
+    let changeBaseline = null
+
+    // dedups re-emissions towards a parent that does not sync the model
+    // prop back; see QSlider's emittedValue
+    let emittedValue = null
+
+    // effective selection-width limits, capped to what the inner track
+    // can hold; minRange wins over a smaller maxRange
+    function getWidthLimits() {
+      const len = state.innerMax.value - state.innerMin.value
+      const min = Number.isFinite(props.minRange)
+        ? between(props.minRange, 0, len)
+        : 0
+
+      return {
+        min,
+        max: Number.isFinite(props.maxRange)
+          ? between(props.maxRange, min, len)
+          : len
+      }
+    }
+
+    // the interval one thumb can move in, given the other thumb's value
+    // and the width limits; expects an already normalized other value
+    function getThumbBounds(which, otherValue, limits = getWidthLimits()) {
+      return which === 'min'
+        ? {
+            min: Math.max(state.innerMin.value, otherValue - limits.max),
+            max: otherValue - limits.min
+          }
+        : {
+            min: otherValue + limits.min,
+            max: Math.min(state.innerMax.value, otherValue + limits.max)
+          }
+    }
+
     function normalizeModel() {
-      model.value.min =
+      emittedValue = null
+
+      let min =
         modelProp.value.min === null
           ? state.innerMin.value
           : between(
@@ -82,7 +129,7 @@ export default /*#__PURE__*/ createComponent({
               state.innerMax.value
             )
 
-      model.value.max =
+      let max =
         modelProp.value.max === null
           ? state.innerMax.value
           : between(
@@ -90,11 +137,27 @@ export default /*#__PURE__*/ createComponent({
               state.innerMin.value,
               state.innerMax.value
             )
+
+      if (Number.isFinite(props.minRange) || Number.isFinite(props.maxRange)) {
+        // like inner-min/inner-max, the width limits coerce the displayed
+        // model (without emitting); min acts as the anchor
+        const limits = getWidthLimits()
+
+        max = between(max, min + limits.min, min + limits.max)
+
+        if (max > state.innerMax.value) {
+          max = state.innerMax.value
+          min = max - limits.min
+        }
+      }
+
+      model.value.min = min
+      model.value.max = max
     }
 
     watch(
       () =>
-        `${modelProp.value.min}|${modelProp.value.max}|${state.innerMin.value}|${state.innerMax.value}`,
+        `${modelProp.value.min}|${modelProp.value.max}|${state.innerMin.value}|${state.innerMax.value}|${props.minRange}|${props.maxRange}`,
       normalizeModel
     )
 
@@ -125,14 +188,88 @@ export default /*#__PURE__*/ createComponent({
       return acc
     })
 
+    function getEditableAriaState() {
+      return props.disable
+        ? { 'aria-disabled': 'true' }
+        : props.readonly
+          ? { 'aria-readonly': 'true' }
+          : {}
+    }
+
+    // one WAI-ARIA slider per thumb (unless drag-only-range, where the
+    // track container is the single focusable acting on the whole window)
+    function getThumbAriaAttrs(which) {
+      if (props.dragOnlyRange) return {}
+
+      const isMin = which === 'min',
+        labelValue = props[isMin ? 'leftLabelValue' : 'rightLabelValue'],
+        // each thumb is clamped against the other one and the width
+        // limits (see onKeydown), so its effective limits are what
+        // gets exposed
+        bounds = getThumbBounds(which, model.value[isMin ? 'max' : 'min'])
+
+      return {
+        role: 'slider',
+        'aria-label':
+          props[isMin ? 'leftThumbAriaLabel' : 'rightThumbAriaLabel'] ||
+          $q.lang.label[isMin ? 'minimum' : 'maximum'],
+        'aria-orientation': state.orientation.value,
+        'aria-valuemin': bounds.min,
+        'aria-valuemax': bounds.max,
+        'aria-valuenow': model.value[which],
+        // a null side still reports a number (the limit its thumb sits on),
+        // so say what that number means: nothing has been picked yet
+        ...(labelValue !== void 0
+          ? { 'aria-valuetext': labelValue }
+          : modelProp.value[which] === null
+            ? { 'aria-valuetext': $q.lang.label.noValue }
+            : {}),
+        ...getEditableAriaState()
+      }
+    }
+
+    const minThumbAriaAttrs = computed(() => getThumbAriaAttrs('min'))
+    const maxThumbAriaAttrs = computed(() => getThumbAriaAttrs('max'))
+
+    const rootAttrs = computed(() => ({
+      role: 'group',
+      'data-step': props.step,
+      // only aria-disabled is allowed on a group; aria-readonly belongs to
+      // the thumbs, which carry the slider role
+      ...(props.disable ? { 'aria-disabled': 'true' } : {})
+    }))
+
+    const trackContainerAriaAttrs = computed(() => {
+      if (!props.dragRange && !props.dragOnlyRange) {
+        return {}
+      }
+
+      const min = model.value.min,
+        max = model.value.max,
+        minLabel = props.leftLabelValue !== void 0 ? props.leftLabelValue : min,
+        maxLabel =
+          props.rightLabelValue !== void 0 ? props.rightLabelValue : max
+
+      return {
+        role: 'slider',
+        'aria-label': $q.lang.label.range,
+        'aria-orientation': state.orientation.value,
+        'aria-valuemin': state.innerMin.value,
+        'aria-valuemax': state.innerMax.value,
+        'aria-valuenow': min,
+        'aria-valuetext': `${minLabel}–${maxLabel}`,
+        ...getEditableAriaState()
+      }
+    })
+
     const trackContainerEvents = computed(() => {
       if (!state.editable.value) return {}
 
-      if ($q.platform.is.mobile) {
-        return { onClick: methods.onMobileClick }
+      // same wiring on every device; see QSlider's trackContainerEvents
+      const evt = {
+        onClick: methods.onClick,
+        onMousedown: methods.onActivate
       }
-
-      const evt = { onMousedown: methods.onActivate }
 
       if (props.dragRange || props.dragOnlyRange) {
         Object.assign(evt, {
@@ -148,10 +285,13 @@ export default /*#__PURE__*/ createComponent({
       return evt
     })
 
+    const trackContainerData = computed(() => ({
+      ...trackContainerAriaAttrs.value,
+      ...trackContainerEvents.value
+    }))
+
     function getEvents(side) {
-      return !$q.platform.is.mobile &&
-        state.editable.value &&
-        !props.dragOnlyRange
+      return state.editable.value && !props.dragOnlyRange
         ? {
             onFocus: () => {
               state.focus.value = side
@@ -167,12 +307,10 @@ export default /*#__PURE__*/ createComponent({
       props.dragOnlyRange ? null : state.tabindex.value
     )
     const trackContainerTabindex = computed(() =>
-      !$q.platform.is.mobile && (props.dragRange || props.dragOnlyRange)
-        ? state.tabindex.value
-        : null
+      props.dragRange || props.dragOnlyRange ? state.tabindex.value : null
     )
 
-    const minThumbRef = ref(null)
+    const minThumbRef = shallowRef(null)
     const minEvents = computed(() => getEvents('min'))
     const getMinThumb = methods.getThumbRenderFn({
       focusValue: 'min',
@@ -180,7 +318,8 @@ export default /*#__PURE__*/ createComponent({
         ref: minThumbRef,
         key: 'tmin',
         ...minEvents.value,
-        tabindex: thumbTabindex.value
+        tabindex: thumbTabindex.value,
+        ...minThumbAriaAttrs.value
       }),
       ratio: ratioMin,
       label: computed(() =>
@@ -202,7 +341,8 @@ export default /*#__PURE__*/ createComponent({
       getNodeData: () => ({
         ...maxEvents.value,
         key: 'tmax',
-        tabindex: thumbTabindex.value
+        tabindex: thumbTabindex.value,
+        ...maxThumbAriaAttrs.value
       }),
       ratio: ratioMax,
       label: computed(() =>
@@ -221,16 +361,31 @@ export default /*#__PURE__*/ createComponent({
 
     function updateValue(change) {
       if (
-        model.value.min !== modelProp.value.min ||
-        model.value.max !== modelProp.value.max
+        (model.value.min !== modelProp.value.min ||
+          model.value.max !== modelProp.value.max) &&
+        (emittedValue === null ||
+          model.value.min !== emittedValue.min ||
+          model.value.max !== emittedValue.max)
       ) {
+        emittedValue = { min: model.value.min, max: model.value.max }
         emit('update:modelValue', { ...model.value })
       }
 
-      if (change) emit('change', { ...model.value })
+      if (change) {
+        if (
+          changeBaseline !== null &&
+          (changeBaseline.min !== model.value.min ||
+            changeBaseline.max !== model.value.max)
+        ) {
+          emit('change', { ...model.value })
+        }
+        changeBaseline = null
+      }
     }
 
     function getDragging(event) {
+      changeBaseline = { ...model.value }
+
       const { left, top, width, height } =
           rootRef.value.getBoundingClientRect(),
         sensitivity = props.dragOnlyRange
@@ -283,23 +438,42 @@ export default /*#__PURE__*/ createComponent({
       let pos
       const ratio = methods.getDraggingRatio(event, dragging)
       const localModel = methods.convertRatioToModel(ratio)
+      const limits = getWidthLimits()
+
+      // clamps a dragged thumb (value + visual ratio) to its bounds
+      function getThumbPos(which, otherValue) {
+        const bounds = getThumbBounds(which, otherValue, limits)
+
+        return {
+          value: between(localModel, bounds.min, bounds.max),
+          ratio: between(
+            ratio,
+            methods.convertModelToRatio(bounds.min),
+            methods.convertModelToRatio(bounds.max)
+          )
+        }
+      }
 
       switch (dragging.type) {
         case dragType.MIN: {
-          if (ratio <= dragging.ratioMax) {
+          // a minimum width blocks thumb crossover
+          // (the widths in between would be forbidden)
+          if (limits.min > 0 || ratio <= dragging.ratioMax) {
+            const thumb = getThumbPos('min', dragging.valueMax)
             pos = {
-              minR: ratio,
+              minR: thumb.ratio,
               maxR: dragging.ratioMax,
-              min: localModel,
+              min: thumb.value,
               max: dragging.valueMax
             }
             state.focus.value = 'min'
           } else {
+            const thumb = getThumbPos('max', dragging.valueMax)
             pos = {
               minR: dragging.ratioMax,
-              maxR: ratio,
+              maxR: thumb.ratio,
               min: dragging.valueMax,
-              max: localModel
+              max: thumb.value
             }
             state.focus.value = 'max'
           }
@@ -307,19 +481,21 @@ export default /*#__PURE__*/ createComponent({
         }
 
         case dragType.MAX: {
-          if (ratio >= dragging.ratioMin) {
+          if (limits.min > 0 || ratio >= dragging.ratioMin) {
+            const thumb = getThumbPos('max', dragging.valueMin)
             pos = {
               minR: dragging.ratioMin,
-              maxR: ratio,
+              maxR: thumb.ratio,
               min: dragging.valueMin,
-              max: localModel
+              max: thumb.value
             }
             state.focus.value = 'max'
           } else {
+            const thumb = getThumbPos('min', dragging.valueMin)
             pos = {
-              minR: ratio,
+              minR: thumb.ratio,
               maxR: dragging.ratioMin,
-              min: localModel,
+              min: thumb.value,
               max: dragging.valueMin
             }
             state.focus.value = 'min'
@@ -353,11 +529,7 @@ export default /*#__PURE__*/ createComponent({
         }
       }
 
-      // If either of the values to be emitted are null, set them to the defaults the user has entered.
-      model.value =
-        model.value.min === null || model.value.max === null
-          ? { min: pos.min ?? props.min, max: pos.max ?? props.max }
-          : { min: pos.min, max: pos.max }
+      model.value = { min: pos.min, max: pos.max }
 
       if (!props.snap || props.step === 0) {
         curMinRatio.value = pos.minR
@@ -372,6 +544,46 @@ export default /*#__PURE__*/ createComponent({
       if (!keyCodes.includes(evt.keyCode)) return
 
       stopAndPrevent(evt)
+
+      if (changeBaseline === null) {
+        changeBaseline = { ...model.value }
+      }
+
+      // HOME/END jump straight to the focused thumb's limits
+      // (never direction-reversed)
+      if (evt.keyCode === 36 || evt.keyCode === 35) {
+        const toStart = evt.keyCode === 36
+
+        if (state.focus.value === 'both') {
+          // the whole window moves to the edge, preserving its width
+          const interval = model.value.max - model.value.min
+          const min = toStart
+            ? state.innerMin.value
+            : state.innerMax.value - interval
+
+          model.value = {
+            min,
+            max: state.roundValueFn.value(min + interval)
+          }
+        } else if (!state.focus.value) {
+          return
+        } else if (state.focus.value === 'min') {
+          const bounds = getThumbBounds('min', model.value.max)
+          model.value = {
+            ...model.value,
+            min: toStart ? bounds.min : bounds.max
+          }
+        } else {
+          const bounds = getThumbBounds('max', model.value.min)
+          model.value = {
+            ...model.value,
+            max: toStart ? bounds.min : bounds.max
+          }
+        }
+
+        updateValue()
+        return
+      }
 
       const stepVal =
           ([34, 33].includes(evt.keyCode) ? 10 : 1) * state.keyStep.value,
@@ -397,13 +609,17 @@ export default /*#__PURE__*/ createComponent({
         return
       } else {
         const which = state.focus.value
+        const bounds = getThumbBounds(
+          which,
+          model.value[which === 'min' ? 'max' : 'min']
+        )
 
         model.value = {
           ...model.value,
           [which]: between(
             state.roundValueFn.value(model.value[which] + offset),
-            which === 'min' ? state.innerMin.value : model.value.min,
-            which === 'max' ? state.innerMax.value : model.value.max
+            bounds.min,
+            bounds.max
           )
         }
       }
@@ -415,7 +631,7 @@ export default /*#__PURE__*/ createComponent({
       const content = methods.getContent(
         selectionBarStyle,
         trackContainerTabindex,
-        trackContainerEvents,
+        trackContainerData,
         node => {
           node.push(getMinThumb(), getMaxThumb())
         }
@@ -431,8 +647,7 @@ export default /*#__PURE__*/ createComponent({
             (modelProp.value.min === null || modelProp.value.max === null
               ? ' q-slider--no-value'
               : ''),
-          ...state.attributes.value,
-          'aria-valuenow': modelProp.value.min + '|' + modelProp.value.max
+          ...rootAttrs.value
         },
         content
       )

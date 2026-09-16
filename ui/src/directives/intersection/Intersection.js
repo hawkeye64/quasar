@@ -1,63 +1,39 @@
 import { createDirective } from '../../utils/private.create/create.js'
-import { isDeepEqual } from '../../utils/is/is.js'
+import {
+  observe,
+  unobserve
+} from '../../utils/private.intersection/intersection.js'
 import getSSRProps from '../../utils/private.noop-ssr-directive-transform/noop-ssr-directive-transform.js'
 
-const defaultCfg = {
-  threshold: 0,
-  root: null,
-  rootMargin: '0px'
-}
-
 function update(el, ctx, value) {
-  let handler, cfg, changed
+  // undefined disables too, matching the touch directives,
+  // so a gated value never throws
+  if (value === false || value === void 0) {
+    unobserve(el)
+    ctx.handler = void 0
+    return
+  }
+
+  let handler
+  let root = null
+  let rootMargin = '0px'
+  let threshold = 0
 
   if (typeof value === 'function') {
     handler = value
-    changed = ctx.cfg !== defaultCfg
-    cfg = defaultCfg
   } else {
     handler = value.handler
-    cfg = { ...defaultCfg, ...value.cfg }
-    changed = ctx.cfg === void 0 || !isDeepEqual(ctx.cfg, cfg)
-  }
 
-  if (ctx.handler !== handler) {
-    ctx.handler = handler
-  }
-
-  if (!changed) return
-
-  ctx.cfg = cfg
-  ctx.observer?.disconnect()
-
-  ctx.observer = new IntersectionObserver(([entry]) => {
-    if (typeof ctx.handler === 'function') {
-      // if observed element is part of a vue transition
-      // then we need to be careful...
-      if (entry.rootBounds === null && document.body.contains(el)) {
-        ctx.observer.unobserve(el)
-        ctx.observer.observe(el)
-        return
-      }
-
-      const res = ctx.handler(entry, ctx.observer)
-
-      if (res === false || (ctx.once && entry.isIntersecting)) {
-        destroy(el)
-      }
+    const cfg = value.cfg
+    if (cfg !== void 0) {
+      root = cfg.root ?? null
+      rootMargin = cfg.rootMargin ?? '0px'
+      threshold = cfg.threshold ?? 0
     }
-  }, cfg)
-
-  ctx.observer.observe(el)
-}
-
-function destroy(el) {
-  const ctx = el.__qvisible
-
-  if (ctx !== void 0) {
-    ctx.observer?.disconnect()
-    delete el.__qvisible
   }
+
+  ctx.handler = handler
+  observe(el, ctx, root, rootMargin, threshold)
 }
 
 export default /*#__PURE__*/ createDirective(
@@ -67,20 +43,32 @@ export default /*#__PURE__*/ createDirective(
         name: 'intersection',
 
         mounted(el, { modifiers, value }) {
+          // the pool subscriber; it also carries the disabled state
+          // (mounted but not observed) between updates
           const ctx = {
-            once: modifiers.once === true
+            handler: void 0,
+            once: modifiers.once === true,
+            pool: void 0,
+            done: false
           }
 
-          update(el, ctx, value)
-
           el.__qvisible = ctx
+          update(el, ctx, value)
         },
 
         updated(el, binding) {
           const ctx = el.__qvisible
-          if (ctx !== void 0) update(el, ctx, binding.value)
+          if (ctx !== void 0) {
+            update(el, ctx, binding.value)
+          }
         },
 
-        beforeUnmount: destroy
+        beforeUnmount(el) {
+          const ctx = el.__qvisible
+          if (ctx !== void 0) {
+            unobserve(el)
+            el.__qvisible = void 0
+          }
+        }
       }
 )

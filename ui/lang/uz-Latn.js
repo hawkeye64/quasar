@@ -15,6 +15,11 @@ export default {
     search: 'Qidirish',
     filter: 'Filtrlash',
     refresh: 'Yangilash',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Diapazon',
+    noValue: "Qiymat yo'q",
+    resize: "O'lchamni o'zgartirish",
     expand: label => (label ? `"${label}" ni kengaytirish` : 'Kengaytirish'),
     collapse: label => (label ? `"${label}" ni yig'ish` : 'Yiqilish')
   },
@@ -38,8 +43,12 @@ export default {
     prevYear: "O'tgan yili",
     nextYear: 'Keyingi yil',
     today: 'Bugun',
-    prevRangeYears: range => `Oldingi ${range} Yillar`,
-    nextRangeYears: range => `Keyingi ${range} Yillar`
+    prevRangeYears: range => `Oldingi ${range} yil`,
+    nextRangeYears: range => `Keyingi ${range} yil`,
+    hour: 'Soat',
+    minute: 'Daqiqa',
+    second: 'Soniya',
+    now: 'Joriy vaqt'
   },
   table: {
     noData: "Ma'lumotlar topilmadi",
@@ -57,15 +66,41 @@ export default {
     recordsPerPage: 'Saxifadagi qatorlar:',
     allRows: 'Barchasi',
     pagination: (start, end, total) => start + '-' + end + ' jami ' + total,
-    columns: 'Ustunlar'
+    columns: 'Ustunlar',
+    selectAllRows: 'Barcha qatorlarni tanlash',
+    selectRow: 'Qatorni tanlash'
   },
   pagination: {
+    label: 'Sahifalash',
     first: 'Birinchi sahifa',
     prev: 'Oldingi sahifa',
     next: 'Keyingi sahifa',
     last: "So'nggi sahifa"
   },
+  carousel: {
+    prevSlide: 'Oldingi slayd',
+    nextSlide: 'Keyingi slayd'
+  },
+  colorPicker: {
+    spectrum: 'Spektr',
+    tune: 'Sozlash',
+    palette: 'Palitra',
+    value: 'Rang qiymati',
+    hue: 'Tus',
+    alpha: 'Xiralik',
+    saturation: "To'yinganlik",
+    brightness: 'Yorqinlik'
+  },
+  uploader: {
+    addFiles: 'Fayllarni tanlash',
+    upload: 'Fayllarni yuklash',
+    abort: "Yuklashni to'xtatish",
+    removeQueued: "Navbatdagi fayllarni o'chirish",
+    removeUploaded: "Yuklangan fayllarni o'chirish",
+    removeFile: "Faylni o'chirish"
+  },
   editor: {
+    toolbar: 'Muharrir asboblar paneli',
     url: 'URL',
     bold: 'Qalin',
     italic: 'Kursiv',

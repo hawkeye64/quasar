@@ -54,8 +54,13 @@ function getConfigPlugin(opts) {
       }
     },
 
-    config(viteConf, { mode }) {
-      return getViteConfig(opts.runMode, mode, viteConf, opts.sassVariables)
+    config(viteConf, { command }) {
+      return getViteConfig(
+        opts.runMode,
+        command === 'serve',
+        viteConf,
+        opts.sassVariables
+      )
     }
   }
 }
@@ -121,7 +126,7 @@ function getScriptTransformsPlugin(opts) {
     if (
       useTreeshaking &&
       !warnedFiles.has(id) &&
-      hasResidualQuasarImports(code)
+      hasResidualQuasarImports(code, id)
     ) {
       warnedFiles.add(id)
       const msg =
@@ -191,7 +196,7 @@ function getScriptTransformsPlugin(opts) {
     name: 'vite:quasar:script',
 
     configResolved(resolvedConfig) {
-      if (!opts.devTreeshaking && resolvedConfig.mode !== 'production') {
+      if (!opts.devTreeshaking && !resolvedConfig.isProduction) {
         useTreeshaking = false
       } else {
         loadQuasarImportMap()

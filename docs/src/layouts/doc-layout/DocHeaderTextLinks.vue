@@ -1,5 +1,5 @@
 <template>
-  <div class="row no-wrap items-center">
+  <nav class="row no-wrap items-center" :aria-label="props.ariaLabel">
     <q-btn
       v-for="(entry, index) in props.menu"
       :key="index"
@@ -14,6 +14,7 @@
       :to="entry.path"
       :href="entry.external ? entry.path : void 0"
       :target="entry.external ? '_blank' : void 0"
+      :aria-haspopup="entry.children ? 'menu' : void 0"
     >
       <DocHeaderMenu
         v-if="entry.children"
@@ -21,7 +22,7 @@
         :mq-prefix="props.mqPrefix"
       />
     </q-btn>
-  </div>
+  </nav>
 </template>
 
 <script setup>
@@ -32,6 +33,7 @@ import DocHeaderMenu from './DocHeaderMenu.js'
 const props = defineProps({
   menu: Array,
   mqPrefix: String,
-  navClass: String
+  navClass: String,
+  ariaLabel: String
 })
 </script>

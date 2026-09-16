@@ -15,6 +15,11 @@ export default {
     search: '検索', // 'Search',
     filter: 'フィルタ', // 'Filter',
     refresh: '再読込', // 'Refresh'
+    minimum: '最小',
+    maximum: '最大',
+    range: '範囲',
+    noValue: '値なし',
+    resize: 'サイズ変更',
     expand: label => (label ? `「${label}」を展開します。` : '展開'),
     collapse: label => (label ? `「${label}」を折りたたむ` : '折りたたむ')
   },
@@ -39,8 +44,12 @@ export default {
     prevYear: '前年',
     nextYear: '来年',
     today: '今日',
-    prevRangeYears: range => `前${range}年`,
-    nextRangeYears: range => `次${range}年`
+    prevRangeYears: range => `前の${range}年`,
+    nextRangeYears: range => `次の${range}年`,
+    hour: '時',
+    minute: '分',
+    second: '秒',
+    now: '現在時刻'
   },
   table: {
     noData: 'データがありません', // 'No data available',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'ページあたりの行数', // 'Rows per page:',
     allRows: '全て', // 'All',
     pagination: (start, end, total) => start + '〜' + end + ' ／ ' + total,
-    columns: '列' // 'Columns'
+    columns: '列', // 'Columns',
+    selectAllRows: 'すべての行を選択',
+    selectRow: '行を選択'
   },
   pagination: {
+    label: 'ページ送り',
     first: '最初のページ',
     prev: '前のページ',
     next: '次のページ',
     last: '最後のページ'
   },
+  carousel: {
+    prevSlide: '前のスライド',
+    nextSlide: '次のスライド'
+  },
+  colorPicker: {
+    spectrum: 'スペクトル',
+    tune: '調整',
+    palette: 'パレット',
+    value: '色の値',
+    hue: '色相',
+    alpha: '不透明度',
+    saturation: '彩度',
+    brightness: '明度'
+  },
+  uploader: {
+    addFiles: 'ファイルを選択',
+    upload: 'ファイルをアップロード',
+    abort: 'アップロードを中止',
+    removeQueued: '待機中のファイルを削除',
+    removeUploaded: 'アップロード済みのファイルを削除',
+    removeFile: 'ファイルを削除'
+  },
   editor: {
+    toolbar: 'エディタツールバー',
     url: 'URL', // 'URL',
     bold: '太字', // 'Bold',
     italic: '斜体', // 'Italic',

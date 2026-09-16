@@ -1,19 +1,18 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <q-tree :nodes="customize" node-key="label" default-expand-all>
-      <template v-slot:default-header="prop">
+      <template #default-header="prop">
         <div class="row items-center">
           <q-icon
             :name="prop.node.icon || 'share'"
             color="orange"
-            size="28px"
             class="q-mr-sm"
           />
           <div class="text-weight-bold text-primary">{{ prop.node.label }}</div>
         </div>
       </template>
 
-      <template v-slot:default-body="prop">
+      <template #default-body="prop">
         <div v-if="prop.node.story">
           <span class="text-weight-bold">This node has a story</span>:
           {{ prop.node.story }}

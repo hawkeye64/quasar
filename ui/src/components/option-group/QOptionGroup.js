@@ -1,4 +1,4 @@
-import { computed, getCurrentInstance, h, ref, toRaw } from 'vue'
+import { computed, h, shallowRef, toRaw } from 'vue'
 
 import QRadio from '../radio/QRadio.js'
 import QCheckbox from '../checkbox/QCheckbox.js'
@@ -7,6 +7,7 @@ import QToggle from '../toggle/QToggle.js'
 import { createComponent } from '../../utils/private.create/create.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -69,9 +70,7 @@ export default /*#__PURE__*/ createComponent({
   emits: ['update:modelValue'],
 
   setup(props, { emit, slots }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
+    const $q = useQuasar()
 
     const arrayModel = Array.isArray(props.modelValue)
 
@@ -86,7 +85,7 @@ export default /*#__PURE__*/ createComponent({
     const isDark = useDark(props, $q)
     const component = computed(() => components[props.type])
 
-    const rootRef = ref(null)
+    const rootRef = shallowRef(null)
 
     const getOptionValue = computed(() =>
       getPropValueFn(props.optionValue, 'value')
@@ -107,7 +106,7 @@ export default /*#__PURE__*/ createComponent({
         color: opt.color === void 0 ? props.color : opt.color,
         checkedIcon: opt.checkedIcon,
         uncheckedIcon: opt.uncheckedIcon,
-        dark: opt.dark === void 0 ? isDark.value : opt.dark,
+        dark: opt.dark === void 0 ? isDark() : opt.dark,
         size: opt.size === void 0 ? props.size : opt.size,
         dense: props.dense,
         keepColor: opt.keepColor === void 0 ? props.keepColor : opt.keepColor
@@ -134,14 +133,15 @@ export default /*#__PURE__*/ createComponent({
     )
 
     const attrs = computed(() => {
-      const acc = { role: 'group' }
+      const acc = {
+        role: props.type === 'radio' ? 'radiogroup' : 'group'
+      }
 
-      if (props.type === 'radio') {
-        acc.role = 'radiogroup'
-
-        if (props.disable) {
-          acc['aria-disabled'] = 'true'
-        }
+      // ARIA allows aria-disabled on "group" just as much as on "radiogroup",
+      // and a whole set of options being unavailable is worth announcing
+      // whichever type the group holds
+      if (props.disable) {
+        acc['aria-disabled'] = 'true'
       }
 
       return acc

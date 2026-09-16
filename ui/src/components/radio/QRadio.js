@@ -1,13 +1,12 @@
-import { computed, getCurrentInstance, h, ref, toRaw } from 'vue'
+import { computed, getCurrentInstance, h, shallowRef, toRaw } from 'vue'
 
 import QIcon from '../icon/QIcon.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
-import useSize, {
-  useSizeProps
-} from '../../composables/private.use-size/use-size.js'
+import { useSizeProps } from '../../composables/private.use-size/use-size.js'
 import useRefocusTarget from '../../composables/private.use-refocus-target/use-refocus-target.js'
 import {
   useFormInject,
@@ -15,7 +14,7 @@ import {
 } from '../../composables/use-form/private.use-form.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
-import optionSizes from '../../utils/private.option-sizes/option-sizes.js'
+import { getOptionSizeStyle } from '../../utils/private.option-sizes/option-sizes.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
 import { hMergeSlot, hSlot } from '../../utils/private.render/render.js'
 
@@ -74,11 +73,11 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
+    const $q = useQuasar()
 
-    const isDark = useDark(props, proxy.$q)
-    const sizeStyle = useSize(props, optionSizes)
+    const isDark = useDark(props, $q)
 
-    const rootRef = ref(null)
+    const rootRef = shallowRef(null)
     const { refocusTargetEl, refocusTarget } = useRefocusTarget(props, rootRef)
 
     const isTrue = computed(() => toRaw(props.modelValue) === toRaw(props.val))
@@ -87,7 +86,7 @@ export default /*#__PURE__*/ createComponent({
       () =>
         'q-radio cursor-pointer no-outline row inline no-wrap items-center' +
         (props.disable ? ' disabled' : '') +
-        (isDark.value ? ' q-radio--dark' : '') +
+        (isDark() ? ' q-radio--dark' : '') +
         (props.dense ? ' q-radio--dense' : '') +
         (props.leftLabel ? ' reverse' : '')
     )
@@ -110,7 +109,7 @@ export default /*#__PURE__*/ createComponent({
 
     const tabindex = computed(() => (props.disable ? -1 : props.tabindex || 0))
 
-    const formAttrs = computed(() => {
+    const formAttrs = () => {
       const prop = { type: 'radio' }
 
       if (props.name !== void 0) {
@@ -124,7 +123,7 @@ export default /*#__PURE__*/ createComponent({
       }
 
       return prop
-    })
+    }
 
     const injectFormInput = useFormInject(formAttrs)
 
@@ -187,7 +186,7 @@ export default /*#__PURE__*/ createComponent({
           'div',
           {
             class: innerClass.value,
-            style: sizeStyle.value,
+            style: getOptionSizeStyle(props.size),
             'aria-hidden': 'true'
           },
           content

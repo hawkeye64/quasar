@@ -5,8 +5,10 @@ import {
   nextTick,
   onBeforeUnmount,
   onBeforeUpdate,
+  onMounted,
   onUpdated,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
@@ -21,6 +23,7 @@ import QItemLabel from '../item/QItemLabel.js'
 import QMenu from '../menu/QMenu.js'
 import QDialog from '../dialog/QDialog.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useField, {
   fieldValueIsFilled,
   useFieldEmits,
@@ -36,10 +39,15 @@ import {
   useFormProps
 } from '../../composables/use-form/private.use-form.js'
 import useKeyComposition from '../../composables/private.use-key-composition/use-key-composition.js'
+import useHover, {
+  useHoverProps
+} from '../../composables/private.use-hover/use-hover.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { isDeepEqual } from '../../utils/is/is.js'
 import { prevent, stop, stopAndPrevent } from '../../utils/event/event.js'
+import { getPortalProxy } from '../../utils/private.portal/portal.js'
+import { getParentProxy } from '../../utils/private.vm/vm.js'
 import { normalizeToInterval } from '../../utils/format/format.js'
 import {
   isKeyCode,
@@ -95,6 +103,7 @@ export default /*#__PURE__*/ createComponent({
 
     hideSelected: Boolean,
     hideDropdownIcon: Boolean,
+    hideDialogClose: Boolean,
     fillInput: Boolean,
 
     maxValues: [Number, String],
@@ -109,6 +118,8 @@ export default /*#__PURE__*/ createComponent({
 
     optionsCover: Boolean,
 
+    noOptionLabel: String,
+
     menuShrink: Boolean,
     menuAnchor: String,
     menuSelf: String,
@@ -120,6 +131,7 @@ export default /*#__PURE__*/ createComponent({
 
     useInput: Boolean,
     useChips: Boolean,
+    noChipRemove: Boolean,
 
     newValueMode: {
       type: String,
@@ -128,6 +140,7 @@ export default /*#__PURE__*/ createComponent({
 
     mapOptions: Boolean,
     emitValue: Boolean,
+    noOptionPrefetch: Boolean,
 
     disableTabSelection: Boolean,
 
@@ -156,6 +169,8 @@ export default /*#__PURE__*/ createComponent({
       default: 'default'
     },
 
+    ...useHoverProps,
+
     // override of useVirtualScrollProps > virtualScrollItemSize (no default)
     virtualScrollItemSize: useVirtualScrollProps.virtualScrollItemSize.type,
 
@@ -178,7 +193,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const menu = ref(false)
     const dialog = ref(false)
@@ -189,20 +204,31 @@ export default /*#__PURE__*/ createComponent({
 
     let filterTimer = null,
       inputValueTimer = null,
+      // set while the current popup "show" was triggered by hovering the
+      // control (and not yet upgraded to a focused open), in which case
+      // focus must stay wherever it already is
+      hoverShown = false,
+      // when the current "show" was hover-triggered, the moment it happened
+      hoverShownAt = 0,
       innerValueCache,
+      prefetchPending = false,
       hasDialog,
       userInputValue,
+      // set while the highlighted option merely mirrors the model (placed
+      // by updateMenu() on open or after a filter), as opposed to one the
+      // user navigated or hovered to
+      optionIndexFromModel = false,
       filterId = null,
       defaultInputValue,
       transitionShowComputed,
       searchBuffer,
       searchBufferExp
 
-    const inputRef = ref(null)
-    const targetRef = ref(null)
-    const menuRef = ref(null)
-    const dialogRef = ref(null)
-    const menuContentRef = ref(null)
+    const inputRef = shallowRef(null)
+    const targetRef = shallowRef(null)
+    const menuRef = shallowRef(null)
+    const dialogRef = shallowRef(null)
+    const menuContentRef = shallowRef(null)
 
     const nameProp = useFormInputNameAttr(props)
 
@@ -271,7 +297,7 @@ export default /*#__PURE__*/ createComponent({
     })
 
     const isOptionsDark = computed(() =>
-      props.optionsDark === null ? state.isDark.value : props.optionsDark
+      props.optionsDark === null ? state.isDark() : props.optionsDark
     )
 
     const hasValue = computed(() => fieldValueIsFilled(innerValue.value))
@@ -296,6 +322,12 @@ export default /*#__PURE__*/ createComponent({
 
     const noOptions = computed(() => virtualScrollLength.value === 0)
 
+    // called from non-reactive contexts (event handlers, onBeforeUpdate)
+    // as well, so a plain function instead of a computed
+    function hasNoOptionDisplay() {
+      return slots['no-option'] !== void 0 || props.noOptionLabel !== void 0
+    }
+
     const selectedString = computed(() =>
       innerValue.value.map(opt => getOptionLabel.value(opt)).join(', ')
     )
@@ -319,13 +351,20 @@ export default /*#__PURE__*/ createComponent({
 
     const comboboxAttrs = computed(() => {
       const attrs = {
-        tabindex: props.tabindex,
+        // a disabled form control is never focusable, so carrying a tabindex
+        // on it would only be misleading markup
+        tabindex: props.disable === true ? void 0 : props.tabindex,
         role: 'combobox',
         'aria-label': props.label,
         'aria-readonly': props.readonly ? 'true' : 'false',
         'aria-autocomplete': props.useInput ? 'list' : 'none',
-        'aria-expanded': menu.value ? 'true' : 'false',
-        'aria-controls': `${state.targetUid.value}_lb`
+        'aria-expanded': menu.value ? 'true' : 'false'
+      }
+
+      // the listbox only exists while the popup is shown with options
+      // in it, and aria-controls must not reference a missing id
+      if (menu.value && !noOptions.value) {
+        attrs['aria-controls'] = `${state.targetUid.value}_lb`
       }
 
       if (optionIndex.value >= 0) {
@@ -376,6 +415,10 @@ export default /*#__PURE__*/ createComponent({
           dark: isOptionsDark.value,
           role: 'option',
           'aria-selected': active ? 'true' : 'false',
+          // virtual scroll renders only a slice of the options,
+          // so screen readers need the real set size and position
+          'aria-setsize': virtualScrollLength.value,
+          'aria-posinset': index + 1,
           id: `${state.targetUid.value}_${index}`,
           onClick: () => {
             toggleOption(opt)
@@ -385,9 +428,12 @@ export default /*#__PURE__*/ createComponent({
         if (!disable) {
           if (optionIndex.value === index) itemProps.focused = true
 
-          if ($q.platform.is.desktop) {
-            itemProps.onMousemove = () => {
-              if (menu.value) setOptionIndex(index)
+          // per-interaction gate instead of a UA sniff, so hybrids
+          // (iPad with trackpad, pen hover) get the hover highlight
+          // while a tap's own pointermove cannot move it
+          itemProps.onPointermove = evt => {
+            if (evt.pointerType !== 'touch' && menu.value) {
+              setOptionIndex(index)
             }
           }
         }
@@ -494,6 +540,10 @@ export default /*#__PURE__*/ createComponent({
           if (!userInputValue) resetInputValue()
           if (dialog.value || menu.value) filter('')
         }
+
+        if (prefetchPending && prefetchUnmappedOptions()) {
+          prefetchPending = false
+        }
       },
       { immediate: true }
     )
@@ -571,6 +621,9 @@ export default /*#__PURE__*/ createComponent({
       const optValue = getOptionValue.value(opt)
 
       if (!props.multiple) {
+        // captured before hidePopup() resets it
+        const closesDialog = !keepOpen && dialog.value
+
         if (!keepOpen) {
           updateInputValue(
             props.fillInput ? getOptionLabel.value(opt) : '',
@@ -581,7 +634,11 @@ export default /*#__PURE__*/ createComponent({
           hidePopup()
         }
 
-        targetRef.value?.focus()
+        // when the selection closes the options dialog, targetRef still
+        // points at the in-dialog control (the portal is being destroyed,
+        // taking focus down with it); QDialog's refocus puts focus on the
+        // outside control instead, so it must not be stolen back here
+        if (!closesDialog) targetRef.value?.focus()
 
         if (
           innerValue.value.length === 0 ||
@@ -624,12 +681,11 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function setOptionIndex(index) {
-      if (!$q.platform.is.desktop) return
-
       const val = index !== -1 && index < virtualScrollLength.value ? index : -1
 
       if (optionIndex.value !== val) {
         optionIndex.value = val
+        optionIndexFromModel = false
       }
     }
 
@@ -694,7 +750,7 @@ export default /*#__PURE__*/ createComponent({
       if (isKeyCode(e, 27) && menu.value) {
         stop(e)
         // on ESC we need to close the dialog also
-        hidePopup()
+        hidePopup(e)
         resetInputValue()
       }
 
@@ -759,7 +815,7 @@ export default /*#__PURE__*/ createComponent({
     function onTargetKeydown(e) {
       emit('keydown', e)
 
-      if (shouldIgnoreKey(e) || e.defaultPrevented) return
+      if (e.defaultPrevented || shouldIgnoreKey(e)) return
 
       const newValueModeValid =
         inputValue.value.length !== 0 &&
@@ -779,7 +835,7 @@ export default /*#__PURE__*/ createComponent({
 
       // tab
       if (e.keyCode === 9 && !tabShouldSelect) {
-        closeMenu()
+        closeMenu(e)
         return
       }
 
@@ -791,24 +847,36 @@ export default /*#__PURE__*/ createComponent({
         return
       }
 
-      // down
-      if (e.keyCode === 40 && !state.innerLoading.value && !menu.value) {
+      // up, down (open the popup when closed)
+      if (
+        (e.keyCode === 40 || e.keyCode === 38) &&
+        !state.innerLoading.value &&
+        !menu.value
+      ) {
         stopAndPrevent(e)
-        showPopup()
+        showPopup(e)
         return
       }
 
       // backspace
       if (
         e.keyCode === 8 &&
-        (props.useChips || props.clearable) &&
+        ((props.useChips && !props.noChipRemove) || props.clearable) &&
         !props.hideSelected &&
         inputValue.value.length === 0
       ) {
-        if (props.multiple && Array.isArray(props.modelValue)) {
-          removeAtIndex(props.modelValue.length - 1)
-        } else if (!props.multiple && props.modelValue !== null) {
-          emit('update:modelValue', null)
+        if (
+          // a disabled option's chip has no remove affordance, so the
+          // chip-armed removal skips it too; clearable clears regardless,
+          // matching its clear icon
+          props.clearable ||
+          isOptionDisabled.value(innerValue.value.at(-1)) !== true
+        ) {
+          if (props.multiple && Array.isArray(props.modelValue)) {
+            removeAtIndex(props.modelValue.length - 1)
+          } else if (!props.multiple && props.modelValue !== null) {
+            emit('update:modelValue', null)
+          }
         }
 
         return
@@ -928,7 +996,14 @@ export default /*#__PURE__*/ createComponent({
 
       if (e.keyCode !== 9) stopAndPrevent(e)
 
-      if (optionIndex.value !== -1 && optionIndex.value < optionsLength) {
+      if (
+        optionIndex.value !== -1 &&
+        optionIndex.value < optionsLength &&
+        // text the user typed to create a new value must not be hijacked
+        // by the highlight that only mirrors the model (#16514); one the
+        // user navigated or hovered to still wins
+        !(newValueModeValid && userInputValue && optionIndexFromModel)
+      ) {
         toggleOption(props.options[optionIndex.value])
         return
       }
@@ -964,9 +1039,9 @@ export default /*#__PURE__*/ createComponent({
       }
 
       if (menu.value) {
-        closeMenu()
+        closeMenu(e)
       } else if (!state.innerLoading.value) {
-        showPopup()
+        showPopup(e)
       }
     }
 
@@ -1000,6 +1075,7 @@ export default /*#__PURE__*/ createComponent({
             {
               key: 'option-' + i,
               removable:
+                !props.noChipRemove &&
                 state.editable.value &&
                 isOptionDisabled.value(scope.opt) !== true,
               dense: true,
@@ -1021,7 +1097,7 @@ export default /*#__PURE__*/ createComponent({
 
       return [
         h('span', {
-          class: 'ellipsis',
+          class: 'q-select__selected-value ellipsis',
           [valueAsHtml.value ? 'innerHTML' : 'textContent']:
             ariaCurrentValue.value
         })
@@ -1030,8 +1106,18 @@ export default /*#__PURE__*/ createComponent({
 
     function getAllOptions() {
       if (noOptions.value) {
-        return slots['no-option'] !== void 0
-          ? slots['no-option']({ inputValue: inputValue.value })
+        if (slots['no-option'] !== void 0) {
+          return slots['no-option']({ inputValue: inputValue.value })
+        }
+
+        return props.noOptionLabel !== void 0
+          ? [
+              h(QItem, () =>
+                h(QItemSection, { class: 'text-grey' }, () =>
+                  h(QItemLabel, () => props.noOptionLabel)
+                )
+              )
+            ]
           : void 0
       }
 
@@ -1055,7 +1141,14 @@ export default /*#__PURE__*/ createComponent({
                   )
               )
 
-      let options = padVirtualScroll('div', optionScope.value.map(fn))
+      // the listbox role wraps only the options (through the virtual
+      // scroll content element); slot content and the aria-hidden
+      // virtual scroll padding are not valid children of a listbox
+      let options = padVirtualScroll(
+        'div',
+        optionScope.value.map(fn),
+        listboxAttrs.value
+      )
 
       if (slots['before-options'] !== void 0) {
         options = [slots['before-options'](), ...options].flat()
@@ -1125,10 +1218,19 @@ export default /*#__PURE__*/ createComponent({
       }
 
       if (props.onFilter !== void 0) {
-        filterTimer = setTimeout(() => {
-          filterTimer = null
-          filter(inputValue.value)
-        }, props.inputDebounce)
+        if (hasDialog && !dialog.value) {
+          // typing on the closed control must open the options dialog,
+          // as it opens the menu in menu mode (#15976); showPopup()
+          // filters with the just-set inputValue, and the input event
+          // carries the user activation iOS needs for the keyboard
+          // handoff (#16196)
+          showPopup(e)
+        } else {
+          filterTimer = setTimeout(() => {
+            filterTimer = null
+            filter(inputValue.value)
+          }, props.inputDebounce)
+        }
       }
     }
 
@@ -1171,7 +1273,10 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function filter(val, keepClosed, afterUpdateFn) {
-      if (props.onFilter === void 0 || (!keepClosed && !state.focused.value)) {
+      if (
+        props.onFilter === void 0 ||
+        (!keepClosed && !state.focused.value && !hoverShown)
+      ) {
         return
       }
 
@@ -1204,7 +1309,7 @@ export default /*#__PURE__*/ createComponent({
         val,
         (fn, afterFn) => {
           if (
-            (keepClosed || state.focused.value) &&
+            (keepClosed || state.focused.value || hoverShown) &&
             filterId === localFilterId
           ) {
             clearTimeout(filterId)
@@ -1242,7 +1347,10 @@ export default /*#__PURE__*/ createComponent({
           }
         },
         () => {
-          if (state.focused.value && filterId === localFilterId) {
+          if (
+            (keepClosed || state.focused.value || hoverShown) &&
+            filterId === localFilterId
+          ) {
             clearTimeout(filterId)
             state.innerLoading.value = false
             innerLoadingIndicator.value = false
@@ -1251,6 +1359,26 @@ export default /*#__PURE__*/ createComponent({
           if (menu.value) menu.value = false
         }
       )
+    }
+
+    // with lazy loaded options, mapOptions has nothing to look a preloaded
+    // model value up into, so the field would display the raw value; ask
+    // the filter handler for the options once, without opening the menu
+    function prefetchUnmappedOptions() {
+      if (
+        // already loaded options map everything they ever will
+        virtualScrollLength.value !== 0 ||
+        // whole-option model values carry their own labels
+        innerValue.value.every(opt => opt !== null && typeof opt === 'object')
+      ) {
+        return false
+      }
+
+      // innerLoading only clears on the tick after the options land, so
+      // the innerValue watcher skips resetInputValue(); do it afterwards
+      filter('', true, resetInputValue)
+
+      return true
     }
 
     function getMenu() {
@@ -1276,11 +1404,17 @@ export default /*#__PURE__*/ createComponent({
           transitionHide: props.transitionHide,
           transitionDuration: props.transitionDuration,
           separateClosePopup: true,
-          ...listboxAttrs.value,
           onScrollPassive: onVirtualScrollEvt,
           onBeforeShow: onControlPopupShow,
           onBeforeHide: onMenuBeforeHide,
-          onShow: onMenuShow
+          onShow: onMenuShow,
+          // fall-through attrs, landing on the menu's content element
+          ...(props.hover
+            ? {
+                onPointerenter: onHoverContentEnter,
+                onPointerleave: hoverHide
+              }
+            : {})
         },
         getAllOptions
       )
@@ -1299,10 +1433,15 @@ export default /*#__PURE__*/ createComponent({
       stop(e)
       targetRef.value?.focus()
       dialogFieldFocused.value = true
-      window.scrollTo(
-        window.pageXOffset || window.scrollX || document.body.scrollLeft || 0,
-        0
-      )
+
+      // only iOS needs the snap back to top: its pinned-body scroll lock
+      // holds the window at 0 but the software keyboard can still push it;
+      // everywhere else the clip lock keeps the page at its real scroll
+      // position, which this call would throw away for good (the clip
+      // release does not restore scroll)
+      if ($q.platform.is.ios) {
+        window.scrollTo(window.scrollX, 0)
+      }
     }
 
     function onDialogFieldBlur(e) {
@@ -1334,7 +1473,27 @@ export default /*#__PURE__*/ createComponent({
             ...slots,
             rawControl: () => state.getControl(true),
             before: void 0,
-            after: void 0
+            after: void 0,
+            append: props.hideDialogClose
+              ? slots.append
+              : () => {
+                  const closeBtn = h(
+                    'button',
+                    {
+                      class:
+                        'q-select__dialog-close' +
+                        (props.color !== void 0 ? ` text-${props.color}` : ''),
+                      type: 'button',
+                      tabindex: 0,
+                      onClick: hidePopup
+                    },
+                    $q.lang.label.close
+                  )
+
+                  return slots.append !== void 0
+                    ? [...slots.append(), closeBtn]
+                    : [closeBtn]
+                }
           }
         )
       ]
@@ -1347,7 +1506,6 @@ export default /*#__PURE__*/ createComponent({
               ref: menuContentRef,
               class: menuContentClass.value + ' scroll',
               style: props.popupContentStyle,
-              ...listboxAttrs.value,
               onClick: prevent,
               onScrollPassive: onVirtualScrollEvt
             },
@@ -1362,6 +1520,10 @@ export default /*#__PURE__*/ createComponent({
           ref: dialogRef,
           modelValue: dialog.value,
           position: props.useInput ? 'top' : void 0,
+          // the select manages focus itself; QDialog's own handling
+          // would blur the control focused during the opening gesture,
+          // dismissing the iOS keyboard it acquired (#16196)
+          noFocus: true,
           transitionShow: transitionShowComputed,
           transitionHide: props.transitionHide,
           transitionDuration: props.transitionDuration,
@@ -1389,11 +1551,29 @@ export default /*#__PURE__*/ createComponent({
       onControlPopupHide(e)
 
       if (dialogRef.value !== null) {
-        dialogRef.value.__updateRefocusTarget(
-          state.rootRef.value.querySelector(
-            '.q-field__native > [tabindex]:last-child'
-          )
-        )
+        // while the dialog is open the outside control is not the target,
+        // so its input carries no tabindex attribute; select it by class
+        // (a native input takes programmatic focus without the attribute,
+        // and it becomes the target again on the post-hide render) - a
+        // [tabindex] selector matches nothing at this point, dropping the
+        // refocus and leaving focus on body after dismissal.
+        // On mobile platforms a use-input control is a real text input,
+        // and restoring focus onto it after a touch-driven close would
+        // pop the software keyboard the user just dismissed, so there the
+        // refocus only follows keyboard-initiated closes (ESC, or Enter
+        // on the close button, which is a click carrying detail 0)
+        const refocusTarget =
+          !$q.platform.is.mobile ||
+          !props.useInput ||
+          (e !== void 0 &&
+            (e.type.indexOf('key') === 0 ||
+              (e.type === 'click' && e.detail === 0)))
+            ? state.rootRef.value.querySelector(
+                '.q-field__native > .q-select__focus-target, .q-field__native > .q-field__input'
+              )
+            : null
+
+        dialogRef.value.__updateRefocusTarget(refocusTarget)
       }
 
       state.focused.value = false
@@ -1418,13 +1598,22 @@ export default /*#__PURE__*/ createComponent({
       setVirtualScrollSize()
     }
 
-    function closeMenu() {
+    function closeMenu(e) {
       if (dialog.value) return
+
+      clearHoverTimer()
+      hoverShown = false
 
       optionIndex.value = -1
 
       if (menu.value) {
+        // hide through QMenu itself (with the model already in sync so
+        // its watcher no-ops) to hand `e` over to the popup events;
+        // menuRef is null in dialog mode, where menu only gates the
+        // in-dialog options list
+        if (e !== void 0) e.qSelectHandled = true
         menu.value = false
+        menuRef.value?.hide(e)
       }
 
       if (!state.focused.value) {
@@ -1441,12 +1630,90 @@ export default /*#__PURE__*/ createComponent({
       }
     }
 
+    // is the pointer still over the select's own scope: its control, the
+    // options menu, or a popup opened from within the options (the latter
+    // is rendered in a sibling portal, never a DOM descendant of the menu)
+    function hoverWithinScope(el) {
+      if (el === null || el === void 0) return false
+
+      const menuContent =
+        menuRef.value !== null ? menuRef.value.contentEl : null
+
+      if (
+        (state.controlRef.value !== null &&
+          state.controlRef.value.contains(el)) ||
+        (menuContent !== null && menuContent.contains(el))
+      ) {
+        return true
+      }
+
+      let portalProxy = getPortalProxy(el)
+      while (portalProxy !== void 0 && portalProxy !== null) {
+        if (portalProxy === proxy) return true
+        portalProxy = getParentProxy(portalProxy)
+      }
+
+      return false
+    }
+
+    const { clearHoverTimer, hoverShow, hoverHide, onHoverContentEnter } =
+      useHover({
+        props,
+        canShow: () =>
+          !hasDialog && !hoverShown && !menu.value && state.editable.value,
+        show: hoverShowPopup,
+        canHide: evt => hoverShown && !hoverWithinScope(evt.relatedTarget),
+        hide: hidePopup
+      })
+
+    function hoverShowPopup(evt) {
+      if (
+        props.onFilter === void 0 &&
+        noOptions.value &&
+        !hasNoOptionDisplay()
+      ) {
+        return
+      }
+
+      hoverShown = true
+      hoverShownAt = Date.now()
+      evt.qSelectHandled = true
+
+      // mirrors showPopup()'s menu branch, minus the focus handling: a
+      // pointer merely passing over the control must not steal focus from
+      // wherever the user currently is
+      if (props.onFilter !== void 0) {
+        filter(inputValue.value)
+      } else {
+        menu.value = true
+        menuRef.value?.show(evt)
+      }
+    }
+
     function showPopup(e) {
       if (!state.editable.value) return
 
+      clearHoverTimer()
+      hoverShown = false
+
+      if (e !== void 0) e.qSelectHandled = true
+
       if (hasDialog) {
         state.onControlFocusin(e)
+
+        // focus the (still outside) control before the dialog portal
+        // raises its focus wait flag, so it runs inside the user
+        // gesture; iOS only shows the software keyboard for a focus
+        // applied within user activation, and it then keeps it up
+        // across the later handoff to the in-dialog control (#16196)
+        state.focus()
+
+        // show through QDialog itself to hand `e` over to the popup
+        // events; the ref is null while the flipped model is what first
+        // renders it, and then mounting processes the (eventless) show
         dialog.value = true
+        dialogRef.value?.show(e)
+
         nextTick(() => {
           state.focus()
         })
@@ -1456,21 +1723,27 @@ export default /*#__PURE__*/ createComponent({
 
       if (props.onFilter !== void 0) {
         filter(inputValue.value)
-      } else if (!noOptions.value || slots['no-option'] !== void 0) {
+      } else if (!noOptions.value || hasNoOptionDisplay()) {
         menu.value = true
+        menuRef.value?.show(e)
       }
     }
 
-    function hidePopup() {
-      dialog.value = false
-      closeMenu()
+    function hidePopup(e) {
+      if (dialog.value) {
+        if (e !== void 0) e.qSelectHandled = true
+        dialog.value = false
+        dialogRef.value?.hide(e)
+      }
+
+      closeMenu(e)
     }
 
     function resetInputValue() {
       if (props.useInput) {
         updateInputValue(
           !props.multiple && props.fillInput && innerValue.value.length !== 0
-            ? getOptionLabel.value(innerValue.value[0]) || ''
+            ? (getOptionLabel.value(innerValue.value[0]) ?? '')
             : '',
           true,
           true
@@ -1493,6 +1766,7 @@ export default /*#__PURE__*/ createComponent({
       }
 
       setOptionIndex(localOptionIndex)
+      optionIndexFromModel = localOptionIndex !== -1
     }
 
     function rerenderMenu(newLength, oldLength) {
@@ -1516,17 +1790,27 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function onControlPopupShow(e) {
-      if (e !== void 0) stop(e)
+      // an event stamped by our own control handlers is still
+      // mid-dispatch (the popup processes it synchronously), so only
+      // popup-initiated events (click-outside, ESC plugin) get stopped
+      if (e !== void 0 && e.qSelectHandled !== true) stop(e)
       emit('popupShow', e)
       state.hasPopupOpen = true
-      state.onControlFocusin(e)
+      // a hover-triggered open leaves focus (and with it the focused
+      // state, its styling and the focus/blur emits) wherever it already is
+      if (!hoverShown) state.onControlFocusin(e)
     }
 
     function onControlPopupHide(e) {
-      if (e !== void 0) stop(e)
+      if (e !== void 0 && e.qSelectHandled !== true) stop(e)
       emit('popupHide', e)
       state.hasPopupOpen = false
-      state.onControlFocusout(e)
+      // focus can leave the control while the popup is still open
+      // (clicking non-focusable popup content, like the no-option slot),
+      // which makes the control focusout skip its own reset; this late
+      // focusout only settles once the popup is gone, so it must carry
+      // the same reset (#16135)
+      state.onControlFocusout(e, resetInputValue)
     }
 
     function updatePreState() {
@@ -1535,7 +1819,7 @@ export default /*#__PURE__*/ createComponent({
           ? false
           : props.behavior !== 'menu' &&
             (props.useInput
-              ? slots['no-option'] !== void 0 ||
+              ? hasNoOptionDisplay() ||
                 props.onFilter !== void 0 ||
                 !noOptions.value
               : true)
@@ -1548,6 +1832,18 @@ export default /*#__PURE__*/ createComponent({
 
     onBeforeUpdate(updatePreState)
     onUpdated(updateMenuPosition)
+
+    if (
+      !props.noOptionPrefetch &&
+      props.mapOptions &&
+      props.onFilter !== void 0
+    ) {
+      onMounted(() => {
+        // the model value can also land after mounting (a form fetching
+        // its record), in which case the innerValue watcher picks it up
+        prefetchPending = !prefetchUnmappedOptions()
+      })
+    }
 
     updatePreState()
 
@@ -1604,7 +1900,7 @@ export default /*#__PURE__*/ createComponent({
           state.editable.value &&
           (dialog.value || // dialog always has menu displayed, so need to render it
             !noOptions.value ||
-            slots['no-option'] !== void 0)
+            hasNoOptionDisplay())
         ) {
           return hasDialog ? getDialog() : getMenu()
         } else if (state.hasPopupOpen) {
@@ -1615,12 +1911,17 @@ export default /*#__PURE__*/ createComponent({
 
       controlEvents: {
         onFocusin(e) {
+          // a real focus upgrades a hover-shown popup to a regular
+          // focused open: from here on it closes like any other (blur,
+          // ESC, selection), not by the pointer leaving
+          clearHoverTimer()
+          hoverShown = false
           state.onControlFocusin(e)
         },
         onFocusout(e) {
           state.onControlFocusout(e, () => {
             resetInputValue()
-            closeMenu()
+            closeMenu(e)
           })
         },
         onClick(e) {
@@ -1628,13 +1929,32 @@ export default /*#__PURE__*/ createComponent({
           prevent(e)
 
           if (!hasDialog && menu.value) {
-            closeMenu()
+            // on real hardware the pointer reaches the control before any
+            // click can, so with "hover" on, the menu is still animating
+            // in when a move-and-click gesture's click lands; that click
+            // must not dismiss what the very same gesture just opened:
+            // it upgrades the show to a focused open instead
+            if (
+              hoverShown &&
+              Date.now() - hoverShownAt <
+                (props.transitionDuration !== void 0
+                  ? Number(props.transitionDuration)
+                  : 300)
+            ) {
+              hoverShown = false
+              state.focus()
+              return
+            }
+
+            closeMenu(e)
             targetRef.value?.focus()
             return
           }
 
           showPopup(e)
-        }
+        },
+        onPointerenter: hoverShow,
+        onPointerleave: hoverHide
       },
 
       getControl: fromDialog => {
@@ -1645,37 +1965,44 @@ export default /*#__PURE__*/ createComponent({
           child.push(getInput(fromDialog, isTarget))
         }
         // there can be only one (when dialog is opened the control in dialog should be target)
-        else if (state.editable.value) {
-          const attrs = isTarget ? comboboxAttrs.value : void 0
+        // rendered whatever the state, matching the use-input branch above: a
+        // readonly control stays focusable and a disabled one is still exposed
+        // (announced as unavailable, out of the tab order through the native
+        // attribute), and either way this is the element that owns the id the
+        // QField label's "for" points at. Neither becomes a popup trigger -
+        // showPopup() and onTargetKeydown() both bail when the field is not
+        // editable, and getControlChild() renders no menu/dialog
+        else {
+          const attrs = isTarget
+            ? { ...comboboxAttrs.value, ...state.splitAttrs.attributes.value }
+            : void 0
 
           const data = {
             ref: isTarget ? targetRef : void 0,
             key: 'd_t',
             class: 'q-select__focus-target',
-            id: isTarget ? state.targetUid.value : void 0,
             value: ariaCurrentValue.value,
             readonly: true,
             'data-autofocus': fromDialog === true || props.autofocus || void 0,
             ...attrs,
+            disabled: props.disable,
+            id: isTarget ? state.targetUid.value : void 0,
             onKeydown: onTargetKeydown,
             onKeyup: onTargetKeyup,
             onKeypress: onTargetKeypress
           }
 
           if (isTarget) {
-            Object.assign(
-              data,
-              state.getErrorAriaAttrs({
-                ...state.splitAttrs.attributes.value,
-                ...data
-              })
-            )
+            Object.assign(data, state.getErrorAriaAttrs(data))
           }
 
           child.push(h('input', data))
 
+          // browser autofill has nothing to fill on a readonly field, and the
+          // handler behind it writes the model (clearing it on an empty value)
           if (
             isTarget &&
+            state.editable.value &&
             typeof props.autocomplete === 'string' &&
             props.autocomplete.length !== 0
           ) {
@@ -1690,43 +2017,41 @@ export default /*#__PURE__*/ createComponent({
           }
         }
 
-        if (
-          nameProp.value !== void 0 &&
-          !props.disable &&
-          innerOptionsValue.value.length !== 0
-        ) {
-          const opts = innerOptionsValue.value.map(value =>
-            h('option', { value, selected: true })
-          )
-
-          child.push(
-            h(
-              'select',
-              {
-                class: 'hidden',
-                name: nameProp.value,
-                multiple: props.multiple
-              },
-              opts
+        if (!props.disable) {
+          const name = nameProp()
+          if (name !== void 0) {
+            const opts = innerOptionsValue.value.map(value =>
+              h('option', { value, selected: true })
             )
-          )
-        }
 
-        const attrs =
-          props.useInput || !isTarget
-            ? void 0
-            : state.splitAttrs.attributes.value
+            child.push(
+              h(
+                'select',
+                {
+                  class: 'hidden',
+                  name,
+                  multiple: props.multiple
+                },
+                opts
+              )
+            )
+          }
+        }
 
         return h(
           'div',
           {
             class: 'q-field__native row items-center',
-            ...attrs,
             ...state.splitAttrs.listeners.value
           },
           child
         )
       },
+
+      // the default loading spinner swaps in for the dropdown icon at a
+      // constant width; with the icon hidden there is nothing to swap
+      // with, so the spinner would make the field width jump (#17375)
+      shouldHideLoadingIndicator: () => props.hideDropdownIcon === true,
 
       getInnerAppend: () =>
         !props.loading &&

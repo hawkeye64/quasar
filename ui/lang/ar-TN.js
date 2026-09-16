@@ -16,7 +16,12 @@ export default {
     search: 'بحث',
     filter: 'ترشيح',
     refresh: 'تحديث',
-    expand: label => (label ? `"${label} توسيع` : 'وسعت'),
+    minimum: 'الحد الأدنى',
+    maximum: 'الحد الأقصى',
+    range: 'النطاق',
+    noValue: 'بدون قيمة',
+    resize: 'تغيير الحجم',
+    expand: label => (label ? `"${label}" توسيع` : 'وسعت'),
     collapse: label => (label ? `"${label}" تصغير` : 'انهيار')
   },
   date: {
@@ -36,7 +41,11 @@ export default {
     nextYear: 'السنة القادمة',
     today: 'اليوم',
     prevRangeYears: range => `السابق ${range} سنوات`,
-    nextRangeYears: range => `التالي ${range} سنوات`
+    nextRangeYears: range => `التالي ${range} سنوات`,
+    hour: 'الساعة',
+    minute: 'الدقيقة',
+    second: 'الثانية',
+    now: 'الوقت الحالي'
   },
   table: {
     noData: 'لا توجد بيانات',
@@ -53,15 +62,41 @@ export default {
     recordsPerPage: 'عدد المُدخَلات في كل صفحة:',
     allRows: 'الكل',
     pagination: (start, end, total) => start + ' - ' + end + ' من ' + total,
-    columns: 'أعمدة'
+    columns: 'أعمدة',
+    selectAllRows: 'تحديد كل الصفوف',
+    selectRow: 'تحديد الصف'
   },
   pagination: {
+    label: 'ترقيم الصفحات',
     first: 'الصفحة الأولى',
     prev: 'الصفحة السابقة',
     next: 'الصفحة التالية',
     last: 'الصفحة الأخيرة'
   },
+  carousel: {
+    prevSlide: 'الشريحة السابقة',
+    nextSlide: 'الشريحة التالية'
+  },
+  colorPicker: {
+    spectrum: 'الطيف',
+    tune: 'ضبط',
+    palette: 'لوحة الألوان',
+    value: 'قيمة اللون',
+    hue: 'درجة اللون',
+    alpha: 'العتامة',
+    saturation: 'التشبع',
+    brightness: 'السطوع'
+  },
+  uploader: {
+    addFiles: 'اختيار الملفات',
+    upload: 'رفع الملفات',
+    abort: 'إلغاء الرفع',
+    removeQueued: 'إزالة الملفات في الانتظار',
+    removeUploaded: 'إزالة الملفات المرفوعة',
+    removeFile: 'إزالة الملف'
+  },
   editor: {
+    toolbar: 'شريط أدوات المحرر',
     url: 'رابط',
     bold: 'عريض',
     italic: 'مائل',

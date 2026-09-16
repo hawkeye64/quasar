@@ -13,9 +13,8 @@ Quasar provides lots of CSS classes to help you build your UI easily with the he
 
 Flexbox (upon which Quasar Flex CSS classes are based) module aims to provide a more efficient way to lay out, align and distribute space among items in a container, even when their size is unknown and/or dynamic (thus the word “flex”).
 
-::: tip
-This page covers the basic theory of Quasar Flex CSS classes and prepares you for the in-depth pages on [Grid Row](/layout/grid/row), [Grid Column](/layout/grid/column) and [Grid Gutter](/layout/grid/gutter).
-:::
+> [!TIP]
+> This page covers the basic theory of Quasar Flex CSS classes and prepares you for the in-depth pages on [Grid Row](/layout/grid/row), [Grid Column](/layout/grid/column) and [Grid Gutter](/layout/grid/gutter).
 
 ## Key concept
 
@@ -77,9 +76,8 @@ Also, if you want to wrap in reverse order, then `reverse-wrap` is available.
 
 ![Flexbox Items Align](/img/flexbox-cross-axis-align.svg)
 
-::: tip
-There is also the convenience `flex-center` CSS class which is equivalent to `items-center` + `justify-center`. Use it along with `flex`, `row` or `column`.
-:::
+> [!TIP]
+> There is also the convenience `flex-center` CSS class which is equivalent to `items-center` + `justify-center`. Use it along with `flex`, `row` or `column`.
 
 The next classes **align a flex container's lines** within when there is extra space in the cross-axis, similar to how horizontal-\* aligns individual items within the main-axis.
 
@@ -233,11 +231,11 @@ Also check [Visibility](/style/visibility#window-width-related) Style page to se
 
 ## Flex Addons
 
-When enabled (through `quasar.config file > framework > cssAddon: true`) it provides breakpoint aware versions for all flex (and display) related CSS classes.
+When enabled, it provides breakpoint aware versions for all flex (and display) related CSS classes.
+With Quasar CLI, switch it on through `quasar.config file > framework > cssAddon: true`.
 
-::: warning
-Note that there will be a noticeable bump in CSS footprint when enabling it. So only do it if you really need it.
-:::
+> [!WARNING]
+> Note that there will be a noticeable bump in CSS footprint when enabling it. So only do it if you really need it.
 
 ```
 .flex-<bp>-(block|inline)
@@ -261,6 +259,30 @@ There are also responsive classes for spacing, both for padding and for margin:
 ```
 
 Examples: `row-md`, `items-lg-end`, `q-pa-xs q-pa-sm-sm q-px-md-lg q-py-md-md`
+
+### Enabling outside of Quasar CLI
+
+`cssAddon` is a Quasar CLI option, but the addon itself is a plain stylesheet, so the other flavours
+can pull it in directly.
+
+With `@quasar/vite-plugin` (or any bundler that handles Sass), import it once, next to wherever you
+import the Quasar CSS. This is the exact same import that Quasar CLI generates for you:
+
+```js
+import 'quasar/src/css/flex-addon.sass'
+```
+
+With [UMD](/start/umd), add the prebuilt stylesheet after the base one:
+
+```html
+<link
+  href="https://cdn.jsdelivr.net/npm/quasar@2/dist/quasar.addon.prod.css"
+  rel="stylesheet"
+  type="text/css"
+/>
+```
+
+Use `quasar.addon.rtl.prod.css` instead if you are serving an RTL language.
 
 ## Flex Playground
 

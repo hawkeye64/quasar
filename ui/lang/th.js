@@ -15,6 +15,11 @@ export default {
     search: 'ค้นหา',
     filter: 'กรอง',
     refresh: 'รีเฟรช',
+    minimum: 'ต่ำสุด',
+    maximum: 'สูงสุด',
+    range: 'ช่วง',
+    noValue: 'ไม่มีค่า',
+    resize: 'ปรับขนาด',
     expand: label => (label ? `ขยาย "${label}"` : 'ขยาย'),
     collapse: label => (label ? `ยุบ "${label}"` : 'ทรุด')
   },
@@ -36,7 +41,11 @@ export default {
     nextYear: 'ปีหน้า',
     today: 'วันนี้',
     prevRangeYears: range => `ก่อนหน้านี้ ${range} ปี`,
-    nextRangeYears: range => `ถัดไป ${range} ปี`
+    nextRangeYears: range => `ถัดไป ${range} ปี`,
+    hour: 'ชั่วโมง',
+    minute: 'นาที',
+    second: 'วินาที',
+    now: 'เวลาปัจจุบัน'
   },
   table: {
     noData: 'ไม่มีข้อมูล',
@@ -47,15 +56,41 @@ export default {
     recordsPerPage: 'แถวต่อหน้า:',
     allRows: 'แถวทั้งหมด',
     pagination: (start, end, total) => start + '-' + end + ' of ' + total,
-    columns: 'คอลัมน์'
+    columns: 'คอลัมน์',
+    selectAllRows: 'เลือกทุกแถว',
+    selectRow: 'เลือกแถว'
   },
   pagination: {
+    label: 'การแบ่งหน้า',
     first: 'หน้าแรก',
     prev: 'หน้าก่อนหน้า',
     next: 'หน้าถัดไป',
     last: 'หน้าสุดท้าย'
   },
+  carousel: {
+    prevSlide: 'สไลด์ก่อนหน้า',
+    nextSlide: 'สไลด์ถัดไป'
+  },
+  colorPicker: {
+    spectrum: 'สเปกตรัม',
+    tune: 'ปรับแต่ง',
+    palette: 'จานสี',
+    value: 'ค่าสี',
+    hue: 'เฉดสี',
+    alpha: 'ความทึบ',
+    saturation: 'ความอิ่มตัว',
+    brightness: 'ความสว่าง'
+  },
+  uploader: {
+    addFiles: 'เลือกไฟล์',
+    upload: 'อัปโหลดไฟล์',
+    abort: 'ยกเลิกการอัปโหลด',
+    removeQueued: 'ลบไฟล์ที่รออยู่',
+    removeUploaded: 'ลบไฟล์ที่อัปโหลดแล้ว',
+    removeFile: 'ลบไฟล์'
+  },
   editor: {
+    toolbar: 'แถบเครื่องมือตัวแก้ไข',
     url: 'URL',
     bold: 'ตัวหนา',
     italic: 'ตัวเอียง',

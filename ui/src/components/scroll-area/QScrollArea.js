@@ -6,9 +6,11 @@ import {
   onBeforeUnmount,
   onDeactivated,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -26,7 +28,6 @@ import {
   setVerticalScrollPosition
 } from '../../utils/scroll/scroll.js'
 import { hMergeSlot } from '../../utils/private.render/render.js'
-import { rtlHasScrollBug } from '../../utils/private.rtl/rtl.js'
 import debounce from '../../utils/debounce/debounce.js'
 
 const axisList = ['vertical', 'horizontal']
@@ -46,6 +47,10 @@ const panOpts = {
 }
 
 const getMinThumbSize = size => (size >= 250 ? 50 : Math.ceil(size / 5))
+
+// converts between logical and native horizontal scroll positions
+// (in RTL the two are negated mirrors of each other)
+const getHorizontalPosition = (position, rtl) => (rtl ? -position : position)
 
 function isValidAxis(axis, methodName) {
   if (axisList.includes(axis)) return true
@@ -111,29 +116,30 @@ export default /*#__PURE__*/ createComponent({
 
     const scroll = {
       vertical: {
-        ref: ref(null),
+        ref: shallowRef(null),
         position: ref(0),
         size: ref(0)
       },
 
       horizontal: {
-        ref: ref(null),
+        ref: shallowRef(null),
         position: ref(0),
         size: ref(0)
       }
     }
 
     const { proxy } = getCurrentInstance()
+    const $q = useQuasar()
 
-    const isDark = useDark(props, proxy.$q)
+    const isDark = useDark(props, $q)
 
     let timer = null,
       panRefPos
 
-    const targetRef = ref(null)
+    const targetRef = shallowRef(null)
 
     const classes = computed(
-      () => 'q-scrollarea' + (isDark.value ? ' q-scrollarea--dark' : '')
+      () => 'q-scrollarea' + (isDark() ? ' q-scrollarea--dark' : '')
     )
 
     Object.assign(container, {
@@ -188,7 +194,8 @@ export default /*#__PURE__*/ createComponent({
       ...props.verticalThumbStyle,
       top: `${scroll.vertical.thumbStart.value}px`,
       height: `${scroll.vertical.thumbSize.value}px`,
-      right: `${props.horizontalOffset[1]}px`
+      [$q.lang.rtl ? 'left' : 'right']:
+        `${props.horizontalOffset[$q.lang.rtl ? 0 : 1]}px`
     }))
     scroll.vertical.thumbClass = computed(
       () =>
@@ -211,7 +218,8 @@ export default /*#__PURE__*/ createComponent({
         return 0
       }
       const p = between(
-        getHorizontalLogicalPosition(scroll.horizontal.position.value) / diff,
+        getHorizontalPosition(scroll.horizontal.position.value, $q.lang.rtl) /
+          diff,
         0,
         1
       )
@@ -226,7 +234,7 @@ export default /*#__PURE__*/ createComponent({
     )
     scroll.horizontal.thumbStart = computed(
       () =>
-        props.horizontalOffset[proxy.$q.lang.rtl ? 1 : 0] +
+        props.horizontalOffset[$q.lang.rtl ? 1 : 0] +
         scroll.horizontal.percentage.value *
           (container.horizontalInner.value - scroll.horizontal.thumbSize.value)
     )
@@ -243,7 +251,7 @@ export default /*#__PURE__*/ createComponent({
     scroll.horizontal.style = computed(() => ({
       ...props.thumbStyle,
       ...props.horizontalThumbStyle,
-      [proxy.$q.lang.rtl ? 'right' : 'left']:
+      [$q.lang.rtl ? 'right' : 'left']:
         `${scroll.horizontal.thumbStart.value}px`,
       width: `${scroll.horizontal.thumbSize.value}px`,
       bottom: `${props.verticalOffset[1]}px`
@@ -263,27 +271,43 @@ export default /*#__PURE__*/ createComponent({
           : '')
     )
 
+    // a scrollable region must be keyboard-operable (WCAG 2.1.1), but a tab
+    // stop on a region with nothing to scroll is only noise. The render also
+    // re-runs on hover (mainStyle -> thumbHidden), so this stays a computed:
+    // the overflow state only ever changes when one of the sizes does.
+    const tabindex = computed(() =>
+      props.tabindex !== void 0
+        ? props.tabindex
+        : scroll.vertical.size.value > container.vertical.value + 1 ||
+            scroll.horizontal.size.value > container.horizontal.value + 1
+          ? 0
+          : void 0
+    )
+
     const mainStyle = computed(() =>
       scroll.vertical.thumbHidden.value && scroll.horizontal.thumbHidden.value
         ? props.contentStyle
         : props.contentActiveStyle
     )
 
+    // spelled out (not built by concatenating the axis) on two counts: these
+    // 10 keys are public API, so they should be greppable in the component
+    // that produces them; and a static-key literal is one allocation with a
+    // cached shape, against 10 string internalizations per scroll event
     function getScroll() {
-      const info = {}
+      return {
+        verticalPosition: scroll.vertical.position.value,
+        verticalPercentage: scroll.vertical.percentage.value,
+        verticalSize: scroll.vertical.size.value,
+        verticalContainerSize: container.vertical.value,
+        verticalContainerInnerSize: container.verticalInner.value,
 
-      axisList.forEach(axis => {
-        const data = scroll[axis]
-        Object.assign(info, {
-          [axis + 'Position']: data.position.value,
-          [axis + 'Percentage']: data.percentage.value,
-          [axis + 'Size']: data.size.value,
-          [axis + 'ContainerSize']: container[axis].value,
-          [axis + 'ContainerInnerSize']: container[axis + 'Inner'].value
-        })
-      })
-
-      return info
+        horizontalPosition: scroll.horizontal.position.value,
+        horizontalPercentage: scroll.horizontal.percentage.value,
+        horizontalSize: scroll.horizontal.size.value,
+        horizontalContainerSize: container.horizontal.value,
+        horizontalContainerInnerSize: container.horizontalInner.value
+      }
     }
 
     // we have lots of listeners, so
@@ -358,7 +382,7 @@ export default /*#__PURE__*/ createComponent({
 
         panRefPos =
           axis === 'horizontal'
-            ? getHorizontalLogicalPosition(data.position.value)
+            ? getHorizontalPosition(data.position.value, $q.lang.rtl)
             : data.position.value
         panning.value = true
       } else if (!panning.value) {
@@ -375,11 +399,11 @@ export default /*#__PURE__*/ createComponent({
       const distance = e.distance[dProp.dist]
       const direction =
         (e.direction === dProp.dir ? 1 : -1) *
-        (axis === 'horizontal' && proxy.$q.lang.rtl ? -1 : 1)
+        (axis === 'horizontal' && $q.lang.rtl ? -1 : 1)
       const pos = panRefPos + direction * distance * multiplier
 
       setScroll(
-        axis === 'horizontal' ? getHorizontalNativePosition(pos) : pos,
+        axis === 'horizontal' ? getHorizontalPosition(pos, $q.lang.rtl) : pos,
         axis
       )
     }
@@ -388,7 +412,7 @@ export default /*#__PURE__*/ createComponent({
       const data = scroll[axis]
 
       if (!data.thumbHidden.value) {
-        const isHorizontalRtl = axis === 'horizontal' && proxy.$q.lang.rtl
+        const isHorizontalRtl = axis === 'horizontal' && $q.lang.rtl
         const startOffset =
           axis === 'vertical'
             ? props.verticalOffset[0]
@@ -410,9 +434,10 @@ export default /*#__PURE__*/ createComponent({
           )
           setScroll(
             isHorizontalRtl
-              ? getHorizontalNativePosition(
+              ? getHorizontalPosition(
                   percentage *
-                    Math.max(0, data.size.value - container[axis].value)
+                    Math.max(0, data.size.value - container[axis].value),
+                  $q.lang.rtl
                 )
               : percentage *
                   Math.max(0, data.size.value - container[axis].value),
@@ -443,28 +468,6 @@ export default /*#__PURE__*/ createComponent({
       targetRef.value[dirProps[axis].scroll] = offset
     }
 
-    function getHorizontalLogicalPosition(position, rtl = proxy.$q.lang.rtl) {
-      if (!rtl) return position
-
-      return rtlHasScrollBug
-        ? Math.max(
-            0,
-            scroll.horizontal.size.value - container.horizontal.value
-          ) - position
-        : -position
-    }
-
-    function getHorizontalNativePosition(position, rtl = proxy.$q.lang.rtl) {
-      if (!rtl) return position
-
-      return rtlHasScrollBug
-        ? Math.max(
-            0,
-            scroll.horizontal.size.value - container.horizontal.value
-          ) - position
-        : -position
-    }
-
     let mouseEventTimer = null
 
     function onMouseenter() {
@@ -478,7 +481,7 @@ export default /*#__PURE__*/ createComponent({
           mouseEventTimer = null
           hover.value = true
         },
-        proxy.$q.platform.is.ios ? 50 : 0
+        $q.platform.is.ios ? 50 : 0
       )
     }
 
@@ -494,16 +497,13 @@ export default /*#__PURE__*/ createComponent({
     let scrollPosition = null
 
     watch(
-      () => proxy.$q.lang.rtl,
+      () => $q.lang.rtl,
       (rtl, oldRtl) => {
         if (targetRef.value !== null) {
           setHorizontalScrollPosition(
             targetRef.value,
-            getHorizontalNativePosition(
-              getHorizontalLogicalPosition(
-                scroll.horizontal.position.value,
-                oldRtl
-              ),
+            getHorizontalPosition(
+              getHorizontalPosition(scroll.horizontal.position.value, oldRtl),
               rtl
             )
           )
@@ -552,7 +552,9 @@ export default /*#__PURE__*/ createComponent({
 
         localSetScrollPosition(
           axis,
-          axis === 'horizontal' ? getHorizontalNativePosition(offset) : offset,
+          axis === 'horizontal'
+            ? getHorizontalPosition(offset, $q.lang.rtl)
+            : offset,
           duration
         )
       }
@@ -607,7 +609,7 @@ export default /*#__PURE__*/ createComponent({
               ref: targetRef,
               class:
                 'q-scrollarea__container scroll relative-position fit hide-scrollbar',
-              tabindex: props.tabindex !== void 0 ? props.tabindex : void 0
+              tabindex: tabindex.value
             },
             [
               h(

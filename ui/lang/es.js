@@ -15,6 +15,11 @@ export default {
     search: 'Buscar',
     filter: 'Filtrar',
     refresh: 'Actualizar',
+    minimum: 'Mínimo',
+    maximum: 'Máximo',
+    range: 'Rango',
+    noValue: 'Sin valor',
+    resize: 'Redimensionar',
     expand: label => (label ? `Expandir "${label}"` : 'Expandir'),
     collapse: label => (label ? `Ocultar "${label}"` : 'Colapsar')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Año anterior',
     nextYear: 'Año siguiente',
     today: 'Hoy',
-    prevRangeYears: range => `Anterior ${range} años`,
-    nextRangeYears: range => `Siguiente ${range} años`
+    prevRangeYears: range => `${range} años anteriores`,
+    nextRangeYears: range => `${range} años siguientes`,
+    hour: 'Hora',
+    minute: 'Minuto',
+    second: 'Segundo',
+    now: 'Hora actual'
   },
   table: {
     noData: 'Sin datos disponibles',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Filas por página:',
     allRows: 'Todas',
     pagination: (start, end, total) => start + '-' + end + ' de ' + total,
-    columns: 'Columnas'
+    columns: 'Columnas',
+    selectAllRows: 'Seleccionar todas las filas',
+    selectRow: 'Seleccionar fila'
   },
   pagination: {
+    label: 'Paginación',
     first: 'Primera página',
     prev: 'Página anterior',
     next: 'Próxima página',
     last: 'Última página'
   },
+  carousel: {
+    prevSlide: 'Diapositiva anterior',
+    nextSlide: 'Diapositiva siguiente'
+  },
+  colorPicker: {
+    spectrum: 'Espectro',
+    tune: 'Ajuste',
+    palette: 'Paleta',
+    value: 'Valor del color',
+    hue: 'Tono',
+    alpha: 'Opacidad',
+    saturation: 'Saturación',
+    brightness: 'Brillo'
+  },
+  uploader: {
+    addFiles: 'Elegir archivos',
+    upload: 'Subir archivos',
+    abort: 'Cancelar la subida',
+    removeQueued: 'Eliminar archivos en cola',
+    removeUploaded: 'Eliminar archivos subidos',
+    removeFile: 'Eliminar archivo'
+  },
   editor: {
+    toolbar: 'Barra de herramientas del editor',
     url: 'URL',
     bold: 'Negrita',
     italic: 'Cursiva',

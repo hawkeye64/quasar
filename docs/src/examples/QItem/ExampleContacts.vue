@@ -40,7 +40,10 @@
       >
         <q-item-section avatar>
           <q-avatar>
-            <img :src="`https://cdn.quasar.dev/img/${contact.avatar}`" />
+            <img
+              :alt="`${contact.name} avatar`"
+              :src="`https://cdn.quasar.dev/img/${contact.avatar}`"
+            />
           </q-avatar>
         </q-item-section>
 

@@ -15,6 +15,11 @@ export default {
     search: 'Ara',
     filter: 'Süz',
     refresh: 'Yenile',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Aralık',
+    noValue: 'Değer yok',
+    resize: 'Yeniden boyutlandır',
     expand: label => (label ? `"${label}" genişlet` : 'Genişletmek'),
     collapse: label => (label ? `"${label}" daralt` : 'Yıkılmak')
   },
@@ -35,7 +40,11 @@ export default {
     nextYear: 'Sonraki yıl',
     today: 'Bugün',
     prevRangeYears: range => `Önceki ${range} yıl`,
-    nextRangeYears: range => `Sonraki ${range} yıl`
+    nextRangeYears: range => `Sonraki ${range} yıl`,
+    hour: 'Saat',
+    minute: 'Dakika',
+    second: 'Saniye',
+    now: 'Şu anki saat'
   },
   table: {
     noData: 'Veri yok',
@@ -45,15 +54,41 @@ export default {
     recordsPerPage: 'Sayfa başına kayıt:',
     allRows: 'Tümü',
     pagination: (start, end, total) => start + '-' + end + ' toplam ' + total,
-    columns: 'Sütunlar'
+    columns: 'Sütunlar',
+    selectAllRows: 'Tüm satırları seç',
+    selectRow: 'Satırı seç'
   },
   pagination: {
+    label: 'Sayfalama',
     first: 'İlk sayfa',
     prev: 'Önceki sayfa',
     next: 'Sonraki Sayfa',
     last: 'Son Sayfa'
   },
+  carousel: {
+    prevSlide: 'Önceki slayt',
+    nextSlide: 'Sonraki slayt'
+  },
+  colorPicker: {
+    spectrum: 'Tayf',
+    tune: 'İnce ayar',
+    palette: 'Palet',
+    value: 'Renk değeri',
+    hue: 'Renk tonu',
+    alpha: 'Matlık',
+    saturation: 'Doygunluk',
+    brightness: 'Parlaklık'
+  },
+  uploader: {
+    addFiles: 'Dosya seç',
+    upload: 'Dosyaları yükle',
+    abort: 'Yüklemeyi iptal et',
+    removeQueued: 'Sıradaki dosyaları kaldır',
+    removeUploaded: 'Yüklenen dosyaları kaldır',
+    removeFile: 'Dosyayı kaldır'
+  },
   editor: {
+    toolbar: 'Düzenleyici araç çubuğu',
     url: 'URL',
     bold: 'Kalın',
     italic: 'Eğik',

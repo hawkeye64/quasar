@@ -19,9 +19,9 @@ There are two modes in which QPagination operates: with buttons only or with an 
 
 The following are a few examples, but not an exhaustive list:
 
-<DocExample title="Button design (v2.10+)" file="BtnDesign" />
+<DocExample title="Button design" file="BtnDesign" />
 
-<DocExample title="Gutter (v2.10+)" file="BtnGutter" />
+<DocExample title="Gutter" file="BtnGutter" />
 
 ### Custom icons
 
@@ -46,3 +46,19 @@ The following are a few examples, but not an exhaustive list:
 <DocExample title="With boundary links" file="BoundaryLinks" />
 
 <DocExample title="With direction links" file="DirectionLinks" />
+
+### Custom ellipsis <q-badge label="v2.30+" />
+
+The `ellipsis` slot replaces the "..." buttons. Spread its `btnProps` onto your own QBtn to keep the default look, then attach whatever behavior you need: below, a [QPopupEdit](/vue-components/popup-edit) lets the user type the page number instead of jumping to the next hidden page. Bind the slot's `onClick` (or `to` when using `to-fn`) if you also want the default navigation.
+
+<DocExample title="Go to page with QPopupEdit" file="EllipsisSlot" />
+
+### Localized digits <q-badge label="v2.31+" />
+
+The page numbers follow the `formatNumber` function of the active [language pack](/options/quasar-language-packs), when it defines one (see [QDate's localized digits](/vue-components/date#localized-digits)). The `fa` and `fa-IR` packs render Persian digits. The model and the `input` mode stay numeric.
+
+## Accessibility <q-badge label="v2.25+" />
+
+QPagination renders as a `navigation` landmark. The first/previous/next/last buttons get localized `aria-label`s from the [Quasar Language Pack](/options/quasar-language-packs) in use, the numbered buttons are labeled with the page they lead to, and the active page's button is marked with `aria-current="page"`. The landmark itself is named from the same language pack (`pagination.label`); pass your own `aria-label` (it falls through to the root element) to tell several paginations on one page apart. It also carries `aria-disabled` at all times, reporting `true` or `false` according to the `disable` prop.
+
+In input mode, the typed page number is committed when the user hits <kbd>Enter</kbd> or when the field loses focus.

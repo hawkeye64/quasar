@@ -4,7 +4,7 @@
       <q-toggle v-model="dense" label="Dense QField" />
 
       <q-field filled :dense="dense">
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
@@ -12,7 +12,7 @@
       </q-field>
 
       <q-field filled label="Label" stack-label :dense="dense">
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
@@ -20,7 +20,7 @@
       </q-field>
 
       <q-field filled square hint="With perfect square borders" :dense="dense">
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
@@ -28,11 +28,11 @@
       </q-field>
 
       <q-field filled :dense="dense">
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="event" />
         </template>
 
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
@@ -40,15 +40,18 @@
       </q-field>
 
       <q-field filled :dense="dense">
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+            <img
+              alt="Quasar logo"
+              src="https://cdn.quasar.dev/logo-v2/svg/logo.svg"
+            />
           </q-avatar>
         </template>
       </q-field>
@@ -62,21 +65,21 @@
         counter
         :dense="dense"
       >
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="place" />
         </template>
 
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon name="close" class="cursor-pointer" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-field>
 
       <q-field
@@ -89,22 +92,22 @@
         maxlength="12"
         :dense="dense"
       >
-        <template v-slot:before>
+        <template #before>
           <q-icon name="flight_takeoff" />
         </template>
 
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon v-if="text !== ''" name="close" class="cursor-pointer" />
           <q-icon name="search" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
       </q-field>
 
       <q-field
@@ -117,26 +120,29 @@
         maxlength="12"
         :dense="dense"
       >
-        <template v-slot:before>
+        <template #before>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/img/avatar5.jpg" />
+            <img
+              alt="User avatar"
+              src="https://cdn.quasar.dev/img/avatar5.jpg"
+            />
           </q-avatar>
         </template>
 
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
         </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-icon v-if="text !== ''" name="close" class="cursor-pointer" />
           <q-icon name="schedule" />
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
 
-        <template v-slot:after>
+        <template #after>
           <q-btn round dense flat icon="send" />
         </template>
       </q-field>
@@ -151,31 +157,31 @@
         maxlength="12"
         :dense="dense"
       >
-        <template v-slot:before>
+        <template #before>
           <q-icon name="event" />
         </template>
 
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline" tabindex="0">{{
             text
           }}</div>
         </template>
 
-        <template v-slot:hint> Field hint </template>
+        <template #hint> Field hint </template>
 
-        <template v-slot:append>
+        <template #append>
           <q-btn round dense flat icon="add" />
         </template>
       </q-field>
 
       <q-field filled hint="Disable" :dense="dense" disable>
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline">{{ text }}</div>
         </template>
       </q-field>
 
       <q-field filled hint="Readonly" :dense="dense" readonly>
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline">{{ text }}</div>
         </template>
       </q-field>
@@ -187,7 +193,7 @@
         disable
         readonly
       >
-        <template v-slot:control>
+        <template #control>
           <div class="self-center full-width no-outline">{{ text }}</div>
         </template>
       </q-field>

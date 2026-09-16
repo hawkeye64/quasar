@@ -5,13 +5,14 @@ import {
   h,
   onBeforeUnmount,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useAnchor, {
   useAnchorStaticProps
 } from '../../composables/private.use-anchor/use-anchor.js'
-import useScrollTarget from '../../composables/private.use-scroll-target/use-scroll-target.js'
 import useModelToggle, {
   useModelToggleEmits,
   useModelToggleProps
@@ -21,30 +22,42 @@ import useTransition, {
   useTransitionProps
 } from '../../composables/private.use-transition/use-transition.js'
 import useTick from '../../composables/use-tick/use-tick.js'
-import useTimeout from '../../composables/use-timeout/use-timeout.js'
+import useTransitionEnd from '../../composables/private.use-transition-end/use-transition-end.js'
 import useId from '../../composables/use-id/use-id.js'
+import usePositionEngine, {
+  parsePosition,
+  validateOffset,
+  validatePosition
+} from '../../composables/private.use-position-engine/use-position-engine.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
-import { getScrollTarget, scrollTargetProp } from '../../utils/scroll/scroll.js'
-import { addEvt, cleanEvt, stopAndPrevent } from '../../utils/event/event.js'
+import { addEvt, cleanEvt, position } from '../../utils/event/event.js'
 import {
   addEscapeKey,
   removeEscapeKey
 } from '../../utils/private.keyboard/escape-key.js'
 import { clearSelection } from '../../utils/private.selection/selection.js'
 import { hSlot } from '../../utils/private.render/render.js'
-import {
-  addClickOutside,
-  removeClickOutside
-} from '../../utils/private.click-outside/click-outside.js'
-import {
-  parsePosition,
-  setPosition,
-  validateOffset,
-  validatePosition
-} from '../../utils/private.position-engine/position-engine.js'
 
 let nonSelectableCount = 0
+
+// cursor-position freezes the tooltip at the pointer, so it waits for
+// the pointer to settle before showing: a coordinate latched mid-sweep
+// is one the pointer has already left. Both are what a native `title`
+// does, and the tolerance is what keeps a jittery sensor, a trackpad or
+// a hand tremor from postponing the tooltip forever.
+const cursorSettleDelay = 100
+const cursorSettleTolerance = 4
+
+// a finger, or a stylus pressed to the screen (buttons is 0 while it
+// merely hovers): both start native text selection when held, unlike
+// a hovering pointer, so both need the touch UX
+function isContactPointer(evt) {
+  return (
+    evt.pointerType === 'touch' ||
+    (evt.pointerType === 'pen' && evt.buttons !== 0)
+  )
+}
 
 export default /*#__PURE__*/ createComponent({
   name: 'QTooltip',
@@ -90,7 +103,7 @@ export default /*#__PURE__*/ createComponent({
       validator: validateOffset
     },
 
-    scrollTarget: scrollTargetProp,
+    cursorPosition: Boolean,
 
     delay: {
       type: Number,
@@ -108,21 +121,28 @@ export default /*#__PURE__*/ createComponent({
   emits: [...useModelToggleEmits],
 
   setup(props, { slots, emit, attrs }) {
-    let unwatchPosition,
-      observer,
-      removeNonSelectableTimer,
+    let removeNonSelectableTimer,
       hasNonSelectable = false,
+      // the pointerType of the contact interaction (touch or a pressed
+      // stylus) driving the current show, if any; the hide side needs it
+      // because its events can't tell us themselves
+      contactType = null,
+      // while a cursor-position show is waiting for the pointer to
+      // settle: the coordinates the wait is measured from
+      settlePoint = null,
       describedBy
 
     const vm = getCurrentInstance()
-    const {
-      proxy: { $q }
-    } = vm
+    const $q = useQuasar()
 
-    const innerRef = ref(null)
+    const innerRef = shallowRef(null)
     const showing = ref(false)
     const targetUid = useId()
-    const tooltipId = computed(() => attrs.id || targetUid.value)
+    // attrs is not reactive, so the custom id must be resolved on
+    // demand (render/show path) instead of through a cached computed
+    function getTooltipId() {
+      return attrs.id || targetUid.value
+    }
 
     const anchorOrigin = computed(() =>
       parsePosition(props.anchor, $q.lang.rtl)
@@ -130,11 +150,10 @@ export default /*#__PURE__*/ createComponent({
     const selfOrigin = computed(() => parsePosition(props.self, $q.lang.rtl))
     const hideOnRouteChange = computed(() => !props.persistent)
 
-    const { registerTick, removeTick } = useTick()
-    const { registerTimeout } = useTimeout()
+    // registerTimeout also drives delay/hideDelay: sharing the slot with
+    // the transition tail keeps a starting delay able to supersede it
+    const { registerTimeout, registerTransitionEnd } = useTransitionEnd(props)
     const { transitionProps, transitionStyle } = useTransition(props)
-    const { localScrollTarget, changeScrollEvent, unconfigureScrollTarget } =
-      useScrollTarget(props, configureScrollTarget)
 
     const { anchorEl, canShow, anchorEvents } = useAnchor({
       showing,
@@ -150,7 +169,13 @@ export default /*#__PURE__*/ createComponent({
       processOnMount: true
     })
 
-    Object.assign(anchorEvents, { delayShow, delayHide, onFocusin })
+    Object.assign(anchorEvents, {
+      delayShow,
+      delayHide,
+      onFocusin,
+      onPointerdown,
+      onCursorMove
+    })
 
     const { showPortal, hidePortal, renderPortal } = usePortal(
       vm,
@@ -159,164 +184,110 @@ export default /*#__PURE__*/ createComponent({
       'tooltip'
     )
 
-    // if we're on mobile, let's improve the experience
-    // by closing it when user taps outside of it
-    if ($q.platform.is.mobile) {
-      const clickOutsideProps = {
-        anchorEl,
-        innerRef,
-        onClickOutside(e) {
-          hide(e)
+    const { registerTick, removeTick } = useTick()
+    const posEngine = usePositionEngine({
+      props,
+      $q,
+      anchorEl,
+      innerRef,
+      showing,
+      anchorOrigin,
+      selfOrigin,
+      // a tooltip's content can change while shown (live values) and
+      // there is no transition-end re-measure to catch it
+      trackContent: true
+    })
 
-          // prevent click if it's on a dialog backdrop
-          if (e.target.classList.contains('q-dialog__backdrop')) {
-            stopAndPrevent(e)
-          }
-
-          return true
-        }
+    // independent of the touch handling above: hybrid devices
+    // (touchscreen laptop, iPad with a keyboard) need both
+    // dismissal methods, so no platform gate here.
+    // Dismiss with the ESC key (WCAG 1.4.13) without moving focus;
+    // uses the shared escape stack so only the top-most popup reacts
+    watch(
+      () =>
+        // trigger only if it doesn't have external model
+        // or else only if the model can be updated (otherwise respect the external model)
+        (props.modelValue === null || props['onUpdate:modelValue']) &&
+        showing.value === true &&
+        props.persistent !== true,
+      val => {
+        const fn = val === true ? addEscapeKey : removeEscapeKey
+        fn(onEscapeKey)
       }
-
-      const hasClickOutside = computed(
-        () =>
-          // it doesn't has external model
-          // (null is the default value)
-          props.modelValue === null &&
-          // and it's not persistent
-          !props.persistent &&
-          showing.value
-      )
-
-      watch(hasClickOutside, val => {
-        const fn = val ? addClickOutside : removeClickOutside
-        fn(clickOutsideProps)
-      })
-
-      onBeforeUnmount(() => {
-        removeClickOutside(clickOutsideProps)
-      })
-    } else {
-      // dismiss with the ESC key (WCAG 1.4.13) without moving focus;
-      // uses the shared escape stack so only the top-most popup reacts
-      watch(
-        () =>
-          // trigger only if it doesn't have external model
-          // or else only if the model can be updated (otherwise respect the external model)
-          (props.modelValue === null || props['onUpdate:modelValue']) &&
-          showing.value === true &&
-          props.persistent !== true,
-        val => {
-          const fn = val === true ? addEscapeKey : removeEscapeKey
-          fn(onEscapeKey)
-        }
-      )
-    }
+    )
 
     function handleShow(evt) {
+      cleanEvt(anchorEvents, 'cursorTemp')
+
       showPortal()
       addAriaDescription()
 
+      // the event that opened the tooltip carries the coordinates to
+      // open at; a bare model toggle carries none and keeps the
+      // anchor-relative placement
+      posEngine.handleShow(props.cursorPosition ? evt : void 0)
+
       // should removeTick() if this gets removed
-      registerTick(() => {
-        observer?.disconnect()
-        if (innerRef.value === null) {
-          observer = void 0
-          return
-        }
+      registerTick(posEngine.handleTick)
 
-        observer = new MutationObserver(() => updatePosition())
-        observer.observe(innerRef.value, {
-          attributes: false,
-          childList: true,
-          characterData: true,
-          subtree: true
-        })
-        updatePosition()
-        configureScrollTarget()
-      })
-
-      if (unwatchPosition === void 0) {
-        unwatchPosition = watch(
-          () =>
-            $q.screen.width +
-            '|' +
-            $q.screen.height +
-            '|' +
-            props.self +
-            '|' +
-            props.anchor +
-            '|' +
-            $q.lang.rtl,
-          updatePosition
-        )
-      }
-
-      // should removeTimeout() if this gets removed
-      registerTimeout(() => {
+      registerTransitionEnd(() => {
         showPortal(true) // done showing portal
         emit('show', evt)
-      }, props.transitionDuration)
+      })
     }
 
     function handleHide(evt) {
       removeTick()
       hidePortal()
+      anchorCleanup(true)
 
-      anchorCleanup()
-
-      // should removeTimeout() if this gets removed
-      registerTimeout(() => {
+      registerTransitionEnd(() => {
         hidePortal(true) // done hiding, now destroy
+        posEngine.releaseAnchor(false)
         emit('hide', evt)
-      }, props.transitionDuration)
+      })
     }
 
-    function anchorCleanup() {
-      if (observer !== void 0) {
-        observer.disconnect()
-        observer = void 0
-      }
+    function anchorCleanup(hidingInProgress) {
+      posEngine.releaseAnchor(hidingInProgress)
 
-      if (unwatchPosition !== void 0) {
-        unwatchPosition()
-        unwatchPosition = void 0
-      }
-
-      unconfigureScrollTarget()
       removeEscapeKey(onEscapeKey)
+      contactType = null
       cleanEvt(anchorEvents, 'tooltipTemp')
+      cleanEvt(anchorEvents, 'cursorTemp')
       removeAriaDescription()
       setNonSelectable(false)
     }
 
-    function updatePosition() {
-      setPosition({
-        targetEl: innerRef.value,
-        offset: props.offset,
-        anchorEl: anchorEl.value,
-        anchorOrigin: anchorOrigin.value,
-        selfOrigin: selfOrigin.value,
-        maxHeight: props.maxHeight,
-        maxWidth: props.maxWidth
-      })
-    }
-
     function delayShow(evt) {
-      if ($q.platform.is.mobile) {
-        if (removeNonSelectableTimer !== void 0) {
-          clearTimeout(removeNonSelectableTimer)
-          removeNonSelectableTimer = void 0
+      // secondary fingers (multi-touch, e.g. a starting pinch-zoom) don't
+      // get to drive the tooltip; only guard real touches: synthetic
+      // PointerEvents default to isPrimary false, so a broader check would
+      // break tooltips for everyone dispatching them (tests included)
+      if (evt.pointerType === 'touch' && evt.isPrimary === false) return
+
+      const contact = isContactPointer(evt)
+
+      if (contact) {
+        engageContact(evt)
+      }
+
+      // a contact pointer has no approach to wait out (its "enter" is
+      // already the deliberate press) and a keyboard focus reports no
+      // coordinates at all, so only a hovering pointer settles
+      if (props.cursorPosition && !contact) {
+        const pos = position(evt)
+
+        if (pos.left !== void 0) {
+          settlePoint = pos
+
+          addEvt(anchorEvents, 'cursorTemp', [
+            [anchorEl.value, 'pointermove', 'onCursorMove', 'passive']
+          ])
+
+          settleShow(evt)
+          return
         }
-
-        clearSelection()
-        setNonSelectable(true)
-
-        const target = anchorEl.value
-        const evts = ['touchmove', 'touchcancel', 'touchend', 'click'].map(
-          e => [target, e, 'delayHide', 'passiveCapture']
-        )
-
-        addEvt(anchorEvents, 'tooltipTemp', evts)
       }
 
       registerTimeout(() => {
@@ -324,8 +295,90 @@ export default /*#__PURE__*/ createComponent({
       }, props.delay)
     }
 
+    function settleShow(evt) {
+      // the show the pointer has to stay put for; an explicit delay
+      // longer than the settle window still wins
+      registerTimeout(
+        () => {
+          show(evt)
+        },
+        Math.max(props.delay, cursorSettleDelay)
+      )
+    }
+
+    function onCursorMove(evt) {
+      const pos = position(evt)
+
+      // a pointer resting inside the tolerance square keeps both the
+      // coordinates and the pending show; leaving it restarts the wait
+      // around where the pointer went
+      if (
+        Math.abs(pos.left - settlePoint.left) <= cursorSettleTolerance &&
+        Math.abs(pos.top - settlePoint.top) <= cursorSettleTolerance
+      ) {
+        return
+      }
+
+      settlePoint = pos
+      settleShow(evt)
+    }
+
+    function engageContact(evt) {
+      contactType = evt.pointerType
+
+      if (removeNonSelectableTimer !== void 0) {
+        clearTimeout(removeNonSelectableTimer)
+        removeNonSelectableTimer = void 0
+      }
+
+      clearSelection()
+      setNonSelectable(true)
+
+      const target = anchorEl.value
+      const evts = ['touchmove', 'touchcancel', 'touchend', 'click'].map(e => [
+        target,
+        e,
+        'delayHide',
+        'passiveCapture'
+      ])
+
+      addEvt(anchorEvents, 'tooltipTemp', evts)
+    }
+
+    function onPointerdown(evt) {
+      // a stylus that was already hovering (which showed the tooltip
+      // through the hover path, so no pointerenter fires anymore) gets
+      // upgraded to the touch UX when it presses down; touch is engaged
+      // by its own pointerenter and a mouse press needs no contact UX
+      if (evt.pointerType === 'pen' && contactType === null) {
+        engageContact(evt)
+      }
+    }
+
     function delayHide(evt) {
-      if ($q.platform.is.mobile) {
+      if (evt.pointerType === 'touch' && evt.isPrimary === false) return
+
+      // focus moving WITHIN the anchor is not a blur; QBtn for one
+      // shuffles focus to an internal helper after every press, which
+      // must neither hide the tooltip nor end a contact interaction
+      if (
+        evt.type === 'focusout' &&
+        anchorEl.value !== null &&
+        anchorEl.value.contains(evt.relatedTarget)
+      ) {
+        return
+      }
+
+      // a pointer leaving before it ever settled: no show to wait for
+      // anymore (the hide below takes over the shared timer slot)
+      cleanEvt(anchorEvents, 'cursorTemp')
+
+      if (contactType !== null) {
+        const liftedPen =
+          contactType === 'pen' &&
+          (evt.type === 'click' || evt.type === 'touchend')
+
+        contactType = null
         cleanEvt(anchorEvents, 'tooltipTemp')
         clearSelection()
         // delay needed otherwise selection still occurs
@@ -333,6 +386,11 @@ export default /*#__PURE__*/ createComponent({
           removeNonSelectableTimer = void 0
           setNonSelectable(false)
         }, 10)
+
+        // a lifted stylus keeps hovering the anchor, so the tooltip stays
+        // shown like it would for a mouse; pointerleave closes it later
+        // (or right away, on a pen that leaves the digitizer range)
+        if (liftedPen) return
       }
 
       // should removeTimeout() if this gets removed
@@ -346,11 +404,8 @@ export default /*#__PURE__*/ createComponent({
       if (!el) return
 
       // only react to keyboard focus, not to focus coming from a pointer,
-      // so the tooltip doesn't pop up when the target is clicked;
-      // guard the call for engines that don't support :focus-visible
-      try {
-        if (el.matches(':focus-visible') === false) return
-      } catch {}
+      // so the tooltip doesn't pop up when the target is clicked
+      if (!el.matches(':focus-visible')) return
 
       delayShow(evt)
     }
@@ -364,14 +419,17 @@ export default /*#__PURE__*/ createComponent({
     function configureAnchorEl() {
       if (props.noParentEvent || anchorEl.value === null) return
 
-      const evts = $q.platform.is.mobile
-        ? [[anchorEl.value, 'touchstart', 'delayShow', 'passive']]
-        : [
-            [anchorEl.value, 'mouseenter', 'delayShow', 'passive'],
-            [anchorEl.value, 'mouseleave', 'delayHide', 'passive'],
-            [anchorEl.value, 'focusin', 'onFocusin', 'passive'],
-            [anchorEl.value, 'focusout', 'delayHide', 'passive']
-          ]
+      // pointer events cover mouse hover, pen hover AND the touch
+      // press (where "enter" is finger-down and "leave" is finger-up),
+      // so the same wiring serves every platform, hybrids included;
+      // no synthetic mouse event dedup needed since we never listen to them
+      const evts = [
+        [anchorEl.value, 'pointerenter', 'delayShow', 'passive'],
+        [anchorEl.value, 'pointerdown', 'onPointerdown', 'passive'],
+        [anchorEl.value, 'pointerleave', 'delayHide', 'passive'],
+        [anchorEl.value, 'focusin', 'onFocusin', 'passive'],
+        [anchorEl.value, 'focusout', 'delayHide', 'passive']
+      ]
 
       addEvt(anchorEvents, 'anchor', evts)
     }
@@ -391,7 +449,7 @@ export default /*#__PURE__*/ createComponent({
 
     function addAriaDescription() {
       const el = anchorEl.value,
-        id = tooltipId.value
+        id = getTooltipId()
 
       if (el === null || id === void 0) return
 
@@ -421,31 +479,24 @@ export default /*#__PURE__*/ createComponent({
       describedBy = void 0
     }
 
-    function configureScrollTarget() {
-      if (anchorEl.value !== null || props.scrollTarget !== void 0) {
-        localScrollTarget.value = getScrollTarget(
-          anchorEl.value,
-          props.scrollTarget
-        )
-        const fn = props.noParentEvent ? updatePosition : hide
-
-        changeScrollEvent(localScrollTarget.value, fn)
-      }
-    }
-
     function getTooltipContent() {
       return showing.value
         ? h(
             'div',
             {
               ...attrs,
-              id: tooltipId.value,
+              id: getTooltipId(),
               ref: innerRef,
               class: [
-                'q-tooltip q-tooltip--style q-position-engine no-pointer-events',
+                'q-tooltip q-tooltip--style no-pointer-events' +
+                  (posEngine.viaCssAnchor ? '' : ' q-position-engine'),
                 attrs.class
               ],
-              style: [attrs.style, transitionStyle.value],
+              style: [
+                attrs.style,
+                transitionStyle(),
+                posEngine.positionStyle.value
+              ],
               role: 'tooltip'
             },
             hSlot(slots.default)
@@ -454,13 +505,15 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function renderPortalContent() {
-      return h(Transition, transitionProps.value, getTooltipContent)
+      return h(Transition, transitionProps(), getTooltipContent)
     }
 
-    onBeforeUnmount(anchorCleanup)
+    onBeforeUnmount(() => {
+      anchorCleanup(false)
+    })
 
     // expose public methods
-    Object.assign(vm.proxy, { updatePosition })
+    Object.assign(vm.proxy, { updatePosition: posEngine.updatePosition })
 
     return renderPortal
   }

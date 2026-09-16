@@ -8,12 +8,14 @@ import {
   onBeforeUnmount,
   onDeactivated,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
+
 import debounce from '../../utils/debounce/debounce.js'
 import { noop } from '../../utils/event/event.js'
-import { rtlHasScrollBug } from '../../utils/private.rtl/rtl.js'
 
 const aggBucketSize = 1000
 
@@ -77,7 +79,7 @@ function getScrollDetails(
       parent === window
         ? document.scrollingElement || document.documentElement
         : parent,
-    propElSize = horizontal ? 'offsetWidth' : 'offsetHeight',
+    propRectSize = horizontal ? 'width' : 'height',
     details = {
       scrollStart: 0,
       scrollViewSize: -stickyStart - stickyEnd,
@@ -88,8 +90,7 @@ function getScrollDetails(
 
   if (horizontal) {
     if (parent === window) {
-      details.scrollStart =
-        window.pageXOffset || window.scrollX || document.body.scrollLeft || 0
+      details.scrollStart = window.scrollX
       details.scrollViewSize += document.documentElement.clientWidth
     } else {
       details.scrollStart = parentCalc.scrollLeft
@@ -98,14 +99,11 @@ function getScrollDetails(
     details.scrollMaxSize = parentCalc.scrollWidth
 
     if (rtl) {
-      details.scrollStart =
-        (rtlHasScrollBug ? details.scrollMaxSize - details.scrollViewSize : 0) -
-        details.scrollStart
+      details.scrollStart = -details.scrollStart
     }
   } else {
     if (parent === window) {
-      details.scrollStart =
-        window.pageYOffset || window.scrollY || document.body.scrollTop || 0
+      details.scrollStart = window.scrollY
       details.scrollViewSize += document.documentElement.clientHeight
     } else {
       details.scrollStart = parentCalc.scrollTop
@@ -121,7 +119,7 @@ function getScrollDetails(
       el = el.previousElementSibling
     ) {
       if (!el.classList.contains('q-virtual-scroll--skip')) {
-        details.offsetStart += el[propElSize]
+        details.offsetStart += el.getBoundingClientRect()[propRectSize]
       }
     }
   }
@@ -133,7 +131,7 @@ function getScrollDetails(
       el = el.nextElementSibling
     ) {
       if (!el.classList.contains('q-virtual-scroll--skip')) {
-        details.offsetEnd += el[propElSize]
+        details.offsetEnd += el.getBoundingClientRect()[propRectSize]
       }
     }
   }
@@ -167,31 +165,32 @@ function setScroll(parent, scroll, horizontal, rtl) {
   }
 
   if (parent === window) {
+    let left, top
+
     if (horizontal) {
       if (rtl) {
-        scroll =
-          (rtlHasScrollBug
-            ? document.body.scrollWidth - document.documentElement.clientWidth
-            : 0) - scroll
+        scroll = -scroll
       }
-      window.scrollTo(
-        scroll,
-        window.pageYOffset || window.scrollY || document.body.scrollTop || 0
-      )
+      left = scroll
+      top = window.scrollY
     } else {
-      window.scrollTo(
-        window.pageXOffset || window.scrollX || document.body.scrollLeft || 0,
-        scroll
-      )
+      left = window.scrollX
+      top = scroll
     }
+
+    // behavior "instant" so that a scroller with CSS
+    // "scroll-behavior: smooth" doesn't turn this positioning into an
+    // animation, whose intermediate scroll events would get mistaken
+    // for user scrolling (#18168)
+    window.scrollTo({ left, top, behavior: 'instant' })
   } else if (horizontal) {
     if (rtl) {
-      scroll =
-        (rtlHasScrollBug ? parent.scrollWidth - parent.offsetWidth : 0) - scroll
+      scroll = -scroll
     }
-    parent.scrollLeft = scroll
+
+    parent.scrollTo({ left: scroll, behavior: 'instant' })
   } else {
-    parent.scrollTop = scroll
+    parent.scrollTo({ top: scroll, behavior: 'instant' })
   }
 }
 
@@ -204,13 +203,23 @@ function sumSize(sizeAgg, size, from, to) {
     fromAgg = Math.floor(from / aggBucketSize),
     toAgg = Math.floor((to - 1) / aggBucketSize) + 1
 
-  let total = sizeAgg.slice(fromAgg, toAgg).reduce(sumFn, 0)
+  let total = 0
+
+  for (let i = fromAgg; i < toAgg; i++) {
+    total += sizeAgg[i]
+  }
 
   if (from % aggBucketSize !== 0) {
-    total -= size.slice(fromAgg * aggBucketSize, from).reduce(sumFn, 0)
+    for (let i = fromAgg * aggBucketSize; i < from; i++) {
+      total -= size[i]
+    }
   }
+
   if (to % aggBucketSize !== 0 && to !== lastTo) {
-    total -= size.slice(to, toAgg * aggBucketSize).reduce(sumFn, 0)
+    const end = Math.min(toAgg * aggBucketSize, lastTo)
+    for (let i = to; i < end; i++) {
+      total -= size[i]
+    }
   }
 
   return total
@@ -267,7 +276,7 @@ export function useVirtualScroll({
   const vm = getCurrentInstance()
 
   const { props, emit, proxy } = vm
-  const { $q } = proxy
+  const $q = useQuasar()
 
   let prevScrollStart,
     prevToIndex,
@@ -279,9 +288,9 @@ export function useVirtualScroll({
   const virtualScrollPaddingAfter = ref(0)
   const virtualScrollSliceSizeComputed = ref({})
 
-  const beforeRef = ref(null)
-  const afterRef = ref(null)
-  const contentRef = ref(null)
+  const beforeRef = shallowRef(null)
+  const afterRef = shallowRef(null)
+  const contentRef = shallowRef(null)
 
   const virtualScrollSliceRange = ref({ from: 0, to: 0 })
 
@@ -618,9 +627,14 @@ export function useVirtualScroll({
           el => el.classList && !el.classList.contains('q-virtual-scroll--skip')
         ),
         childrenLength = children.length,
+        // measured through the layout rect rather than offsetWidth/Height:
+        // those round to integers, and an item with a fractional size (a
+        // dense QTable row with its separator is 28.5px) would then drift
+        // half a pixel per item between the paddings and the real content,
+        // shifting the rows on every re-slice (#15754)
         sizeFn = props.virtualScrollHorizontal
           ? el => el.getBoundingClientRect().width
-          : el => el.offsetHeight
+          : el => el.getBoundingClientRect().height
 
       let index = from,
         size,

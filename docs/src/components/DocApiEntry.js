@@ -94,6 +94,11 @@ function getNameDiv(prop, label, level, suffix, prefix) {
 
   child.push(
     h(QBadge, {
+      // click-to-copy is a pointer shortcut over the entry name, which is
+      // plain selectable text either way - turning every one of the
+      // hundreds of names on an API page into a button would flood the tab
+      // order and replace the name itself with "Copy ... to clipboard" in
+      // the accessibility tree
       class: 'doc-api-entry__pill cursor-pointer',
       label,
       color: NAME_PROP_COLOR[level % NAME_PROP_COLOR_LEN],
@@ -138,6 +143,8 @@ function getExpandable(openState, desc, isExpandable, key, getDetails) {
             size: '11px',
             padding: '1px',
             icon: expanded ? mdiMinusBox : mdiPlusBox,
+            'aria-label': expanded ? 'Hide details' : 'Show details',
+            'aria-expanded': expanded ? 'true' : 'false',
             onClick: () => {
               openState.value[key] = !expanded
             }

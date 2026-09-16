@@ -5,9 +5,10 @@ related:
   - /vue-composables/use-hydration
 ---
 
-::: warning Warning! Beta Stage
-The Quasar SSG Mode is currently in the "beta" stage. Based on the community feedback, the API may change in the future, so check the release notes each time you upgrade "@quasar/app-vite".
-:::
+> [!WARNING]
+> **Warning! Beta Stage**
+>
+> The Quasar SSG Mode is currently in the "beta" stage. Based on the community feedback, the API may change in the future, so check the release notes each time you upgrade "@quasar/app-vite".
 
 An SSG app uses the SSR rendering pipeline at build time. The same principles apply: [write universal code](/quasar-cli-vite/developing-ssr/writing-universal-code), use the [ssrContext](/quasar-cli-vite/developing-ssr/ssr-context) only while rendering, and keep the first client render compatible with the generated HTML to avoid [hydration errors](/quasar-cli-vite/developing-ssr/client-side-hydration).
 
@@ -22,7 +23,7 @@ Avoid using the following browser-dependent values to choose initial markup **be
 - $q.screen ([Screen Plugin](/options/screen-plugin)). Use Quasar [Window-Width related CSS classes](/style/visibility#window-width-related) instead.
 - $q.platform ([Platform Plugin](/options/platform-detection)). Unless you use the [SSG Renderer](/quasar-cli-vite/developing-ssg/ssg-renderer) to generate a SSG page for each $q.platform prop combination that you use (and fill ssrContext with a specific req.headers['User-Agent']).
 - $q.cookies ([Cookies Plugin](/quasar-plugins/cookies)). A renderer may use a deliberately synthetic, non-secret cookie value to generate a public variant, but never put a real user's cookie or personalized content into a static build artifact.
-- $q.dark ([Dark Plugin](/quasar-plugins/dark)). Unless you generate separate variants and configure the host to serve the matching file.
+- $q.dark ([Dark Plugin](/quasar-plugins/dark)). Unless you generate separate variants and configure the host to serve the matching file. With Dark mode set to `'auto'`, the generated pages are light and the client resolves the preference when it takes over (see the [Dark Plugin's SSR/SSG note](/quasar-plugins/dark#note-about-ssr-ssg)).
 - $q.localStorage ([LocalStorage Plugin](/quasar-plugins/web-storage#localstorage-api))
 - $q.sessionStorage ([SessionStorage Plugin](/quasar-plugins/web-storage#sessionstorage-api))
 

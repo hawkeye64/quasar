@@ -18,6 +18,29 @@
 
 .q-document--prevent-scroll
   overscroll-behavior: none !important
+
+// The default lock: clipping the viewport leaves the page in flow and at
+// its scroll position, so position: sticky content keeps sticking (#18183)
+// and there is no scroll position to lose and restore
+.q-document--clip-scroll
+  overflow: hidden !important
+
+// A clipped viewport stops painting its classic scrollbar, which would let
+// the page shift sideways into the freed space; reserving the gutter keeps
+// the layout still. Overlay scrollbars take up no space to begin with, so
+// the class is only applied when a scrollbar really occupied some
+.q-document--reserve-scrollbar
+  scrollbar-gutter: stable !important
+
+// iOS pans the page by touch no matter how the viewport is clipped, so
+// there the body gets pinned in place instead -- at the cost of sticky
+// content, which cannot stick inside a fixed subtree.
+// The pinned body leaves the flow, which would collapse the root element
+// to 0 height; a body background propagates to the canvas with the ROOT
+// box as its positioning area, so a gradient or cover-sized image would
+// stop painting and expose a blank canvas behind the popup (#16799)
+.q-document--pin-body
+  min-height: 100%
   body
     position: fixed !important
 
@@ -25,16 +48,11 @@
 .q-body--fullscreen-mixin
   position: fixed !important
 
-.q-body--force-scrollbar-x
-  overflow-x: scroll
-.q-body--force-scrollbar-y
-  overflow-y: scroll
-
 .q-no-input-spinner
-  -moz-appearance: textfield !important
+  appearance: textfield !important
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button
-    -webkit-appearance: none
+    appearance: none
     margin: 0
 
 .q-link
@@ -43,9 +61,20 @@
 
   &--focusable:focus-visible
     text-decoration: underline dashed currentColor 1px
+    -webkit-text-decoration: underline dashed currentColor 1px /* Safari */
 
 body.electron
+  // Drag regions are geometric window-level carve-outs that ignore
+  // stacking order, so overlay content overlapping a drag region would
+  // lose its overlapping area to window dragging; carve out the bounded
+  // content elements only -- portal containers can be full-viewport
+  // (dialogs) and would disable dragging entirely while open; must
+  // precede .q-electron-drag so an explicit drag on the same element
+  // wins the cascade tie
+  .q-menu, .q-dialog__inner > *, .q-notification, .q-tooltip
+    -webkit-app-region: no-drag
   .q-electron-drag
+    user-select: none
     -webkit-user-select: none
     -webkit-app-region: drag
   .q-electron-drag .q-btn-item, .q-electron-drag--exception

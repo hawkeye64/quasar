@@ -3,6 +3,7 @@ import fse from 'fs-extra'
 import { format } from 'oxfmt'
 import typescript from 'typescript'
 
+import { langFileAliases } from './build.lang.js'
 import { clone, logError, resolveToRoot, writeFile } from './build.utils.js'
 
 const typeRoot = resolveToRoot('types')
@@ -42,6 +43,7 @@ function write(fileContent, text = '') {
 const typeMap = new Map([
   ['Any', 'any'],
   ['Component', 'Component'],
+  ['ComponentInstance', 'ComponentPublicInstance'],
   ['VNode', 'VNode'], // VNode is exclusive to slot type generation here, it can't and doesn't need to be used in JSON API files
   ['String', 'string'],
   ['Boolean', 'boolean'],
@@ -310,6 +312,10 @@ function addQuasarLangCodes(contents, quasarLangIndex) {
   quasarLangIndex.forEach(({ isoName }) =>
     writeLine(contents, `'${isoName}': true`, 3)
   )
+  Object.entries(langFileAliases).forEach(([file, isoName]) => {
+    writeLine(contents, `/** @deprecated Use '${isoName}'. */`, 3)
+    writeLine(contents, `'${file.slice(0, -3)}': true`, 3)
+  })
   writeLine(contents, '}', 2)
   writeLine(contents, '}')
 }
@@ -824,6 +830,14 @@ function getIndexDts(apis, quasarLangIndex) {
 }
 
 /**
+ * Type-checked along with the .d.ts files, but from the outside: it uses
+ * the generated types the way a userland JSX/TSX file does, which the
+ * .d.ts-only pass cannot exercise (JSX resolves the allowed attributes
+ * through the instance `$props`, templates don't)
+ */
+const jsxCheckFile = resolveToRoot('build/types-jsx-check.tsx')
+
+/**
  * @throws {Error} if TypeScript validation fails
  */
 function ensureTypeScriptValidity() {
@@ -840,6 +854,12 @@ function ensureTypeScriptValidity() {
     typescript.sys.readFile
   )
   config.compilerOptions.noEmit = true
+
+  // what a Quasar app configures for JSX/TSX
+  // (quasar.config file > build > vueJsx)
+  config.compilerOptions.jsx = 'preserve'
+  config.compilerOptions.jsxImportSource = 'vue'
+
   const { options, fileNames, errors } = typescript.parseJsonConfigFileContent(
     config,
     typescript.sys,
@@ -848,7 +868,7 @@ function ensureTypeScriptValidity() {
 
   const program = typescript.createProgram({
     options,
-    rootNames: fileNames,
+    rootNames: [...fileNames, jsxCheckFile],
     configFileParsingDiagnostics: errors
   })
   const emitResult = program.emit()

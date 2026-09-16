@@ -1,5 +1,5 @@
 <template>
-  <q-card class="doc-api q-my-xl" flat bordered>
+  <q-card class="doc-api" flat bordered>
     <div class="header-toolbar row items-center q-pr-sm">
       <DocCardTitle :title="nameBanner" />
 
@@ -9,10 +9,12 @@
       >
         <input
           class="col doc-api__search text-right"
+          type="search"
           ref="inputRef"
           v-model="filter"
           name="filter"
           placeholder="Filter..."
+          aria-label="Filter API"
         />
         <q-btn
           :icon="inputIcon"
@@ -20,6 +22,7 @@
           dense
           flat
           round
+          :aria-label="filter !== '' ? 'Clear filter' : 'Filter API'"
           @click="onFilterClick"
         />
       </div>
@@ -38,12 +41,7 @@
       </q-btn>
     </div>
 
-    <q-linear-progress
-      v-if="loading"
-      color="brand-primary"
-      indeterminate
-      class="q-mt-xs"
-    />
+    <q-linear-progress v-if="loading" color="brand-primary" indeterminate />
     <template v-else-if="nothingToShow">
       <q-separator />
       <div class="doc-api__nothing-to-show">Nothing to display</div>
@@ -150,10 +148,19 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onMounted,
+  ref,
+  useTemplateRef,
+  watch
+} from 'vue'
 import { mdiClose, mdiMagnify } from '@quasar/extras/mdi-v7'
 
 import DocCardTitle from './DocCardTitle.vue'
+import { useDocStore } from '@/layouts/doc-layout/store/index.js'
 import DocApiEntry from './DocApiEntry.js'
 
 const props = defineProps({
@@ -356,7 +363,9 @@ function getApiCount(parsedApi, tabs, innerTabs) {
 const inputRef = useTemplateRef('inputRef')
 
 const loading = ref(true)
-const nameBanner = ref(`Loading ${props.file} API...`)
+// named after the file from the start, so the card id an anchor targets
+// exists before the file arrives; the progress bar shows the loading
+const nameBanner = computed(() => `${props.file} API`)
 const nothingToShow = ref(false)
 
 const docPath = ref('')
@@ -388,7 +397,6 @@ const filteredApiCount = computed(() =>
 )
 
 function parseApiFile(name, { type, behavior, meta, addedIn, ...api }) {
-  nameBanner.value = `${name} API`
   docPath.value = meta.docsUrl.replace(/^https:\/\/v[\d]+\.quasar\.dev/, '')
 
   const { internal: _, ...apiSections } = api
@@ -414,21 +422,34 @@ function onSearchFieldClick() {
 function onFilterClick() {
   if (filter.value !== '') {
     filter.value = ''
+  } else {
+    inputRef.value.focus()
   }
 }
 
 if (import.meta.env.QUASAR_CLIENT) {
+  const docStore = useDocStore()
+  const vm = getCurrentInstance()
+
   onMounted(async () => {
     const loaders = await import('quasar:api')
     const { default: json } = await loaders[props.file]()
+
     parseApiFile(props.file, json)
     loading.value = false
+    docStore.reportCardGrowth(vm)
   })
 }
 </script>
 
 <style lang="sass">
 .doc-api
+  // initial height should be 50px
+  // otherwise edit docStore.reportCardGrowth
+
+  > .q-linear-progress
+    margin-top: 4px
+
   &__subtabs .q-tabs__content
     padding: 8px 0
 

@@ -1,6 +1,11 @@
 import md from './md.js'
 import { convertToRelated, flatMenu } from './flat-menu.js'
 import { getVueComponent, parseFrontMatter } from './md-parse-utils.js'
+import {
+  formatPageIdIssues,
+  pageLabel,
+  reportPageIdIssues
+} from './page-ids.js'
 
 const docApiRE = /<DocApi /
 const docInstallationRE = /<DocInstall /
@@ -32,19 +37,35 @@ function splitRenderedContent(mdPageContent) {
  * content (the wrapper means "exclude from AI export, keep on live site").
  *
  * Applied at the entry of mdParse so the markdown-it tokenizer and the
- * downstream Vue template never see the marker tags.
+ * downstream Vue template never see the marker tags. Exported so that
+ * anything rendering a page outside this module (page-ids.test.js sweeps
+ * every one of them) starts from the same source the site is built from.
+ *
+ * An <llm-only> block leaves its newlines behind rather than collapsing:
+ * markdown-it counts a heading's line in what it is handed, so swallowing
+ * lines here would report every heading below the block above where the
+ * author's editor shows it. The wrapper tags need no such care - dropping
+ * one empties its line without removing it.
  *
  * @param {string} source raw page source (including frontmatter)
  * @returns {string} source with llm-* markers normalized for the HTML pipeline
  */
-function applyHtmlContentControl(source) {
+export function applyHtmlContentControl(source) {
   return source
-    .replace(LLM_ONLY_RE, '')
+    .replace(LLM_ONLY_RE, match => '\n'.repeat(match.split('\n').length - 1))
     .replace(LLM_EXCLUDE_OPEN_RE, '')
     .replace(LLM_EXCLUDE_CLOSE_RE, '')
 }
 
-export default function mdParse(code, id, isProd) {
+/**
+ * @param {string} code the page source
+ * @param {string} id the module id
+ * @param {boolean} isProd
+ * @param {boolean} reportIdIssues false when the caller only wants the
+ *   compiled page and not a second round of the same console lines - the HMR
+ *   hook parses a page purely to be diffed against
+ */
+export default function mdParse(code, id, isProd, reportIdIssues = true) {
   const cleanedCode = applyHtmlContentControl(code)
   const { data: frontMatter, content } = parseFrontMatter(cleanedCode)
 
@@ -53,12 +74,20 @@ export default function mdParse(code, id, isProd) {
 
   if (frontMatter.related !== void 0) {
     frontMatter.related = frontMatter.related.map(entry =>
-      convertToRelated(entry, id)
+      convertToRelated(entry, id, isProd === true)
     )
   }
 
   frontMatter.toc = []
   frontMatter.pageScripts = new Set()
+
+  // markdown-it counts the body's lines from the end of the front matter,
+  // which is not where the author's editor counts from
+  const contentAt = cleanedCode.indexOf(content)
+  frontMatter.lineOffset =
+    contentAt === -1
+      ? 0
+      : cleanedCode.slice(0, contentAt).split('\n').length - 1
 
   frontMatter.pageScripts.add(
     "import DocPage from '@/layouts/doc-layout/DocPage.vue'"
@@ -110,6 +139,23 @@ export default function mdParse(code, id, isProd) {
 
   const mdRenderedContent = md.render(content)
 
+  // the TOC is collected during the render above, so this is the first
+  // moment the page's whole id namespace exists. The terminal hears about it
+  // now; getVueComponent puts the same lines on the page itself in dev.
+  const idIssues = formatPageIdIssues(mdRenderedContent, frontMatter)
+
+  if (idIssues.length !== 0) {
+    // Same call either way: a page whose anchors lead to the wrong section is
+    // something to be told about while writing it, and something to stop the
+    // build that would publish it. md-vite-plugin turns this into the build's
+    // own error, naming the page.
+    if (isProd === true) {
+      throw new Error(`[page-ids] ${pageLabel(id)}\n  ${idIssues.join('\n  ')}`)
+    }
+
+    if (reportIdIssues) reportPageIdIssues(idIssues, id)
+  }
+
   if (frontMatter.editLink !== false) {
     frontMatter.editLink = id.slice(id.indexOf('src/pages/') + 10, -3)
   }
@@ -121,6 +167,7 @@ export default function mdParse(code, id, isProd) {
   return getVueComponent({
     isProd,
     frontMatter,
+    idIssues,
     mdContent,
     pageScripts: [...frontMatter.pageScripts, ...userScripts].join('\n')
   })

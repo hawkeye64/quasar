@@ -32,6 +32,9 @@ List Items have the following pre-built child components:
 
 <DocExample title="Basic" file="Basic" />
 
+> [!TIP]
+> A QItem with a `@click` listener is clickable by default (v2.29+): it gets the hover effects, keyboard activation and its `click` event without the `clickable` prop. Set `clickable` explicitly only when there is no listener (a `v-close-popup` entry, for example) or when you need to toggle the behavior through a boolean; an explicit `clickable="false"` wins over the listener.
+
 <DocExample title="Force dark mode" file="Dark" />
 
 <DocExample title="Dense" file="Dense" />
@@ -42,9 +45,8 @@ List Items have the following pre-built child components:
 
 <DocExample title="Right avatar/thumbnail QItemSection" file="AvatarRight" />
 
-::: tip
-When you have multi-line items, you could use `top` property on QItemSection side/avatar to align the sections to top, overriding default middle alignment.
-:::
+> [!TIP]
+> When you have multi-line items, you could use `top` property on QItemSection side/avatar to align the sections to top, overriding default middle alignment.
 
 <DocExample title="Side QItemSection" file="SideSection" />
 
@@ -54,9 +56,8 @@ When you have multi-line items, you could use `top` property on QItemSection sid
 
 ### QItemLabel
 
-::: warning
-Notice you can handle label overflow with `lines` prop, telling it how many lines it can span. However, this feature uses Webkit specific CSS so won't work in IE/Edge.
-:::
+> [!WARNING]
+> Notice you can handle label overflow with `lines` prop, telling it how many lines it can span. However, this feature uses Webkit specific CSS so won't work in IE/Edge.
 
 <DocExample title="ItemLabel" file="ItemLabel" />
 
@@ -74,9 +75,8 @@ For demoing purposes in the example below, we're using the `active` prop instead
 
 <DocExample title="Menu" file="ExampleMenu" />
 
-::: tip
-For more complex menus, consider also using [QExpansionItem](/vue-components/expansion-item).
-:::
+> [!TIP]
+> For more complex menus, consider also using [QExpansionItem](/vue-components/expansion-item).
 
 ### Connecting to Vue Router
 
@@ -94,4 +94,18 @@ You can use QItems together with Vue Router through `<router-link>` properties b
 
 You can also delay, cancel or redirect navigation, as seen below. For a more in-depth description of the `@click` event being used below, please refer to QItem API card at the top of the page.
 
-<DocExample title="Links with delayed, cancelled or redirected navigation (v2.9+)" file="LinksWithGo" no-edit />
+<DocExample title="Links with delayed, cancelled or redirected navigation" file="LinksWithGo" no-edit />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QList exposes itself with the [WAI-ARIA `list` role](https://www.w3.org/TR/wai-aria-1.2/#list) by default (implicitly so when rendered as `ul`/`ol` through the `tag` prop) and the `role` prop overrides that. Each QItem derives its default role from the QList wrapping it:
+
+| QItem                                           | inside default QList   | inside QList with `role="menu"`/`"menubar"` | outside QList / other QList `role` |
+| ----------------------------------------------- | ---------------------- | ------------------------------------------- | ---------------------------------- |
+| with `clickable`, a `@click` listener or a link | `button` / native link | `menuitem`                                  | `button` / native link             |
+| non-interactive                                 | `listitem`             | none                                        | none                               |
+
+This keeps the produced markup valid: ARIA's `list` may only own `listitem` children (which in turn require a list parent, so a standalone QItem claims no role), while `menu`/`menubar` may only own `menuitem`-type entries — declaring the role once on the QList is enough, as in the "Basic" example of [QMenu's Accessibility section](/vue-components/menu#accessibility). The `role` prop on QItem overrides the derived role for a single item (e.g. `menuitemcheckbox`/`menuitemradio` for toggle entries — managing `aria-checked` is then up to you).
+
+> [!WARNING]
+> A list made up of only interactive items has no valid claim to the `list` role — such a container owns no `listitem` children. Declare what it actually is: `role="menu"` if it pops up as a list of commands, or `role="none"` to keep the items (announced as buttons/links) without list semantics.

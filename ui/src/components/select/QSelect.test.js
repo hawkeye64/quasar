@@ -1,6 +1,10 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 
+import langEn from '../../../lang/en-US.js'
+import Platform from '../../plugins/platform/Platform.js'
+import QDialog from '../dialog/QDialog.js'
 import QMenu from '../menu/QMenu.js'
 import QSelect from './QSelect.js'
 
@@ -118,6 +122,67 @@ describe('[QSelect API]', () => {
         expect(
           formEl.findAll('option').map(el => el.attributes('value'))
         ).toEqual(['a'])
+      })
+
+      test('renders the form element even when there is no selection', () => {
+        const nullModel = mountSelect({ modelValue: null, name: 'car_id' })
+        const nullFormEl = nullModel.get('select.hidden')
+
+        expect(nullFormEl.attributes('name')).toBe('car_id')
+        expect(nullFormEl.findAll('option')).toHaveLength(0)
+
+        const emptyMultiple = mountSelect({
+          modelValue: [],
+          multiple: true,
+          name: 'car_ids'
+        })
+
+        expect(emptyMultiple.get('select.hidden').attributes('name')).toBe(
+          'car_ids'
+        )
+      })
+
+      test('keeps the selection while map-options has not resolved yet', () => {
+        // mapOptions looks the model up in options; until they load there is
+        // no match, and the raw model value has to survive into the form element
+        const pending = mountSelect({
+          modelValue: 'a',
+          mapOptions: true,
+          options: [],
+          name: 'car_id'
+        })
+
+        expect(
+          pending
+            .get('select.hidden')
+            .findAll('option')
+            .map(el => el.attributes('value'))
+        ).toEqual(['a'])
+
+        const pendingMultiple = mountSelect({
+          modelValue: ['a', 'b'],
+          multiple: true,
+          mapOptions: true,
+          options: [],
+          name: 'car_ids'
+        })
+
+        expect(
+          pendingMultiple
+            .get('select.hidden')
+            .findAll('option')
+            .map(el => el.attributes('value'))
+        ).toEqual(['a', 'b'])
+      })
+
+      test('type String has no effect when disabled', () => {
+        const wrapper = mountSelect({
+          modelValue: 'a',
+          name: 'car_id',
+          disable: true
+        })
+
+        expect(wrapper.find('select.hidden').exists()).toBe(false)
       })
     })
 
@@ -843,8 +908,11 @@ describe('[QSelect API]', () => {
 
         expect(wrapper.classes()).toContain('q-field--disabled')
         expect(wrapper.attributes('aria-disabled')).toBe('true')
-        // there is nothing left to focus or to open the popup with
-        expect(wrapper.find('.q-select__focus-target').exists()).toBe(false)
+        // the control is still rendered - and still owns the label's "for" -
+        // but the native attribute takes it out of the tab order
+        const target = wrapper.get('.q-select__focus-target')
+        expect(target.attributes('disabled')).toBeDefined()
+        expect(target.attributes('tabindex')).toBeUndefined()
 
         wrapper.vm.showPopup()
         await flushPromises()
@@ -858,7 +926,9 @@ describe('[QSelect API]', () => {
         const wrapper = mountSelect({ readonly: true })
 
         expect(wrapper.classes()).toContain('q-field--readonly')
-        expect(wrapper.find('.q-select__focus-target').exists()).toBe(false)
+        // unlike "disable", a readonly control stays focusable and keeps
+        // exposing its value - only the popup is out of reach
+        expect(wrapper.get('.q-select__focus-target').exists()).toBe(true)
 
         wrapper.vm.showPopup()
         await flushPromises()
@@ -1078,6 +1148,31 @@ describe('[QSelect API]', () => {
         expect(portal.findAll('.q-item')[1].classes()).toContain('disabled')
         expect(wrapper.vm.isOptionDisabled(options[1])).toBe(true)
       })
+
+      test('shields a disabled option from Backspace removal (#15645)', async () => {
+        const wrapper = mountSelect({
+          modelValue: [options[0], options[1]],
+          options,
+          optionDisable: 'off',
+          multiple: true,
+          useInput: true,
+          useChips: true
+        })
+
+        // the disabled option's chip has no remove icon, so Backspace
+        // must not remove it either
+        expect(wrapper.findAll('.q-chip__icon--remove')).toHaveLength(1)
+
+        await wrapper.get('input').trigger('keydown', { keyCode: 8 })
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+        // clearable's Backspace clears regardless, like its clear icon
+        await wrapper.setProps({ clearable: true })
+        await wrapper.get('input').trigger('keydown', { keyCode: 8 })
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([
+          [options[0]]
+        ])
+      })
     })
 
     describe('[(prop)hide-selected]', () => {
@@ -1100,6 +1195,35 @@ describe('[QSelect API]', () => {
 
         const wrapper = mountSelect({ hideDropdownIcon: true })
         expect(wrapper.find('.q-select__dropdown-icon').exists()).toBe(false)
+      })
+
+      test('suppresses the default loading spinner (#17375)', () => {
+        // there is no dropdown icon for the spinner to swap with, so
+        // rendering it would make the field's width jump
+        const wrapper = mountSelect({ hideDropdownIcon: true, loading: true })
+        expect(wrapper.find('.q-spinner').exists()).toBe(false)
+      })
+
+      test('an explicit loading slot still renders', () => {
+        const wrapper = mountSelect(
+          { hideDropdownIcon: true, loading: true },
+          { slots: { loading: () => 'some-slot-content' } }
+        )
+
+        expect(wrapper.get('.q-field__append').text()).toContain(
+          'some-slot-content'
+        )
+      })
+
+      test('keeps the clearable icon while loading', () => {
+        const wrapper = mountSelect({
+          hideDropdownIcon: true,
+          clearable: true,
+          modelValue: 'a',
+          loading: true
+        })
+
+        expect(wrapper.find('.q-field__focusable-action').exists()).toBe(true)
       })
     })
 
@@ -1252,6 +1376,48 @@ describe('[QSelect API]', () => {
 
         const portal = await openPopup(wrapper)
         expect(portal.get('.q-menu').classes()).not.toContain('q-menu--square')
+      })
+    })
+
+    describe('[(prop)no-option-label]', () => {
+      test('type String has effect', async () => {
+        const byDefault = mountSelect({ options: [] })
+
+        // without it (and without a no-option slot) there is nothing
+        // to display, so the popup does not show up at all
+        byDefault.vm.showPopup()
+        await flushPromises()
+        expect(byDefault.findComponent({ name: 'QPortal' }).exists()).toBe(
+          false
+        )
+
+        const wrapper = mountSelect({
+          options: [],
+          noOptionLabel: 'nothing-to-show'
+        })
+
+        wrapper.vm.showPopup()
+        await flushPromises()
+
+        const item = wrapper
+          .findComponent({ name: 'QPortal' })
+          .get('.q-menu .q-item')
+
+        expect(item.text()).toBe('nothing-to-show')
+        expect(item.get('.q-item__section').classes()).toContain('text-grey')
+      })
+
+      test('is overridden by the no-option slot', async () => {
+        const wrapper = mountSelect(
+          { options: [], noOptionLabel: 'nothing-to-show' },
+          { slots: { 'no-option': () => 'slot-content' } }
+        )
+
+        wrapper.vm.showPopup()
+        await flushPromises()
+
+        const menu = wrapper.findComponent({ name: 'QPortal' }).get('.q-menu')
+        expect(menu.text()).toBe('slot-content')
       })
     })
 
@@ -1424,6 +1590,51 @@ describe('[QSelect API]', () => {
         expect(wrapper.vm.getOptionIndex()).toBe(1)
         expect(wrapper.get('input').attributes('aria-expanded')).toBe('true')
       })
+
+      test('resets the input when focus leaves through the popup content', async () => {
+        const wrapper = mountSelect(
+          {
+            useInput: true,
+            inputDebounce: 0,
+            options: [],
+            onFilter: (val, update) => {
+              update(() => {})
+            }
+          },
+          { slots: { 'no-option': () => 'no-results' } }
+        )
+        const input = wrapper.get('input')
+
+        input.element.focus()
+        await flushPromises()
+
+        input.element.value = 'abc'
+        await input.trigger('input')
+        await flushPromises()
+        await flushTimers()
+
+        const menuEl = document.querySelector('.q-menu')
+        expect(menuEl.textContent).toBe('no-results')
+
+        // clicking the non-focusable no-option content moves focus off
+        // the input while the popup is still open
+        menuEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+        input.element.blur()
+        menuEl.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+        await flushPromises()
+        await flushTimers()
+
+        // ...and only then does clicking outside close the popup
+        document.body.dispatchEvent(
+          new MouseEvent('mousedown', { bubbles: true })
+        )
+        await flushPromises()
+        await flushTimers()
+
+        expect(document.querySelector('.q-menu')).toBeNull()
+        expect(wrapper.emitted('blur')).toHaveLength(1)
+        expect(input.element.value).toBe('')
+      })
     })
 
     describe('[(prop)maxlength]', () => {
@@ -1460,6 +1671,28 @@ describe('[QSelect API]', () => {
         await flushPromises()
 
         expect(wrapper.get('input').element.value).toBe('b')
+      })
+
+      test('displays falsy (but non-null) selected values', async () => {
+        const wrapper = mountSelect({
+          modelValue: 0,
+          options: [0, 1, 2],
+          useInput: true,
+          fillInput: true
+        })
+        await flushPromises()
+
+        expect(wrapper.get('input').element.value).toBe('0')
+
+        const boolWrapper = mountSelect({
+          modelValue: false,
+          options: [true, false],
+          useInput: true,
+          fillInput: true
+        })
+        await flushPromises()
+
+        expect(boolWrapper.get('input').element.value).toBe('false')
       })
     })
 
@@ -1512,6 +1745,102 @@ describe('[QSelect API]', () => {
         // an already selected value gets removed
         expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([[]])
       })
+
+      test('typed text wins over the highlight mirroring the model', async () => {
+        const wrapper = mountSelect({
+          modelValue: 'b',
+          useInput: true,
+          newValueMode: 'add-unique'
+        })
+        const input = wrapper.get('input')
+
+        await openPopup(wrapper)
+
+        // opening highlights the current value (#16514)
+        expect(wrapper.vm.getOptionIndex()).toBe(1)
+
+        input.element.value = 'new'
+        await input.trigger('input')
+        await flushPromises()
+
+        await input.trigger('keydown', { keyCode: 13 })
+        await flushPromises()
+
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['new'])
+      })
+
+      test('typed text wins over the highlight restored by a filter', async () => {
+        const wrapper = mountSelect({
+          modelValue: 'b',
+          useInput: true,
+          inputDebounce: 0,
+          newValueMode: 'add-unique',
+          onFilter: (val, update) => {
+            update(() => {})
+          }
+        })
+        const input = wrapper.get('input')
+
+        input.element.focus()
+        await openPopup(wrapper)
+
+        input.element.value = 'new'
+        await input.trigger('input')
+        await flushPromises()
+        await flushTimers()
+
+        // the filter re-highlighted the current value
+        expect(wrapper.vm.getOptionIndex()).toBe(1)
+
+        await input.trigger('keydown', { keyCode: 13 })
+        await flushPromises()
+
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['new'])
+      })
+
+      test('an option the user navigated to still wins over typed text', async () => {
+        const wrapper = mountSelect({
+          modelValue: 'b',
+          useInput: true,
+          newValueMode: 'add-unique'
+        })
+        const input = wrapper.get('input')
+
+        await openPopup(wrapper)
+
+        input.element.value = 'new'
+        await input.trigger('input')
+        await flushPromises()
+
+        await input.trigger('keydown', { keyCode: 40 })
+        await flushPromises()
+        expect(wrapper.vm.getOptionIndex()).toBe(2)
+
+        await input.trigger('keydown', { keyCode: 13 })
+        await flushPromises()
+
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['c'])
+      })
+
+      test('the filled-in label of the current value does not count as typed text', async () => {
+        const wrapper = mountSelect({
+          modelValue: 'b',
+          useInput: true,
+          fillInput: true,
+          newValueMode: 'add'
+        })
+        const input = wrapper.get('input')
+
+        await openPopup(wrapper)
+        expect(input.element.value).toBe('b')
+
+        await input.trigger('keydown', { keyCode: 13 })
+        await flushPromises()
+
+        // the highlighted option is re-selected, no duplicate is added
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+        expect(wrapper.emitted('newValue')).toBeUndefined()
+      })
     })
 
     describe('[(prop)map-options]', () => {
@@ -1527,6 +1856,124 @@ describe('[QSelect API]', () => {
 
         // the model value is looked up in the options to get its label
         expect(wrapper.get('.q-field__native').text()).toBe('B')
+      })
+
+      test('asks the filter handler for lazy loaded options (#17983)', async () => {
+        const onFilter = vi.fn()
+        const wrapper = mountSelect({
+          modelValue: 2,
+          options: [],
+          mapOptions: true,
+          emitValue: true,
+          onFilter
+        })
+
+        await flushPromises()
+
+        // there is nothing to map the model against yet, so the options
+        // get requested right away, with the menu kept closed
+        expect(onFilter).toHaveBeenCalledOnce()
+        expect(onFilter.mock.calls[0][0]).toBe('')
+        expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(false)
+
+        await wrapper.setProps({ options: objectOptions })
+        onFilter.mock.calls[0][1]()
+        await flushPromises()
+
+        expect(wrapper.get('.q-field__native').text()).toBe('B')
+        expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(false)
+      })
+
+      test('only asks for options it cannot map', async () => {
+        const onFilter = vi.fn()
+
+        // the options are already loaded
+        mountSelect({
+          modelValue: 2,
+          options: objectOptions,
+          mapOptions: true,
+          emitValue: true,
+          onFilter
+        })
+
+        // there is no model value to map
+        mountSelect({
+          modelValue: null,
+          options: [],
+          mapOptions: true,
+          emitValue: true,
+          onFilter
+        })
+
+        // no mapping was asked for
+        mountSelect({
+          modelValue: 2,
+          options: [],
+          emitValue: true,
+          onFilter
+        })
+
+        // the model holds whole options, which carry their own labels
+        mountSelect({
+          modelValue: objectOptions[1],
+          options: [],
+          mapOptions: true,
+          onFilter
+        })
+
+        await flushPromises()
+
+        expect(onFilter).not.toHaveBeenCalled()
+      })
+
+      test('maps a model value that arrives after mounting', async () => {
+        const onFilter = vi.fn()
+        const wrapper = mountSelect({
+          modelValue: null,
+          options: [],
+          mapOptions: true,
+          emitValue: true,
+          onFilter
+        })
+
+        await flushPromises()
+
+        expect(onFilter).not.toHaveBeenCalled()
+
+        await wrapper.setProps({ modelValue: 2 })
+        await flushPromises()
+
+        expect(onFilter).toHaveBeenCalledOnce()
+
+        // a value the loaded options do not hold must not keep asking
+        await wrapper.setProps({ modelValue: 4 })
+        await flushPromises()
+
+        expect(onFilter).toHaveBeenCalledOnce()
+      })
+
+      test('fills the input with the mapped label', async () => {
+        const onFilter = vi.fn()
+        const wrapper = mountSelect({
+          modelValue: 2,
+          options: [],
+          mapOptions: true,
+          emitValue: true,
+          useInput: true,
+          fillInput: true,
+          hideSelected: true,
+          onFilter
+        })
+
+        await flushPromises()
+
+        expect(wrapper.get('input').element.value).toBe('2')
+
+        await wrapper.setProps({ options: objectOptions })
+        onFilter.mock.calls[0][1]()
+        await flushPromises()
+
+        expect(wrapper.get('input').element.value).toBe('B')
       })
     })
 
@@ -1741,6 +2188,14 @@ describe('[QSelect API]', () => {
           false
         )
         expect(withInput.get('input').attributes('autocomplete')).toBe('name')
+
+        // a readonly select still renders its focus target, but autofill has
+        // nothing to fill there and its handler would write the model
+        const readonly = mountSelect({ autocomplete: 'name', readonly: true })
+        expect(readonly.find('.q-select__focus-target').exists()).toBe(true)
+        expect(readonly.find('.q-select__autocomplete-input').exists()).toBe(
+          false
+        )
       })
     })
 
@@ -1823,6 +2278,491 @@ describe('[QSelect API]', () => {
 
         expect(portal.find('.q-menu').exists()).toBe(false)
         expect(portal.find('.q-select__dialog').exists()).toBe(true)
+      })
+
+      test('value "dialog" hands focus from the control to the dialog (#16196)', async () => {
+        const wrapper = mountSelect(
+          { behavior: 'dialog', transitionDuration: 0 },
+          { attachTo: document.body }
+        )
+        const control = wrapper.get('.q-field__control')
+
+        control.element.dispatchEvent(
+          new MouseEvent('click', { bubbles: true })
+        )
+
+        // the control is focused synchronously inside the opening
+        // interaction, or iOS never raises its software keyboard
+        expect(document.activeElement).toBe(
+          wrapper.get('.q-select__focus-target').element
+        )
+
+        await flushPromises()
+        await flushTimers()
+        await flushPromises()
+
+        // after the show transition the focus has moved on to the
+        // control rendered inside the dialog
+        const portal = wrapper.findComponent({ name: 'QPortal' })
+        const dialog = portal.get('.q-select__dialog')
+
+        expect(dialog.element.contains(document.activeElement)).toBe(true)
+
+        wrapper.unmount()
+      })
+
+      test('value "dialog" opens when typing on the closed control (#15976)', async () => {
+        const onFilter = vi.fn()
+        const wrapper = mountSelect(
+          {
+            behavior: 'dialog',
+            useInput: true,
+            autofocus: true,
+            transitionDuration: 0,
+            onFilter
+          },
+          { attachTo: document.body }
+        )
+
+        await flushPromises()
+
+        // autofocus alone must NOT open the dialog
+        expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(false)
+
+        const input = wrapper.get('input')
+        input.element.value = 'b'
+        await input.trigger('input')
+        await flushPromises()
+        await flushTimers()
+        await flushPromises()
+
+        const portal = wrapper.findComponent({ name: 'QPortal' })
+        const dialog = portal.get('.q-select__dialog')
+
+        // the dialog opened and filtered with the typed text right away,
+        // without waiting for the input debounce
+        expect(onFilter).toHaveBeenCalledOnce()
+        expect(onFilter.mock.calls[0][0]).toBe('b')
+
+        // the typed text carried over to the in-dialog control
+        expect(dialog.get('input').element.value).toBe('b')
+
+        wrapper.unmount()
+      })
+
+      test('value "dialog" renders a close button that dismisses the dialog (#6858)', async () => {
+        const wrapper = mountSelect({
+          behavior: 'dialog',
+          transitionDuration: 0
+        })
+
+        wrapper.vm.showPopup()
+        await flushPromises()
+
+        const portal = wrapper.findComponent({ name: 'QPortal' })
+        const closeBtn = portal.get('.q-select__dialog-close')
+
+        // a native button inside the in-dialog control, so it sits in
+        // the natural tab order and never below the software keyboard
+        expect(closeBtn.element.tagName).toBe('BUTTON')
+        expect(closeBtn.text()).toBe(langEn.label.close)
+
+        // it follows the component's color
+        await wrapper.setProps({ color: 'orange' })
+        expect(portal.get('.q-select__dialog-close').classes()).toContain(
+          'text-orange'
+        )
+
+        await closeBtn.trigger('click')
+        await flushPromises()
+        await flushTimers()
+        await flushPromises()
+
+        expect(wrapper.find('.q-select__dialog').exists()).toBe(false)
+        expect(wrapper.emitted('popupHide')).toHaveLength(1)
+      })
+    })
+
+    describe('[(prop)hover]', () => {
+      function getControl(wrapper) {
+        return wrapper.get('.q-field__control')
+      }
+
+      function hoverEnter(wrapper) {
+        return getControl(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+      }
+
+      function hoverLeave(wrapper, relatedTarget = null) {
+        getControl(wrapper).element.dispatchEvent(
+          new PointerEvent('pointerleave', {
+            pointerType: 'mouse',
+            relatedTarget
+          })
+        )
+        return flushPromises()
+      }
+
+      function getMenuContent(wrapper) {
+        const portal = wrapper.findComponent({ name: 'QPortal' })
+        if (!portal.exists()) return null
+
+        const menu = portal.find('.q-menu')
+        return menu.exists() ? menu.element : null
+      }
+
+      test('type Boolean has effect', async () => {
+        const wrapper = mountSelect({
+          hover: true,
+          hoverHideDelay: 0,
+          transitionDuration: 0
+        })
+
+        await hoverEnter(wrapper)
+        expect(getMenuContent(wrapper)).not.toBeNull()
+
+        await hoverLeave(wrapper)
+        await flushTimers()
+        await flushPromises()
+
+        expect(getMenuContent(wrapper)).toBeNull()
+
+        // without the prop, hovering must not open the options
+        await wrapper.setProps({ hover: false })
+        await hoverEnter(wrapper)
+
+        expect(getMenuContent(wrapper)).toBeNull()
+      })
+
+      test('a touch pointer does not trigger it', async () => {
+        const wrapper = mountSelect({ hover: true, transitionDuration: 0 })
+
+        await getControl(wrapper).trigger('pointerenter', {
+          pointerType: 'touch'
+        })
+
+        expect(getMenuContent(wrapper)).toBeNull()
+      })
+
+      test('does not steal focus, nor emit @focus, when opening', async () => {
+        const button = document.createElement('button')
+        document.body.append(button)
+
+        try {
+          const wrapper = mountSelect(
+            { hover: true, transitionDuration: 0 },
+            { attachTo: document.body }
+          )
+
+          button.focus()
+          await hoverEnter(wrapper)
+          await flushTimers()
+          await flushPromises()
+
+          expect(getMenuContent(wrapper)).not.toBeNull()
+          expect(document.activeElement).toBe(button)
+          expect(wrapper.emitted('focus')).toBeUndefined()
+          expect(wrapper.get('.q-field').classes()).not.toContain(
+            'q-field--focused'
+          )
+
+          wrapper.unmount()
+        } finally {
+          button.remove()
+        }
+      })
+
+      test('moving the pointer into the options menu keeps it open', async () => {
+        const wrapper = mountSelect({
+          hover: true,
+          hoverHideDelay: 0,
+          transitionDuration: 0
+        })
+
+        await hoverEnter(wrapper)
+
+        const menuContent = getMenuContent(wrapper)
+        expect(menuContent).not.toBeNull()
+
+        // the relatedTarget of a real crossing is the element entered
+        await hoverLeave(wrapper, menuContent)
+        await flushTimers()
+        await flushPromises()
+
+        expect(getMenuContent(wrapper)).not.toBeNull()
+
+        // leaving the menu for a foreign target closes it
+        menuContent.dispatchEvent(
+          new PointerEvent('pointerleave', { pointerType: 'mouse' })
+        )
+        await flushTimers()
+        await flushPromises()
+
+        expect(getMenuContent(wrapper)).toBeNull()
+      })
+
+      test('clicking the control of a fully shown hover menu toggles it closed', async () => {
+        const wrapper = mountSelect(
+          { hover: true, transitionDuration: 0 },
+          { attachTo: document.body }
+        )
+
+        await hoverEnter(wrapper)
+        expect(getMenuContent(wrapper)).not.toBeNull()
+
+        // with transition-duration 0 the show is never "still animating"
+        await getControl(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(getMenuContent(wrapper)).toBeNull()
+
+        wrapper.unmount()
+      })
+
+      test('a click while the menu still animates in upgrades to a focused open', async () => {
+        vi.useFakeTimers()
+
+        try {
+          const wrapper = mountSelect(
+            { hover: true, transitionDuration: 300 },
+            { attachTo: document.body }
+          )
+
+          await hoverEnter(wrapper)
+          expect(getMenuContent(wrapper)).not.toBeNull()
+
+          // the move-and-click gesture's click lands right after the
+          // pointerenter, while the menu is still animating into view
+          await getControl(wrapper).trigger('click')
+
+          expect(getMenuContent(wrapper)).not.toBeNull()
+
+          // the deferred focus lands once the show transition settles
+          await vi.runAllTimersAsync()
+          await flushPromises()
+
+          expect(getMenuContent(wrapper)).not.toBeNull()
+          expect(wrapper.emitted('focus')).toHaveLength(1)
+          expect(document.activeElement).toBe(
+            wrapper.get('.q-select__focus-target').element
+          )
+
+          // once upgraded, the pointer leaving must not close it anymore
+          await hoverLeave(wrapper)
+          await vi.runAllTimersAsync()
+          await flushPromises()
+
+          expect(getMenuContent(wrapper)).not.toBeNull()
+
+          wrapper.unmount()
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+
+      test('runs the filter of an unfocused select', async () => {
+        const onFilter = vi.fn((val, update) => {
+          update(() => {})
+        })
+        const wrapper = mountSelect({
+          hover: true,
+          transitionDuration: 0,
+          onFilter
+        })
+
+        await hoverEnter(wrapper)
+        await flushPromises()
+
+        expect(onFilter).toHaveBeenCalledOnce()
+        expect(getMenuContent(wrapper)).not.toBeNull()
+        expect(wrapper.emitted('focus')).toBeUndefined()
+      })
+
+      test('has no effect with behavior "dialog"', async () => {
+        const wrapper = mountSelect({
+          hover: true,
+          behavior: 'dialog',
+          transitionDuration: 0
+        })
+
+        await hoverEnter(wrapper)
+        await flushTimers()
+        await flushPromises()
+
+        expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(false)
+      })
+    })
+
+    describe('[(prop)hover-delay]', () => {
+      test('type Number has effect', async () => {
+        vi.useFakeTimers()
+
+        try {
+          const wrapper = mountSelect({
+            hover: true,
+            hoverDelay: 300,
+            transitionDuration: 0
+          })
+
+          await wrapper.get('.q-field__control').trigger('pointerenter', {
+            pointerType: 'mouse'
+          })
+
+          vi.advanceTimersByTime(299)
+          await flushPromises()
+          expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(
+            false
+          )
+
+          vi.advanceTimersByTime(1)
+          await flushPromises()
+          expect(
+            wrapper.findComponent({ name: 'QPortal' }).find('.q-menu').exists()
+          ).toBe(true)
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+    })
+
+    describe('[(prop)hover-hide-delay]', () => {
+      test('type Number has effect', async () => {
+        vi.useFakeTimers()
+
+        try {
+          const wrapper = mountSelect({
+            hover: true,
+            hoverHideDelay: 300,
+            transitionDuration: 0
+          })
+
+          const control = wrapper.get('.q-field__control')
+
+          await control.trigger('pointerenter', { pointerType: 'mouse' })
+          expect(
+            wrapper.findComponent({ name: 'QPortal' }).find('.q-menu').exists()
+          ).toBe(true)
+
+          control.element.dispatchEvent(
+            new PointerEvent('pointerleave', { pointerType: 'mouse' })
+          )
+
+          // the grace period keeps it up...
+          vi.advanceTimersByTime(299)
+          await flushPromises()
+          expect(
+            wrapper.findComponent({ name: 'QPortal' }).find('.q-menu').exists()
+          ).toBe(true)
+
+          // ...and re-entering within it cancels the hide
+          await control.trigger('pointerenter', { pointerType: 'mouse' })
+          await vi.runAllTimersAsync()
+          await flushPromises()
+          expect(
+            wrapper.findComponent({ name: 'QPortal' }).find('.q-menu').exists()
+          ).toBe(true)
+
+          control.element.dispatchEvent(
+            new PointerEvent('pointerleave', { pointerType: 'mouse' })
+          )
+          vi.advanceTimersByTime(300)
+          await vi.runAllTimersAsync()
+          await flushPromises()
+          expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(
+            false
+          )
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+    })
+
+    describe('[(prop)no-chip-remove]', () => {
+      test('type Boolean has effect', async () => {
+        const wrapper = mountSelect({
+          modelValue: ['a', 'b'],
+          multiple: true,
+          useInput: true,
+          useChips: true
+        })
+
+        expect(wrapper.find('.q-chip__icon--remove').exists()).toBe(true)
+
+        await wrapper.get('input').trigger('keydown', { keyCode: 8 })
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([['a']])
+
+        await wrapper.setProps({ noChipRemove: true })
+        await flushPromises()
+
+        expect(wrapper.find('.q-chip__icon--remove').exists()).toBe(false)
+
+        await wrapper.get('input').trigger('keydown', { keyCode: 8 })
+        expect(wrapper.emitted('update:modelValue')).toHaveLength(1)
+
+        // it only targets the chip affordances; 'clearable' keeps
+        // its own Backspace behavior
+        await wrapper.setProps({ clearable: true })
+        await wrapper.get('input').trigger('keydown', { keyCode: 8 })
+        expect(wrapper.emitted('update:modelValue')).toHaveLength(2)
+      })
+    })
+
+    describe('[(prop)no-option-prefetch]', () => {
+      test('type Boolean has effect', async () => {
+        const prefetchProps = {
+          modelValue: 2,
+          options: [],
+          mapOptions: true,
+          emitValue: true
+        }
+
+        const onFilter = vi.fn()
+        mountSelect({ ...prefetchProps, onFilter })
+
+        await flushPromises()
+
+        // without the prop, the unmappable model value gets the options
+        // requested right away (see the map-options tests)
+        expect(onFilter).toHaveBeenCalledOnce()
+
+        const onFilterOptOut = vi.fn()
+        const wrapper = mountSelect({
+          ...prefetchProps,
+          noOptionPrefetch: true,
+          onFilter: onFilterOptOut
+        })
+
+        await flushPromises()
+
+        expect(onFilterOptOut).not.toHaveBeenCalled()
+        expect(wrapper.get('.q-field__native').text()).toBe('2')
+
+        // a model value arriving later must not request them either
+        await wrapper.setProps({ modelValue: 3 })
+        await flushPromises()
+
+        expect(onFilterOptOut).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('[(prop)hide-dialog-close]', () => {
+      test('type Boolean has effect', async () => {
+        const wrapper = mountSelect({
+          behavior: 'dialog',
+          transitionDuration: 0
+        })
+
+        wrapper.vm.showPopup()
+        await flushPromises()
+
+        const portal = wrapper.findComponent({ name: 'QPortal' })
+        expect(portal.find('.q-select__dialog-close').exists()).toBe(true)
+
+        await wrapper.setProps({ hideDialogClose: true })
+        await flushPromises()
+
+        expect(portal.find('.q-select__dialog-close').exists()).toBe(false)
       })
     })
   })
@@ -2340,6 +3280,21 @@ describe('[QSelect API]', () => {
         const [evt] = eventList.popupShow[0]
         expect(evt).$any([expect.any(Event), void 0])
       })
+
+      test('carries the event of the opening interaction (#14678)', async () => {
+        const wrapper = mountSelect()
+
+        await wrapper.get('.q-field__control').trigger('click')
+        await flushPromises()
+
+        const eventList = wrapper.emitted()
+        expect(eventList).toHaveProperty('popupShow')
+        expect(eventList.popupShow).toHaveLength(1)
+
+        const [evt] = eventList.popupShow[0]
+        expect(evt).toBeInstanceOf(Event)
+        expect(evt.type).toBe('click')
+      })
     })
 
     describe('[(event)popup-hide]', () => {
@@ -2360,6 +3315,25 @@ describe('[QSelect API]', () => {
 
         const [evt] = eventList.popupHide[0]
         expect(evt).$any([expect.any(Event), void 0])
+      })
+
+      test('carries the event of the dismissing interaction (#14678)', async () => {
+        const wrapper = mountSelect()
+        const control = wrapper.get('.q-field__control')
+
+        await control.trigger('click')
+        await flushPromises()
+
+        await control.trigger('click')
+        await flushPromises()
+
+        const eventList = wrapper.emitted()
+        expect(eventList).toHaveProperty('popupHide')
+        expect(eventList.popupHide).toHaveLength(1)
+
+        const [evt] = eventList.popupHide[0]
+        expect(evt).toBeInstanceOf(Event)
+        expect(evt.type).toBe('click')
       })
     })
   })
@@ -2830,6 +3804,101 @@ describe('[QSelect API]', () => {
     })
   })
 
+  describe('[Generic]', () => {
+    // the displayed value sits in a nowrap span.ellipsis, so the field's
+    // min-content width is the whole text: it must not become a floor that
+    // pushes the field past its parent instead of truncating (#18015)
+    const longValue =
+      'a selected value that is far too long to fit into a narrow parent'
+
+    function mountInParent(parentClass) {
+      return mount(
+        defineComponent({
+          render() {
+            return h('div', { class: parentClass, style: { width: '200px' } }, [
+              h(QSelect, { modelValue: longValue, options: [longValue] })
+            ])
+          }
+        })
+      )
+    }
+
+    test.each([
+      ['row', 'main'],
+      ['column', 'cross']
+    ])('truncates a long value inside a .%s parent (%s axis)', parentClass => {
+      const wrapper = mountInParent(parentClass)
+
+      const parentWidth = wrapper.element.getBoundingClientRect().width
+      const fieldWidth = wrapper
+        .get('.q-select')
+        .element.getBoundingClientRect().width
+      const value = wrapper.get('.q-field__native > span.ellipsis').element
+
+      expect(fieldWidth).toBeLessThanOrEqual(parentWidth)
+      expect(value.scrollWidth).toBeGreaterThan(value.clientWidth)
+    })
+
+    // .ellipsis is an implementation detail; q-select__selected-value is the
+    // stable hook user CSS may target to restyle the displayed value (#17973)
+    test('displayed value carries the q-select__selected-value styling hook', () => {
+      const wrapper = mountSelect({ modelValue: stringOptions[0] })
+      const value = wrapper.get('.q-field__native > .q-select__selected-value')
+
+      expect(value.text()).toBe(stringOptions[0])
+      expect(value.classes()).toContain('ellipsis')
+    })
+
+    test('hover highlight follows mouse and pen pointers, but never touch', async () => {
+      const wrapper = mountSelect()
+      const portal = await openPopup(wrapper)
+      const items = portal.findAll('.q-item')
+
+      // test-utils' trigger cannot assign init-only PointerEvent fields,
+      // so dispatch real events instead
+      async function hoverWith(item, pointerType) {
+        item.element.dispatchEvent(
+          new PointerEvent('pointermove', { pointerType, bubbles: true })
+        )
+        await flushPromises()
+      }
+
+      await hoverWith(items[1], 'mouse')
+      expect(wrapper.vm.getOptionIndex()).toBe(1)
+      expect(items[1].classes()).toContain('q-manual-focusable--focused')
+
+      // pen hover (hovering stylus) drives the highlight too
+      await hoverWith(items[2], 'pen')
+      expect(wrapper.vm.getOptionIndex()).toBe(2)
+
+      // a touch contact's own pointermove must not move it, or taps
+      // and scroll-drags would drag the highlight around on hybrids
+      await hoverWith(items[0], 'touch')
+      expect(wrapper.vm.getOptionIndex()).toBe(2)
+    })
+
+    test('drops the loading state when an unfocused filtering is aborted', async () => {
+      const onFilter = vi.fn((val, update, abort) => {
+        abort()
+      })
+
+      // mapping the model value triggers a filtering while the component
+      // is not focused; aborting it has to clear the loading indicator
+      const wrapper = mountSelect({
+        modelValue: 2,
+        options: [],
+        mapOptions: true,
+        emitValue: true,
+        onFilter
+      })
+
+      await flushPromises()
+
+      expect(onFilter).toHaveBeenCalledOnce()
+      expect(wrapper.find('.q-field__append .q-spinner').exists()).toBe(false)
+    })
+  })
+
   describe('[Accessibility]', () => {
     test.each([
       ['focus target', false],
@@ -2887,5 +3956,241 @@ describe('[QSelect API]', () => {
         `external-help ${messageId}`
       )
     })
+
+    test.each([
+      ['focus target', false],
+      ['use-input control', true]
+    ])(
+      'applies a fall-through aria-label to the %s, overriding the label prop',
+      (_, useInput) => {
+        const wrapper = mountSelect(
+          { useInput, label: 'Car' },
+          { attrs: { 'aria-label': 'Preferred car' } }
+        )
+
+        expect(
+          wrapper.get('input[role="combobox"]').attributes('aria-label')
+        ).toBe('Preferred car')
+
+        // on the target only: a copy on the wrapper div breaks
+        // getByLabel-style strict queries and is invalid ARIA on
+        // its role=generic (#18519)
+        expect(wrapper.findAll('[aria-label="Preferred car"]')).toHaveLength(1)
+      }
+    )
+
+    test('references the listbox only while it exists, with the listbox wrapping only the options', async () => {
+      const wrapper = mountSelect(
+        {},
+        {
+          slots: {
+            'before-options': () =>
+              h('div', { class: 'before-opts' }, 'Select all'),
+            'after-options': () => h('div', { class: 'after-opts' }, 'Footer')
+          }
+        }
+      )
+      const target = wrapper.get('input[role="combobox"]')
+
+      expect(target.attributes('aria-expanded')).toBe('false')
+      expect(target.attributes('aria-controls')).toBeUndefined()
+
+      const portal = await openPopup(wrapper)
+      const listbox = portal.get('[role="listbox"]')
+
+      expect(target.attributes('aria-expanded')).toBe('true')
+      expect(target.attributes('aria-controls')).toBe(listbox.attributes('id'))
+
+      // the listbox contains all the options...
+      expect(listbox.findAll('[role="option"]').length).toBe(
+        stringOptions.length
+      )
+
+      // ...while slot content and the virtual scroll padding are
+      // rendered in the popup, but outside of the listbox
+      expect(listbox.find('.before-opts').exists()).toBe(false)
+      expect(listbox.find('.after-opts').exists()).toBe(false)
+      expect(listbox.find('.q-virtual-scroll__padding').exists()).toBe(false)
+      expect(portal.find('.before-opts').exists()).toBe(true)
+      expect(portal.find('.after-opts').exists()).toBe(true)
+    })
+
+    test('sizes the option set from all options, not the rendered slice', async () => {
+      const total = 100
+      const wrapper = mountSelect({ options: getOptions(total) })
+      const portal = await openPopup(wrapper)
+      const options = portal.findAll('[role="option"]')
+
+      expect(options.length).toBeGreaterThan(0)
+      expect(options.length).toBeLessThan(total)
+
+      options.forEach((opt, i) => {
+        expect(opt.attributes('aria-setsize')).toBe(String(total))
+        expect(opt.attributes('aria-posinset')).toBe(String(i + 1))
+      })
+    })
+
+    test.each([
+      ['focus target', false],
+      ['use-input control', true]
+    ])('exposes a readonly select through its %s', async (_, useInput) => {
+      const wrapper = mountSelect({ useInput, readonly: true, modelValue: 'a' })
+      const target = wrapper.get('input[role="combobox"]')
+
+      expect(target.attributes('aria-readonly')).toBe('true')
+      // the label's "for" has to resolve, so the id stays on a real element
+      expect(target.attributes('id')).toBe(wrapper.attributes('for'))
+      // readonly keeps it in the tab order; only "disable" leaves it
+      expect(target.attributes('tabindex')).toBe('0')
+
+      await target.trigger('keydown', { keyCode: 40 })
+      await flushPromises()
+
+      expect(target.attributes('aria-expanded')).toBe('false')
+      expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(false)
+    })
+
+    test.each([
+      ['focus target', false],
+      ['use-input control', true]
+    ])('keeps a disabled select in the tree through its %s', (_, useInput) => {
+      const wrapper = mountSelect({ useInput, disable: true, modelValue: 'a' })
+      const target = wrapper.get('input[role="combobox"]')
+
+      // exposed (announced as unavailable) rather than missing, so the label's
+      // "for" still resolves - but never focusable
+      expect(target.attributes('id')).toBe(wrapper.attributes('for'))
+      expect(target.attributes('disabled')).toBeDefined()
+      expect(target.attributes('tabindex')).toBeUndefined()
+    })
+
+    test.each([
+      ['ArrowDown', 40],
+      ['ArrowUp', 38]
+    ])('opens the popup on %s', async (_, keyCode) => {
+      const wrapper = mountSelect()
+      const target = wrapper.get('.q-select__focus-target')
+
+      await target.trigger('keydown', { keyCode })
+      await flushPromises()
+
+      expect(target.attributes('aria-expanded')).toBe('true')
+    })
+
+    test('keeps keyboard option navigation working on mobile platforms', async () => {
+      // hardware keyboards exist on mobile devices too (BT keyboards,
+      // DPAD, desktop-mode webviews), so option focus must follow the
+      // arrow keys there as well (#16599)
+      const original = {
+        mobile: Platform.is.mobile,
+        desktop: Platform.is.desktop
+      }
+      Object.assign(Platform.is, { mobile: true, desktop: false })
+
+      try {
+        // "menu" behavior keeps the keydown target in the field; the
+        // handling is shared with the dialog's in-portal focus target
+        const wrapper = mountSelect({ behavior: 'menu' })
+        const target = wrapper.get('.q-select__focus-target')
+
+        // first press opens the menu, second one focuses the first option
+        await target.trigger('keydown', { keyCode: 40 })
+        await flushPromises()
+        await target.trigger('keydown', { keyCode: 40 })
+        await flushPromises()
+
+        expect(target.attributes('aria-activedescendant')).toBe(
+          `${target.attributes('id')}_0`
+        )
+
+        const portal = wrapper.findComponent({ name: 'QPortal' })
+        const focusedItem = portal.findAll('.q-item')[0]
+        expect(focusedItem.classes()).toContain('q-manual-focusable--focused')
+
+        // the focused state must also PAINT under a mobile body class,
+        // where hover/:focus feedback is deliberately suppressed
+        const hadDesktop = document.body.classList.contains('desktop')
+        document.body.classList.remove('desktop')
+        document.body.classList.add('mobile')
+
+        try {
+          const helper = focusedItem.element.querySelector('.q-focus-helper')
+          // snap past the opacity transition so the computed value is final
+          helper.style.transition = 'none'
+
+          expect(getComputedStyle(helper).opacity).toBe('0.22')
+        } finally {
+          document.body.classList.remove('mobile')
+          if (hadDesktop) document.body.classList.add('desktop')
+        }
+
+        await target.trigger('keydown', { keyCode: 13 })
+        await flushPromises()
+
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['a'])
+      } finally {
+        Object.assign(Platform.is, original)
+      }
+    })
+
+    test('keeps the popup inside a modal dialog for assistive tech', async () => {
+      const wrapper = mount(
+        defineComponent({
+          setup() {
+            return () =>
+              h(QDialog, { modelValue: true }, () =>
+                h(QSelect, { modelValue: null, options: stringOptions })
+              )
+          }
+        }),
+        { attachTo: document.body }
+      )
+
+      await flushPromises()
+
+      wrapper.findComponent(QSelect).vm.showPopup()
+      await flushPromises()
+
+      const dialogEl = document.querySelector('[role="dialog"]')
+      const listboxEl = document.querySelector('[role="listbox"]')
+
+      expect(dialogEl.getAttribute('aria-modal')).toBe('true')
+      expect(listboxEl).not.toBeNull()
+      // an aria-modal dialog makes assistive tech ignore everything
+      // outside of the dialog's element, listbox included (#17078)
+      expect(dialogEl.contains(listboxEl)).toBe(true)
+    })
+
+    test.each([
+      ['focus target', false],
+      ['use-input control', true]
+    ])(
+      'reflects focus on a readonly select through its %s',
+      async (_, useInput) => {
+        // readonly keeps the control in the tab order, so the field shows
+        // the keyboard focus like any other; the popup stays out of reach
+        const wrapper = mountSelect({
+          useInput,
+          readonly: true,
+          modelValue: 'a'
+        })
+        const target = wrapper.get('input[role="combobox"]')
+
+        target.element.focus()
+        await flushPromises()
+
+        expect(wrapper.classes()).toContain('q-field--focused')
+        expect(wrapper.emitted('focus')).toHaveLength(1)
+        expect(target.attributes('aria-expanded')).toBe('false')
+        expect(wrapper.findComponent({ name: 'QPortal' }).exists()).toBe(false)
+
+        target.element.blur()
+        await flushTimers()
+        await flushPromises()
+
+        expect(wrapper.classes()).not.toContain('q-field--focused')
+        expect(wrapper.emitted('blur')).toHaveLength(1)
+      }
+    )
   })
 })

@@ -1,4 +1,4 @@
-import { computed, getCurrentInstance, h, ref, toRaw, watch } from 'vue'
+import { computed, h, ref, toRaw, watch } from 'vue'
 
 import QDialog from '../../../components/dialog/QDialog.js'
 import QBtn from '../../../components/btn/QBtn.js'
@@ -14,6 +14,8 @@ import QOptionGroup from '../../../components/option-group/QOptionGroup.js'
 import QSpinner from '../../../components/spinner/QSpinner.js'
 
 import { createComponent } from '../../../utils/private.create/create.js'
+import useQuasar from '../../../composables/use-quasar/use-quasar.js'
+import useDialogPluginComponent from '../../../composables/use-dialog-plugin-component/use-dialog-plugin-component.js'
 import useDark, {
   useDarkProps
 } from '../../../composables/private.use-dark/use-dark.js'
@@ -55,13 +57,13 @@ export default /*#__PURE__*/ createComponent({
 
   emits: ['ok', 'hide'],
 
-  setup(props, { emit }) {
-    const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+  setup(props) {
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
 
-    const dialogRef = ref(null)
+    const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
+      useDialogPluginComponent()
 
     const model = ref(
       props.prompt !== void 0
@@ -74,12 +76,12 @@ export default /*#__PURE__*/ createComponent({
     const classes = computed(
       () =>
         'q-dialog-plugin' +
-        (isDark.value ? ' q-dialog-plugin--dark q-dark' : '') +
+        (isDark() ? ' q-dialog-plugin--dark q-dark' : '') +
         (props.progress !== false ? ' q-dialog-plugin--progress' : '')
     )
 
     const vmColor = computed(
-      () => props.color || (isDark.value ? 'amber' : 'primary')
+      () => props.color || (isDark() ? 'amber' : 'primary')
     )
 
     const spinner = computed(() =>
@@ -157,31 +159,14 @@ export default /*#__PURE__*/ createComponent({
       ripple: false,
       ...(isObject(props.cancel) ? props.cancel : { flat: true }),
       'data-autofocus': (props.focus === 'cancel' && !hasForm.value) || void 0,
-      onClick: onCancel
+      onClick: onDialogCancel
     }))
 
     watch(() => props.prompt && props.prompt.model, onUpdateModel)
     watch(() => props.options && props.options.model, onUpdateModel)
 
-    function show() {
-      dialogRef.value.show()
-    }
-
-    function hide() {
-      dialogRef.value.hide()
-    }
-
     function onOk() {
-      emit('ok', toRaw(model.value))
-      hide()
-    }
-
-    function onCancel() {
-      hide()
-    }
-
-    function onDialogHide() {
-      emit('hide')
+      onDialogOK(toRaw(model.value))
     }
 
     function onUpdateModel(val) {
@@ -214,7 +199,7 @@ export default /*#__PURE__*/ createComponent({
           color: vmColor.value,
           dense: true,
           autofocus: true,
-          dark: isDark.value,
+          dark: isDark(),
           ...formProps.value,
           modelValue: model.value,
           'onUpdate:modelValue': onUpdateModel,
@@ -228,7 +213,7 @@ export default /*#__PURE__*/ createComponent({
         h(QOptionGroup, {
           color: vmColor.value,
           options: props.options.items,
-          dark: isDark.value,
+          dark: isDark(),
           ...formProps.value,
           modelValue: model.value,
           'onUpdate:modelValue': onUpdateModel
@@ -276,13 +261,13 @@ export default /*#__PURE__*/ createComponent({
         )
       } else if (props.options !== void 0) {
         child.push(
-          h(QSeparator, { dark: isDark.value }),
+          h(QSeparator, { dark: isDark() }),
           h(
             QCardSection,
             { class: 'scroll q-dialog-plugin__form' },
             getOptions
           ),
-          h(QSeparator, { dark: isDark.value })
+          h(QSeparator, { dark: isDark() })
         )
       }
 
@@ -300,15 +285,12 @@ export default /*#__PURE__*/ createComponent({
           {
             class: [classes.value, props.cardClass],
             style: props.cardStyle,
-            dark: isDark.value
+            dark: isDark()
           },
           getCardContent
         )
       ]
     }
-
-    // expose public methods
-    Object.assign(proxy, { show, hide })
 
     return () =>
       h(

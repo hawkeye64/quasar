@@ -1,4 +1,4 @@
-import { computed, getCurrentInstance, h, ref } from 'vue'
+import { computed, getCurrentInstance, h, ref, shallowRef } from 'vue'
 
 import QChip from '../chip/QChip.js'
 
@@ -63,7 +63,7 @@ export default /*#__PURE__*/ createComponent({
 
     const state = useFieldState()
 
-    const inputRef = ref(null)
+    const inputRef = shallowRef(null)
     const dnd = ref(false)
     const nameProp = useFormInputNameAttr(props)
 
@@ -110,13 +110,11 @@ export default /*#__PURE__*/ createComponent({
         title: '', // try to remove default tooltip,
         accept: props.accept,
         capture: props.capture,
-        name: nameProp.value,
+        name: nameProp(),
         ...attrs,
         id: state.targetUid.value,
         disabled: !state.editable.value
       }
-
-      Object.assign(acc, state.getErrorAriaAttrs(acc))
 
       return acc
     })
@@ -250,9 +248,13 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function getInput() {
+      const controlAttrs = inputAttrs.value
       const data = {
         ref: inputRef,
-        ...inputAttrs.value,
+        ...controlAttrs,
+        // render-path merge: getErrorAriaAttrs() reads slot presence,
+        // which is not reactive, so a computed must not cache it
+        ...state.getErrorAriaAttrs(controlAttrs),
         ...formDomProps.value,
         class: 'q-field__input fit absolute-full cursor-pointer',
         onChange: addFilesToQueue

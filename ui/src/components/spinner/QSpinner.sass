@@ -1,26 +1,30 @@
 
 .q-spinner
   vertical-align: middle
+  // relies on the root svg's explicit width/height: they keep the box
+  // identical under the size containment applied while offscreen
+  content-visibility: auto
 
 .q-spinner-mat
-  animation: q-spin 2s linear infinite
-  transform-origin: center center
   .path
     stroke-dasharray: 1, 200 #{"/* rtl:ignore */"}
     stroke-dashoffset: 0 #{"/* rtl:ignore */"}
-    animation: q-mat-dash 1.5s ease-in-out infinite
+    // SVG elements default to transform-origin 0 0; pin the rotation
+    // to the circle's center (viewBox units)
+    transform-origin: 25px 25px
+    animation: q-spin 2s linear infinite, q-mat-dash 1.5s ease-in-out infinite
 
 @keyframes q-spin
   0%
-    transform: rotate3d(0, 0, 1, 0deg) #{"/* rtl:ignore */"}
+    transform: rotate(0deg) #{"/* rtl:ignore */"}
   25%
-    transform: rotate3d(0, 0, 1, 90deg) #{"/* rtl:ignore */"}
+    transform: rotate(90deg) #{"/* rtl:ignore */"}
   50%
-    transform: rotate3d(0, 0, 1, 180deg) #{"/* rtl:ignore */"}
+    transform: rotate(180deg) #{"/* rtl:ignore */"}
   75%
-    transform: rotate3d(0, 0, 1, 270deg) #{"/* rtl:ignore */"}
+    transform: rotate(270deg) #{"/* rtl:ignore */"}
   100%
-    transform: rotate3d(0, 0, 1, 359deg) #{"/* rtl:ignore */"}
+    transform: rotate(359deg) #{"/* rtl:ignore */"}
 
 @keyframes q-mat-dash
   0%

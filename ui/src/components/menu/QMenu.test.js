@@ -1,10 +1,69 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { defineComponent, h } from 'vue'
+import { KeepAlive, defineComponent, h } from 'vue'
+import { useRoute } from 'vue-router'
 
 import { getRouter } from 'testing/runtime/router.js'
-import { validatePosition } from '../../utils/private.position-engine/position-engine.js'
+import { client } from '../../plugins/platform/Platform.js'
+import { validatePosition } from '../../composables/private.use-position-engine/use-position-engine.js'
+import useFullscreen, {
+  useFullscreenProps
+} from '../../composables/private.use-fullscreen/use-fullscreen.js'
+import QDialog from '../dialog/QDialog.js'
 import QMenu from './QMenu.js'
+
+// the test browser is a Chromium, so QMenu takes the CSS anchor
+// positioning path by default; flipping this flag before mounting
+// forces the JS positioning fallback of non-supporting browsers instead
+// (through the composable's test-only viaCssAnchor option)
+const engineOverride = vi.hoisted(() => ({ forceJsFallback: false }))
+
+vi.mock(
+  '../../composables/private.use-position-engine/use-position-engine.js',
+  async importOriginal => {
+    const mod = await importOriginal()
+    return {
+      ...mod,
+      default: options =>
+        mod.default(
+          engineOverride.forceJsFallback
+            ? { ...options, viaCssAnchor: false }
+            : options
+        )
+    }
+  }
+)
+
+const FullscreenChild = defineComponent({
+  name: 'FullscreenChild',
+  props: useFullscreenProps,
+
+  setup() {
+    useFullscreen()
+
+    return () =>
+      h('section', null, [h('input', { 'data-test': 'fullscreen-input' })])
+  }
+})
+
+const FullscreenAnchorHost = defineComponent({
+  name: 'FullscreenAnchorHost',
+  props: useFullscreenProps,
+
+  setup(_, { slots }) {
+    useFullscreen()
+
+    return () => h('section', null, slots.default())
+  }
+})
+
+// the detached-fullscreen relocation defers through nextTick + an animation
+// frame; the frame is faked along with the timers in this suite
+async function flushAnimationFrames() {
+  await flushPromises()
+  await vi.runAllTimersAsync()
+  await flushPromises()
+}
 
 let activeWrapper
 
@@ -18,6 +77,7 @@ afterEach(() => {
   vi.clearAllTimers()
   vi.useRealTimers()
   vi.restoreAllMocks()
+  engineOverride.forceJsFallback = false
 })
 
 /**
@@ -109,6 +169,115 @@ async function mountPositionedMenu(props) {
   await showMenu(wrapper)
 
   return wrapper
+}
+
+/**
+ * Where the menu really is: the position is expressed through anchor()
+ * insets that only the layout engine resolves, so tests assert the
+ * resulting geometry instead of style strings.
+ */
+function getMenuRect() {
+  return getMenu().getBoundingClientRect()
+}
+
+const wrappingContent = () =>
+  h(
+    'div',
+    { style: { padding: '16px' } },
+    'Are you sure you want to close the system?'
+  )
+
+/**
+ * Mounts a menu with wrapping text content on a 60x30 anchor pinned 8px
+ * from the top of the viewport at the given horizontal inset.
+ */
+async function mountWrappingMenuAt(inset) {
+  const wrapper = mountMenu(void 0, { default: wrappingContent })
+  Object.assign(getAnchor(wrapper).element.style, {
+    position: 'fixed',
+    top: '8px',
+    width: '60px',
+    height: '30px',
+    ...inset
+  })
+
+  await showMenu(wrapper)
+
+  return wrapper
+}
+
+/**
+ * Shared by both positioning engines: a menu flipped away from the right
+ * viewport edge must keep the width it has when opening freely, instead
+ * of shrinking into the space its intended (overflowing) placement left
+ * it and freezing that as its cap (#18533).
+ */
+async function expectNaturalWidthAtTheRightEdge() {
+  const reference = await mountWrappingMenuAt({ left: '8px' })
+  const { width, height } = getMenuRect()
+  reference.unmount()
+
+  const wrapper = await mountWrappingMenuAt({ right: '8px' })
+  const rect = getMenuRect()
+
+  // flipped: its right edge sits on the anchor's right edge, at its
+  // free-opening width (up to the sub-pixel snapping layout applies to
+  // the fractional pixel left the JS engine writes)
+  expect(rect.right).toBeCloseTo(
+    getAnchor(wrapper).element.getBoundingClientRect().right,
+    0
+  )
+  expect(rect.width).toBeCloseTo(width, 0)
+  // and the text did not wrap into extra lines
+  expect(rect.height).toBe(height)
+}
+
+/**
+ * Shared by both positioning engines: re-checking the placement (what
+ * the updatePosition() method does, e.g. from QSelect on every one of
+ * its re-renders) must not lose the scroll position of a capped popup
+ * (#18534). The anchor sits mid-viewport with content that overflows
+ * the space on either side but fits the popup's CSS max-height, so the
+ * pass' natural-size measurement (caps lifted) is exactly the moment the
+ * content stops overflowing and layout clamps the scroll offset to 0.
+ */
+async function expectScrollKeptAcrossUpdatePosition() {
+  const viewportHeight = document.documentElement.clientHeight
+  const wrapper = mountMenu(void 0, {
+    default: () =>
+      h('div', {
+        style: {
+          width: '50px',
+          height: `${Math.round(viewportHeight * 0.6)}px`
+        }
+      })
+  })
+  Object.assign(getAnchor(wrapper).element.style, {
+    position: 'fixed',
+    top: `${Math.round(viewportHeight / 2)}px`,
+    left: '8px',
+    width: '100px',
+    height: '30px'
+  })
+
+  await showMenu(wrapper)
+
+  const menu = getMenu()
+  // flipped above the anchor and capped to the space there
+  expect(getMenuRect().bottom).toBeCloseTo(
+    getAnchor(wrapper).element.getBoundingClientRect().top,
+    0
+  )
+  expect(menu.style.maxHeight).not.toBe('')
+
+  menu.scrollTop = 20
+  expect(menu.scrollTop).toBe(20)
+
+  getMenuComponent(wrapper).vm.updatePosition()
+  expect(menu.scrollTop).toBe(20)
+
+  await flushAnimationFrames()
+  expect(menu.scrollTop).toBe(20)
 }
 
 async function pressEscapeKey() {
@@ -385,13 +554,12 @@ describe('[QMenu API]', () => {
         const wrapper = await mountPositionedMenu({ fit: true })
 
         // the menu is never narrower than its anchor
-        expect(getMenu().style.minWidth).toBe('100px')
-        expect(getMenu().style.minHeight).toBe('')
+        expect(getMenuRect().width).toBe(100)
+        expect(getMenuRect().height).toBe(20)
 
         await wrapper.setProps({ menuProps: {} })
-        getMenuComponent(wrapper).vm.updatePosition()
 
-        expect(getMenu().style.minWidth).toBe('')
+        expect(getMenuRect().width).toBe(50)
       })
     })
 
@@ -399,34 +567,33 @@ describe('[QMenu API]', () => {
       test('type Boolean has effect', async () => {
         await mountPositionedMenu({ cover: true })
 
-        const style = getMenu().style
-
         // the menu covers the anchor, so it takes over both of its sizes
         // and gets centered on it
-        expect(style.minWidth).toBe('100px')
-        expect(style.minHeight).toBe('50px')
-        expect(style.top).toBe('100px')
-        expect(style.left).toBe('100px')
+        const rect = getMenuRect()
+        expect(rect.top).toBe(100)
+        expect(rect.left).toBe(100)
+        expect(rect.width).toBe(100)
+        expect(rect.height).toBe(50)
       })
     })
 
     describe('[(prop)anchor]', () => {
       const anchorPositionList = [
-        ['top left', '100px', '100px'],
-        ['top middle', '100px', '150px'],
-        ['top right', '100px', '200px'],
-        ['top start', '100px', '100px'],
-        ['top end', '100px', '200px'],
-        ['center left', '125px', '100px'],
-        ['center middle', '125px', '150px'],
-        ['center right', '125px', '200px'],
-        ['center start', '125px', '100px'],
-        ['center end', '125px', '200px'],
-        ['bottom left', '150px', '100px'],
-        ['bottom middle', '150px', '150px'],
-        ['bottom right', '150px', '200px'],
-        ['bottom start', '150px', '100px'],
-        ['bottom end', '150px', '200px']
+        ['top left', 100, 100],
+        ['top middle', 100, 150],
+        ['top right', 100, 200],
+        ['top start', 100, 100],
+        ['top end', 100, 200],
+        ['center left', 125, 100],
+        ['center middle', 125, 150],
+        ['center right', 125, 200],
+        ['center start', 125, 100],
+        ['center end', 125, 200],
+        ['bottom left', 150, 100],
+        ['bottom middle', 150, 150],
+        ['bottom right', 150, 200],
+        ['bottom start', 150, 100],
+        ['bottom end', 150, 200]
       ]
 
       /**
@@ -440,8 +607,9 @@ describe('[QMenu API]', () => {
 
         await mountPositionedMenu({ anchor: propVal })
 
-        expect(getMenu().style.top).toBe(top)
-        expect(getMenu().style.left).toBe(left)
+        const rect = getMenuRect()
+        expect(rect.top).toBe(top)
+        expect(rect.left).toBe(left)
       }
 
       test('value "top left" has effect', async () => {
@@ -517,21 +685,21 @@ describe('[QMenu API]', () => {
 
     describe('[(prop)self]', () => {
       const selfPositionList = [
-        ['top left', '150px', '100px'],
-        ['top middle', '150px', '75px'],
-        ['top right', '150px', '50px'],
-        ['top start', '150px', '100px'],
-        ['top end', '150px', '50px'],
-        ['center left', '140px', '100px'],
-        ['center middle', '140px', '75px'],
-        ['center right', '140px', '50px'],
-        ['center start', '140px', '100px'],
-        ['center end', '140px', '50px'],
-        ['bottom left', '130px', '100px'],
-        ['bottom middle', '130px', '75px'],
-        ['bottom right', '130px', '50px'],
-        ['bottom start', '130px', '100px'],
-        ['bottom end', '130px', '50px']
+        ['top left', 150, 100],
+        ['top middle', 150, 75],
+        ['top right', 150, 50],
+        ['top start', 150, 100],
+        ['top end', 150, 50],
+        ['center left', 140, 100],
+        ['center middle', 140, 75],
+        ['center right', 140, 50],
+        ['center start', 140, 100],
+        ['center end', 140, 50],
+        ['bottom left', 130, 100],
+        ['bottom middle', 130, 75],
+        ['bottom right', 130, 50],
+        ['bottom start', 130, 100],
+        ['bottom end', 130, 50]
       ]
 
       /**
@@ -545,8 +713,9 @@ describe('[QMenu API]', () => {
 
         await mountPositionedMenu({ self: propVal })
 
-        expect(getMenu().style.top).toBe(top)
-        expect(getMenu().style.left).toBe(left)
+        const rect = getMenuRect()
+        expect(rect.top).toBe(top)
+        expect(rect.left).toBe(left)
       }
 
       test('value "top left" has effect', async () => {
@@ -624,8 +793,9 @@ describe('[QMenu API]', () => {
 
         // the anchor is inflated by the offset, so the default
         // "bottom start" attaching point moves accordingly
-        expect(getMenu().style.top).toBe('180px')
-        expect(getMenu().style.left).toBe('80px')
+        const rect = getMenuRect()
+        expect(rect.top).toBe(180)
+        expect(rect.left).toBe(80)
       })
 
       test('only accepts two numbers', () => {
@@ -635,51 +805,6 @@ describe('[QMenu API]', () => {
         expect(validator([10])).toBe(false)
         expect(validator(['a', 'b'])).toBe(false)
         expect(validator(void 0)).toBe(true)
-      })
-    })
-
-    describe('[(prop)scroll-target]', () => {
-      test('type Element has effect', async () => {
-        const target = document.createElement('div')
-        target.classList.add('scroll')
-        document.body.append(target)
-
-        const addSpy = vi.spyOn(target, 'addEventListener')
-
-        try {
-          const wrapper = mountMenu({ scrollTarget: target })
-          await showMenu(wrapper)
-
-          expect(addSpy).toHaveBeenCalledWith(
-            'scroll',
-            expect.any(Function),
-            expect.anything()
-          )
-        } finally {
-          target.remove()
-        }
-      })
-
-      test('type String has effect', async () => {
-        const target = document.createElement('div')
-        target.id = 'my-scroll-target'
-        target.classList.add('scroll')
-        document.body.append(target)
-
-        const addSpy = vi.spyOn(target, 'addEventListener')
-
-        try {
-          const wrapper = mountMenu({ scrollTarget: '#my-scroll-target' })
-          await showMenu(wrapper)
-
-          expect(addSpy).toHaveBeenCalledWith(
-            'scroll',
-            expect.any(Function),
-            expect.anything()
-          )
-        } finally {
-          target.remove()
-        }
       })
     })
 
@@ -694,8 +819,262 @@ describe('[QMenu API]', () => {
         )
 
         // the menu latches onto the pointer instead of onto the anchor
-        expect(getMenu().style.top).toBe('301px')
-        expect(getMenu().style.left).toBe('200px')
+        const rect = getMenuRect()
+        expect(rect.top).toBe(300)
+        expect(rect.left).toBe(200)
+      })
+
+      test('is ignored by hover-triggered shows', async () => {
+        const wrapper = mountMenu({ touchPosition: true, hover: true })
+        setAnchorRect(wrapper)
+
+        // a pointerenter only carries the point where the pointer crossed
+        // the target's edge, so the menu keeps anchoring onto the target;
+        // the PointerEvent constructor is needed for the read-only coords
+        getAnchor(wrapper).element.dispatchEvent(
+          new PointerEvent('pointerenter', {
+            pointerType: 'mouse',
+            clientX: 130,
+            clientY: 110
+          })
+        )
+        await flushPromises()
+        await vi.runAllTimersAsync()
+
+        const rect = getMenuRect()
+        expect(rect.top).toBe(150)
+        expect(rect.left).toBe(100)
+      })
+    })
+
+    describe('[(prop)hover]', () => {
+      test('type Boolean has effect', async () => {
+        const wrapper = mountMenu({ hover: true })
+
+        await getAnchor(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await flushPromises()
+
+        expect(getMenu()).not.toBeNull()
+
+        await getAnchor(wrapper).trigger('pointerleave', {
+          pointerType: 'mouse'
+        })
+        await vi.runAllTimersAsync()
+
+        expect(getMenu()).toBeNull()
+      })
+
+      test('a touch pointer does not trigger it', async () => {
+        const wrapper = mountMenu({ hover: true })
+
+        await getAnchor(wrapper).trigger('pointerenter', {
+          pointerType: 'touch'
+        })
+        await vi.runAllTimersAsync()
+
+        expect(getMenu()).toBeNull()
+      })
+
+      test('moving the pointer into the menu keeps it open', async () => {
+        const wrapper = mountMenu({ hover: true })
+
+        await getAnchor(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await flushPromises()
+
+        // the relatedTarget of a real crossing is the element entered
+        getAnchor(wrapper).element.dispatchEvent(
+          new PointerEvent('pointerleave', {
+            pointerType: 'mouse',
+            relatedTarget: getMenu()
+          })
+        )
+        await vi.runAllTimersAsync()
+
+        expect(getMenu()).not.toBeNull()
+
+        getMenu().dispatchEvent(
+          new PointerEvent('pointerleave', { pointerType: 'mouse' })
+        )
+        await vi.runAllTimersAsync()
+
+        expect(getMenu()).toBeNull()
+      })
+
+      // a hosting QField listens for these to keep its focused state
+      // while a popup owns focus (see use-portal); a hover-shown menu
+      // owns none, so the field must hear nothing
+      test('leaves a hosting field alone (no popup-show/popup-hide)', async () => {
+        const wrapper = mountMenu({ hover: true })
+        const heard = []
+        const onEvt = evt => heard.push(evt.type)
+
+        getAnchor(wrapper).element.addEventListener('popup-show', onEvt)
+        getAnchor(wrapper).element.addEventListener('popup-hide', onEvt)
+
+        await getAnchor(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await flushPromises()
+        expect(getMenu()).not.toBeNull()
+
+        await getAnchor(wrapper).trigger('pointerleave', {
+          pointerType: 'mouse'
+        })
+        await vi.runAllTimersAsync()
+        expect(getMenu()).toBeNull()
+
+        expect(heard).toEqual([])
+
+        // a regular open of the same menu does notify
+        await showMenu(wrapper, new MouseEvent('click'))
+        await hideMenu(wrapper)
+
+        expect(heard).toEqual(['popup-show', 'popup-hide'])
+      })
+
+      test('does not steal focus when opening', async () => {
+        const button = document.createElement('button')
+        document.body.append(button)
+
+        try {
+          const wrapper = mountMenu({ hover: true })
+
+          button.focus()
+          expect(document.activeElement).toBe(button)
+
+          await getAnchor(wrapper).trigger('pointerenter', {
+            pointerType: 'mouse'
+          })
+          await vi.runAllTimersAsync()
+
+          expect(getMenu()).not.toBeNull()
+          expect(document.activeElement).toBe(button)
+        } finally {
+          button.remove()
+        }
+      })
+
+      test('activating the anchor closes a hover-shown menu', async () => {
+        const wrapper = mountMenu({ hover: true })
+
+        await getAnchor(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await vi.runAllTimersAsync()
+        expect(getMenu()).not.toBeNull()
+
+        await getAnchor(wrapper).trigger('click')
+        await vi.runAllTimersAsync()
+
+        expect(getMenu()).toBeNull()
+      })
+
+      test('clicking the anchor while hover showing a menu should keep it', async () => {
+        const wrapper = mountMenu({ hover: true })
+
+        await getAnchor(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await getAnchor(wrapper).trigger('click')
+        await vi.runAllTimersAsync()
+        expect(getMenu()).not.toBeNull()
+
+        await getAnchor(wrapper).trigger('click')
+        await vi.runAllTimersAsync()
+
+        expect(getMenu()).toBeNull()
+      })
+
+      test('closes the whole hover chain when the pointer leaves a submenu', async () => {
+        activeWrapper = mount(
+          defineComponent({
+            setup() {
+              return () =>
+                h('div', { class: 'my-anchor' }, [
+                  h(
+                    QMenu,
+                    { class: 'outer-menu', hover: true, modelValue: true },
+                    () => [
+                      h('div', { class: 'inner-anchor' }, [
+                        h(
+                          QMenu,
+                          {
+                            class: 'inner-menu',
+                            hover: true,
+                            modelValue: true
+                          },
+                          () => h('div', { class: 'my-item' }, 'Item')
+                        )
+                      ])
+                    ]
+                  )
+                ])
+            }
+          }),
+          { attachTo: document.body }
+        )
+
+        await flushPromises()
+        await vi.runAllTimersAsync()
+
+        expect(document.querySelector('.inner-menu')).not.toBeNull()
+
+        // leaving the inner menu for a foreign target must close the
+        // outer menu too, even though its own DOM saw no pointer event
+        document
+          .querySelector('.inner-menu')
+          .dispatchEvent(
+            new PointerEvent('pointerleave', { pointerType: 'mouse' })
+          )
+        await vi.runAllTimersAsync()
+
+        expect(document.querySelector('.inner-menu')).toBeNull()
+        expect(document.querySelector('.outer-menu')).toBeNull()
+      })
+    })
+
+    describe('[(prop)hover-delay]', () => {
+      test('type Number has effect', async () => {
+        const wrapper = mountMenu({ hover: true, hoverDelay: 500 })
+
+        await getAnchor(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await vi.advanceTimersByTimeAsync(499)
+
+        expect(getMenu()).toBeNull()
+
+        await vi.advanceTimersByTimeAsync(1)
+        await flushPromises()
+
+        expect(getMenu()).not.toBeNull()
+      })
+    })
+
+    describe('[(prop)hover-hide-delay]', () => {
+      test('type Number has effect', async () => {
+        const wrapper = mountMenu({ hover: true, hoverHideDelay: 500 })
+
+        await getAnchor(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await vi.runAllTimersAsync()
+        expect(getMenu()).not.toBeNull()
+
+        await getAnchor(wrapper).trigger('pointerleave', {
+          pointerType: 'mouse'
+        })
+        await vi.advanceTimersByTimeAsync(499)
+
+        expect(getMenu()).not.toBeNull()
+
+        await vi.runAllTimersAsync()
+
+        expect(getMenu()).toBeNull()
       })
     })
 
@@ -1108,18 +1487,22 @@ describe('[QMenu API]', () => {
       test('should be callable', async () => {
         const wrapper = await mountPositionedMenu()
 
-        // the anchor moved without any of the watched dependencies changing
+        // an anchor move needs no call at all: the browser tracks it
         Object.assign(getAnchor(wrapper).element.style, {
           top: '200px',
           left: '300px'
         })
 
+        let rect = getMenuRect()
+        expect(rect.top).toBe(250)
+        expect(rect.left).toBe(300)
+
+        // the method stays callable (re-checks the placement decision)
         expect(getMenuComponent(wrapper).vm.updatePosition()).toBeUndefined()
 
-        const style = getMenu().style
-        expect(style.visibility).toBe('visible')
-        expect(style.top).toBe('250px')
-        expect(style.left).toBe('300px')
+        rect = getMenuRect()
+        expect(rect.top).toBe(250)
+        expect(rect.left).toBe(300)
       })
     })
 
@@ -1169,6 +1552,715 @@ describe('[QMenu API]', () => {
 
         expect(menu.vm.contentEl).toBeInstanceOf(Element)
         expect(menu.vm.contentEl).toBe(getMenu())
+      })
+    })
+  })
+
+  describe('[Generic]', () => {
+    describe('viewport boundary', () => {
+      test('keeps its natural width when flipped away from the right edge', async () => {
+        await expectNaturalWidthAtTheRightEdge()
+      })
+
+      test('keeps its scroll position when the placement is re-checked', async () => {
+        await expectScrollKeptAcrossUpdatePosition()
+      })
+    })
+
+    describe('JS positioning fallback', () => {
+      // what browsers without CSS anchor positioning support get
+      beforeEach(() => {
+        engineOverride.forceJsFallback = true
+      })
+
+      test('keeps its natural width when flipped away from the right edge', async () => {
+        await expectNaturalWidthAtTheRightEdge()
+      })
+
+      test('keeps its scroll position when the placement is re-checked', async () => {
+        await expectScrollKeptAcrossUpdatePosition()
+      })
+
+      test('positions the menu through the JS engine', async () => {
+        const wrapper = await mountPositionedMenu()
+
+        // same resulting geometry as the native path (bottom start /
+        // top start), reached through measured pixel styles instead
+        // of anchor() insets
+        const rect = getMenuRect()
+        expect(rect.top).toBe(150)
+        expect(rect.left).toBe(100)
+
+        expect(getMenu().classList.contains('q-position-engine')).toBe(true)
+        expect(getMenu().style.top).toBe('150px')
+        expect(
+          getAnchor(wrapper).element.style.getPropertyValue('anchor-name')
+        ).toBe('')
+      })
+
+      test('follows visual viewport moves while showing on iOS', async () => {
+        // iOS scrolls only the visual viewport while the soft keyboard is
+        // open (or while pinch-zoomed): no window scroll event fires, yet
+        // position:fixed popups stay pinned to the pre-scroll viewport,
+        // so the popup must re-anchor on visual viewport scroll/resize
+        const originalIos = client.is.ios
+        client.is.ios = true
+
+        const addSpy = vi.spyOn(window.visualViewport, 'addEventListener')
+        const removeSpy = vi.spyOn(window.visualViewport, 'removeEventListener')
+
+        try {
+          const wrapper = mountMenu()
+          await showMenu(wrapper)
+
+          for (const evt of ['scroll', 'resize']) {
+            expect(addSpy).toHaveBeenCalledWith(
+              evt,
+              expect.any(Function),
+              expect.anything()
+            )
+          }
+
+          await hideMenu(wrapper)
+
+          for (const evt of ['scroll', 'resize']) {
+            expect(removeSpy).toHaveBeenCalledWith(
+              evt,
+              expect.any(Function),
+              expect.anything()
+            )
+          }
+        } finally {
+          client.is.ios = originalIos
+        }
+      })
+
+      test('follows an anchor still moving while the enter transition plays', async () => {
+        const wrapper = mountMenu(void 0, {
+          default: () => h('div', { style: { width: '50px', height: '20px' } })
+        })
+        setAnchorRect(wrapper)
+
+        getMenuComponent(wrapper).vm.show()
+        await flushPromises()
+        // let the show tick take the initial measurement
+        await vi.advanceTimersByTimeAsync(50)
+
+        // positioned below the anchor (bottom start / top start)
+        expect(getMenu().style.top).toBe('150px')
+
+        // the anchor springs to a new spot mid-transition, the way a push
+        // QBtn returns from its :active translate after the opening click
+        getAnchor(wrapper).element.style.top = '120px'
+        // ...and the menu follows while still inside the enter transition
+        await vi.advanceTimersByTimeAsync(100)
+
+        expect(getMenu().style.top).toBe('170px')
+
+        await vi.runAllTimersAsync()
+      })
+
+      test('stays glued to its scrolled-away anchor instead of staying visible', async () => {
+        // the anchor sits inside a small scrollable container
+        const container = document.createElement('div')
+        Object.assign(container.style, {
+          position: 'fixed',
+          top: '0px',
+          left: '0px',
+          width: '300px',
+          height: '200px',
+          overflow: 'auto'
+        })
+        document.body.append(container)
+
+        const wrapper = mountMenu(
+          void 0,
+          {
+            default: () =>
+              h('div', { style: { width: '50px', height: '20px' } })
+          },
+          { attachTo: container }
+        )
+        Object.assign(getAnchor(wrapper).element.style, {
+          marginTop: '100px',
+          width: '100px',
+          height: '50px'
+        })
+        const spacer = document.createElement('div')
+        spacer.style.height = '1000px'
+        container.append(spacer)
+
+        try {
+          await showMenu(wrapper)
+
+          const before = getMenuRect()
+
+          // any scrolling container is tracked, no helper class involved
+          container.scrollTop = 60
+          container.dispatchEvent(new Event('scroll'))
+          expect(getMenuRect().top).toBe(before.top - 60)
+
+          // scrolling the anchor out takes the menu out with it: the
+          // frozen placement is re-expressed, never re-clamped on screen
+          container.scrollTop = 500
+          container.dispatchEvent(new Event('scroll'))
+          expect(getMenuRect().top).toBe(before.top - 500)
+        } finally {
+          container.remove()
+        }
+      })
+
+      test('a cover menu follows its scrolled-away anchor too', async () => {
+        // cover means centered-on-centered axes (the anchor-center path),
+        // whose viewport shift must stay frozen while scrolling
+        const container = document.createElement('div')
+        Object.assign(container.style, {
+          position: 'fixed',
+          top: '0px',
+          left: '0px',
+          width: '300px',
+          height: '200px',
+          overflow: 'auto'
+        })
+        document.body.append(container)
+
+        const wrapper = mountMenu(
+          { cover: true },
+          {
+            default: () =>
+              h('div', { style: { width: '50px', height: '20px' } })
+          },
+          { attachTo: container }
+        )
+        Object.assign(getAnchor(wrapper).element.style, {
+          marginTop: '100px',
+          width: '100px',
+          height: '50px'
+        })
+        const spacer = document.createElement('div')
+        spacer.style.height = '1000px'
+        container.append(spacer)
+
+        try {
+          await showMenu(wrapper)
+
+          const before = getMenuRect()
+          // covering the anchor's box
+          expect(before.top).toBe(100)
+
+          container.scrollTop = 500
+          container.dispatchEvent(new Event('scroll'))
+
+          // stays glued off-screen instead of pinning to the viewport
+          expect(getMenuRect().top).toBe(before.top - 500)
+        } finally {
+          container.remove()
+        }
+      })
+
+      test('ignores scrolls originating inside its own content', async () => {
+        const wrapper = await mountPositionedMenu()
+        expect(getMenu().style.top).toBe('150px')
+
+        // the anchor moves, but nothing has announced it yet
+        getAnchor(wrapper).element.style.top = '120px'
+
+        // a scroll inside the menu's own scrollable content is no signal
+        getMenu().dispatchEvent(new Event('scroll'))
+        expect(getMenu().style.top).toBe('150px')
+
+        // ...while a scroll anywhere else is
+        document.dispatchEvent(new Event('scroll'))
+        expect(getMenu().style.top).toBe('170px')
+      })
+    })
+
+    test('stays open when clicking inside a fullscreen-detached child (issue #18512)', async () => {
+      const wrapper = mountMenu(
+        {},
+        { default: () => h(FullscreenChild, { fullscreen: true }) }
+      )
+
+      await showMenu(wrapper)
+
+      const el = document.body.querySelector('[data-test="fullscreen-input"]')
+
+      // useFullscreen() has moved the child out of the menu
+      expect(el.closest('.q-menu')).toBeNull()
+
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      // ...yet it still belongs to the menu, so the click is not "outside"
+      expect(getMenu()).not.toBeNull()
+
+      document.body.dispatchEvent(new MouseEvent('mousedown'))
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      // ...while a click genuinely outside still closes it
+      expect(getMenu()).toBeNull()
+    })
+
+    test('dismissal swallows a tap but lets a mouse press through', async () => {
+      const wrapper = mountMenu()
+      await showMenu(wrapper)
+
+      const touchstart = new TouchEvent('touchstart', {
+        bubbles: true,
+        cancelable: true,
+        touches: [new Touch({ identifier: 1, target: document.body })]
+      })
+      document.body.dispatchEvent(touchstart)
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      expect(getMenu()).toBeNull()
+      // the tap must not click through to the element underneath
+      expect(touchstart.defaultPrevented).toBe(true)
+
+      await showMenu(wrapper)
+
+      const mousedown = new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true
+      })
+      document.body.dispatchEvent(mousedown)
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      expect(getMenu()).toBeNull()
+      // desktop convention: the dismissing press reaches the page
+      expect(mousedown.defaultPrevented).toBe(false)
+    })
+
+    test('a press on a dialog backdrop closes the menu, not the dialog', async () => {
+      activeWrapper = mount(
+        defineComponent({
+          setup() {
+            return () =>
+              h(QDialog, { modelValue: true }, () =>
+                h('div', { class: 'my-anchor', tabindex: 0 }, [
+                  h(QMenu, {}, () => 'Menu content')
+                ])
+              )
+          }
+        }),
+        { attachTo: document.body }
+      )
+
+      await flushPromises()
+      await vi.runAllTimersAsync()
+      await showMenu(activeWrapper)
+
+      const pressBackdrop = () =>
+        document
+          .querySelector('.q-dialog__backdrop')
+          .dispatchEvent(
+            new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+          )
+
+      pressBackdrop()
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      expect(getMenu()).toBeNull()
+      expect(document.querySelector('.q-dialog')).not.toBeNull()
+
+      pressBackdrop()
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      expect(document.querySelector('.q-dialog')).toBeNull()
+    })
+
+    test.each([
+      ['CSS anchor positioning', false],
+      ['the JS positioning fallback', true]
+    ])(
+      'follows its anchor through a fullscreen detach and back on %s (issue #18513)',
+      async (_, forceJsFallback) => {
+        engineOverride.forceJsFallback = forceJsFallback
+        activeWrapper = mount(
+          defineComponent({
+            setup() {
+              return () =>
+                h(
+                  FullscreenAnchorHost,
+                  // positioned, and pushed away from where the detached
+                  // geometry will land so the reposition is observable
+                  { style: 'position: relative; margin-top: 300px' },
+                  () =>
+                    h(
+                      'div',
+                      {
+                        class: 'my-anchor',
+                        style:
+                          'position: absolute; top: 40px; left: 30px;' +
+                          ' width: 100px; height: 50px'
+                      },
+                      [
+                        h(QMenu, null, () =>
+                          h('div', { style: 'width: 50px; height: 20px' })
+                        )
+                      ]
+                    )
+                )
+            }
+          }),
+          { attachTo: document.body }
+        )
+        const wrapper = activeWrapper
+
+        await showMenu(wrapper)
+
+        const beforeTop = getMenuRect().top
+        const host = wrapper.findComponent(FullscreenAnchorHost)
+
+        host.vm.setFullscreen()
+        // the suite loads no CSS, so emulate what the fullscreen class does
+        // to the detached element
+        Object.assign(host.vm.$el.style, {
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          width: '500px',
+          height: '400px',
+          margin: '0'
+        })
+        await flushAnimationFrames()
+
+        // the menu is still open...
+        const menuEl = getMenu()
+        expect(menuEl).not.toBeNull()
+
+        // ...repositioned onto the moved anchor (bottom start / top start)...
+        const anchorRect = getAnchor(wrapper).element.getBoundingClientRect()
+        expect(getMenuRect().top).toBe(anchorRect.bottom)
+        expect(getMenuRect().left).toBe(anchorRect.left)
+        expect(getMenuRect().top).not.toBe(beforeTop)
+
+        // ...and its portal paints above the detached element
+        // (same z-index: later in DOM order wins)
+        let portalNode = menuEl
+        while (portalNode.parentElement !== document.body) {
+          portalNode = portalNode.parentElement
+        }
+        expect(
+          host.vm.$el.compareDocumentPosition(portalNode) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy()
+
+        host.vm.exitFullscreen()
+        host.vm.$el.style.cssText = 'position: relative; margin-top: 300px'
+        await flushAnimationFrames()
+
+        // restored: still open, tracking the anchor at its original position
+        const restoredRect = getAnchor(wrapper).element.getBoundingClientRect()
+        expect(getMenu()).not.toBeNull()
+        expect(getMenuRect().top).toBe(restoredRect.bottom)
+      }
+    )
+
+    test('follows an anchor still moving while the enter transition plays', async () => {
+      const wrapper = mountMenu(void 0, {
+        default: () => h('div', { style: { width: '50px', height: '20px' } })
+      })
+      setAnchorRect(wrapper)
+
+      getMenuComponent(wrapper).vm.show()
+      await flushPromises()
+      // let the show tick run the placement pass
+      await vi.advanceTimersByTimeAsync(50)
+
+      // positioned below the anchor (bottom start / top start)
+      expect(getMenuRect().top).toBe(150)
+
+      // the anchor springs to a new spot mid-transition, the way a push
+      // QBtn returns from its :active translate after the opening click;
+      // the browser re-anchors without any engine involvement
+      getAnchor(wrapper).element.style.top = '120px'
+
+      expect(getMenuRect().top).toBe(170)
+
+      await vi.runAllTimersAsync()
+    })
+
+    test('finishes a pending hide when its keep-alive page deactivates', async () => {
+      const router = await getRouter(['/home', '/account'])
+      const onHide = vi.fn()
+      const getPortalEl = () =>
+        document.body.querySelector('[id^="q-portal--menu"]')
+
+      const KeptAlivePage = defineComponent({
+        name: 'KeptAlivePage',
+        setup() {
+          return () =>
+            h('div', { class: 'my-anchor', tabindex: 0 }, [
+              h(QMenu, { modelValue: true, onHide }, () => 'Menu content')
+            ])
+        }
+      })
+
+      const Host = defineComponent({
+        name: 'Host',
+        setup() {
+          const route = useRoute()
+
+          return () =>
+            h(KeepAlive, null, {
+              default: () => (route.path === '/home' ? h(KeptAlivePage) : null)
+            })
+        }
+      })
+
+      await router.push('/home')
+
+      activeWrapper = mount(Host, {
+        attachTo: document.body,
+        global: {
+          plugins: [router]
+        }
+      })
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      expect(getPortalEl()).not.toBe(null)
+
+      // routing away hides the menu and deactivates the page holding it
+      // within the same tick, which cancels the hide transition's timer
+      await router.push('/account')
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      expect(onHide).toHaveBeenCalledTimes(1)
+      expect(getPortalEl()).toBe(null)
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('claims no ARIA role by default, forwards a declared one', async () => {
+      // the popup hosts arbitrary content, so it must not claim
+      // role="menu" (WAI-ARIA allows only menuitem* children in it)
+      const wrapper = mountMenu()
+      await showMenu(wrapper)
+
+      expect(getMenu().hasAttribute('role')).toBe(false)
+
+      wrapper.unmount()
+
+      const roleWrapper = mountMenu({ role: 'menu' })
+      await showMenu(roleWrapper)
+
+      expect(getMenu().getAttribute('role')).toBe('menu')
+    })
+
+    async function mountMenuInDialog(dialogProps) {
+      activeWrapper = mount(
+        defineComponent({
+          setup() {
+            return () =>
+              h(QDialog, { modelValue: true, ...dialogProps }, () =>
+                h('div', { class: 'my-anchor', tabindex: 0 }, [
+                  h(QMenu, {}, () => 'Menu content')
+                ])
+              )
+          }
+        }),
+        { attachTo: document.body }
+      )
+
+      await flushPromises()
+      await vi.runAllTimersAsync()
+
+      await showMenu(activeWrapper)
+
+      return activeWrapper
+    }
+
+    test('renders inside the aria-modal dialog holding its anchor', async () => {
+      await mountMenuInDialog()
+
+      const dialogEl = document.querySelector('[role="dialog"]')
+
+      // an aria-modal dialog makes assistive tech ignore everything
+      // outside of the dialog's element, so the menu must be inside
+      expect(dialogEl.getAttribute('aria-modal')).toBe('true')
+      expect(dialogEl.contains(getMenu())).toBe(true)
+
+      // the dialog's root element is no-pointer-events
+      expect(getComputedStyle(getMenu()).pointerEvents).not.toBe('none')
+    })
+
+    test('renders outside of a seamless dialog', async () => {
+      await mountMenuInDialog({ seamless: true })
+
+      const dialogEl = document.querySelector('[role="dialog"]')
+
+      expect(dialogEl.getAttribute('aria-modal')).toBe('false')
+      expect(getMenu()).not.toBeNull()
+      expect(dialogEl.contains(getMenu())).toBe(false)
+    })
+
+    // the popup renders through a portal, so letting TAB run its default
+    // course would drop focus out of the page instead of continuing the
+    // page's sequence -- WAI-ARIA expects the popup to close instead
+    describe('TAB moving out of the popup', () => {
+      function mountMenuWithButtons(props) {
+        return mountMenu(props, {
+          default: () => [
+            h('button', { class: 'first-action' }, 'first'),
+            h('button', { class: 'last-action' }, 'last')
+          ]
+        })
+      }
+
+      async function pressTabKey(el, shiftKey) {
+        el.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            keyCode: 9,
+            shiftKey: shiftKey === true,
+            bubbles: true
+          })
+        )
+        await flushPromises()
+        await vi.runAllTimersAsync()
+      }
+
+      test('closes it and hands focus back to the anchor', async () => {
+        const wrapper = mountMenuWithButtons()
+        const anchorEl = getAnchor(wrapper).element
+
+        anchorEl.focus()
+        await showMenu(wrapper)
+
+        const lastEl = document.querySelector('.last-action')
+        lastEl.focus()
+        await pressTabKey(lastEl)
+
+        expect(getMenu()).toBeNull()
+        expect(document.activeElement).toBe(anchorEl)
+      })
+
+      test('closes it on Shift+TAB from the first tabbable', async () => {
+        const wrapper = mountMenuWithButtons()
+        const anchorEl = getAnchor(wrapper).element
+
+        anchorEl.focus()
+        await showMenu(wrapper)
+
+        const firstEl = document.querySelector('.first-action')
+        firstEl.focus()
+        await pressTabKey(firstEl, true)
+
+        expect(getMenu()).toBeNull()
+        expect(document.activeElement).toBe(anchorEl)
+      })
+
+      test('keeps it open while focus stays inside', async () => {
+        const wrapper = mountMenuWithButtons()
+
+        getAnchor(wrapper).element.focus()
+        await showMenu(wrapper)
+
+        const firstEl = document.querySelector('.first-action')
+        firstEl.focus()
+        await pressTabKey(firstEl)
+
+        expect(getMenu()).not.toBeNull()
+      })
+
+      test('closes a popup holding no tabbable element', async () => {
+        const wrapper = mountMenu()
+        const anchorEl = getAnchor(wrapper).element
+
+        anchorEl.focus()
+        await showMenu(wrapper)
+
+        // the popup itself receives focus when it holds nothing focusable
+        expect(document.activeElement).toBe(getMenu())
+        await pressTabKey(getMenu())
+
+        expect(getMenu()).toBeNull()
+        expect(document.activeElement).toBe(anchorEl)
+      })
+
+      test('leaves a persistent popup alone', async () => {
+        const wrapper = mountMenu({ persistent: true })
+
+        getAnchor(wrapper).element.focus()
+        await showMenu(wrapper)
+        await pressTabKey(getMenu())
+
+        expect(getMenu()).not.toBeNull()
+      })
+    })
+
+    // the anchor is the control that opens the popup, but it is devland
+    // markup, so QMenu maintains its disclosure ARIA from the outside
+    describe('anchor ARIA', () => {
+      function mountMenuOnButton(menuProps) {
+        activeWrapper = mount(
+          defineComponent({
+            props: { menuProps: Object },
+            setup(componentProps) {
+              return () =>
+                h('button', { class: 'my-anchor' }, [
+                  h(QMenu, componentProps.menuProps, () => 'Menu content')
+                ])
+            }
+          }),
+          {
+            props: { menuProps },
+            attachTo: document.body
+          }
+        )
+
+        return activeWrapper
+      }
+
+      test('tracks the popup state on the anchor', async () => {
+        const wrapper = mountMenuOnButton()
+        const anchorEl = getAnchor(wrapper).element
+
+        expect(anchorEl.getAttribute('aria-expanded')).toBe('false')
+
+        await showMenu(wrapper)
+
+        expect(anchorEl.getAttribute('aria-expanded')).toBe('true')
+
+        await hideMenu(wrapper)
+
+        expect(anchorEl.getAttribute('aria-expanded')).toBe('false')
+      })
+
+      test('mirrors a declared popup role as aria-haspopup', () => {
+        const wrapper = mountMenuOnButton({ role: 'menu' })
+
+        expect(getAnchor(wrapper).element.getAttribute('aria-haspopup')).toBe(
+          'menu'
+        )
+      })
+
+      test('claims no aria-haspopup for a role-less popup', () => {
+        const wrapper = mountMenuOnButton()
+
+        expect(getAnchor(wrapper).element.hasAttribute('aria-haspopup')).toBe(
+          false
+        )
+      })
+
+      test('leaves an anchor that is not a control alone', async () => {
+        // the default anchor of this suite is a plain <div>, which
+        // computes to the "generic" role
+        const wrapper = mountMenu({ role: 'menu' })
+        const anchorEl = getAnchor(wrapper).element
+
+        await showMenu(wrapper)
+
+        expect(anchorEl.hasAttribute('aria-expanded')).toBe(false)
+        expect(anchorEl.hasAttribute('aria-haspopup')).toBe(false)
       })
     })
   })

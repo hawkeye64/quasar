@@ -15,6 +15,11 @@ export default {
     search: 'Sök',
     filter: 'Filtrera',
     refresh: 'Uppdatera',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Intervall',
+    noValue: 'Inget värde',
+    resize: 'Ändra storlek',
     expand: label => (label ? `Utöka "${label}"` : 'Bygga ut'),
     collapse: label => (label ? `Komprimera "${label}"` : 'Kollaps')
   },
@@ -35,7 +40,11 @@ export default {
     nextYear: 'Nästa år',
     today: 'I dag',
     prevRangeYears: range => `Föregående ${range} år`,
-    nextRangeYears: range => `Nästa ${range} år`
+    nextRangeYears: range => `Nästa ${range} år`,
+    hour: 'Timme',
+    minute: 'Minut',
+    second: 'Sekund',
+    now: 'Aktuell tid'
   },
   table: {
     noData: 'Ingen data tillgänglig',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Rader per sida:',
     allRows: 'Alla',
     pagination: (start, end, total) => start + '-' + end + ' av ' + total,
-    columns: 'Kolumner'
+    columns: 'Kolumner',
+    selectAllRows: 'Markera alla rader',
+    selectRow: 'Markera rad'
   },
   pagination: {
+    label: 'Sidnumrering',
     first: 'Första sidan',
     prev: 'Föregående sida',
     next: 'Nästa sida',
     last: 'Sista sidan'
   },
+  carousel: {
+    prevSlide: 'Föregående bild',
+    nextSlide: 'Nästa bild'
+  },
+  colorPicker: {
+    spectrum: 'Spektrum',
+    tune: 'Finjustering',
+    palette: 'Palett',
+    value: 'Färgvärde',
+    hue: 'Nyans',
+    alpha: 'Opacitet',
+    saturation: 'Mättnad',
+    brightness: 'Ljusstyrka'
+  },
+  uploader: {
+    addFiles: 'Välj filer',
+    upload: 'Ladda upp filer',
+    abort: 'Avbryt uppladdningen',
+    removeQueued: 'Ta bort köade filer',
+    removeUploaded: 'Ta bort uppladdade filer',
+    removeFile: 'Ta bort fil'
+  },
   editor: {
+    toolbar: 'Redigerarens verktygsfält',
     url: 'URL',
     bold: 'Fet',
     italic: 'Kursiv',

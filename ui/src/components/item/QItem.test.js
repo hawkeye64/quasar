@@ -1,8 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { h } from 'vue'
 import { describe, expect, test, vi } from 'vitest'
 
 import { getRouter } from 'testing/runtime/router.js'
 import QItem from './QItem.js'
+import QList from './QList.js'
 
 describe('[QItem API]', () => {
   describe('[Props]', () => {
@@ -224,7 +226,7 @@ describe('[QItem API]', () => {
         const wrapper = mount(QItem)
         const target = wrapper.get('.q-item')
 
-        expect(target.attributes('role')).toBe('listitem')
+        expect(target.attributes('role')).toBeUndefined()
 
         await wrapper.setProps({ clickable: true })
 
@@ -232,6 +234,33 @@ describe('[QItem API]', () => {
         expect(target.attributes('role')).toBe('button')
         expect(target.attributes('tabindex')).toBe('0')
         expect(wrapper.find('.q-focus-helper').exists()).toBe(true)
+      })
+
+      test('a click listener implies clickability when the prop is not set', async () => {
+        const onClick = vi.fn()
+        const wrapper = mount(QItem, {
+          props: { onClick }
+        })
+        const target = wrapper.get('.q-item')
+
+        expect(target.classes()).toContain('q-item--clickable')
+        expect(target.attributes('role')).toBe('button')
+        expect(target.attributes('tabindex')).toBe('0')
+
+        await target.trigger('click')
+
+        expect(onClick).toHaveBeenCalledTimes(1)
+      })
+
+      test('an explicit false wins over a click listener', () => {
+        const wrapper = mount(QItem, {
+          props: { clickable: false, onClick: () => {} }
+        })
+        const target = wrapper.get('.q-item')
+
+        expect(target.classes()).not.toContain('q-item--clickable')
+        expect(target.attributes('role')).toBeUndefined()
+        expect(target.attributes('tabindex')).toBeUndefined()
       })
     })
 
@@ -282,6 +311,23 @@ describe('[QItem API]', () => {
         })
 
         expect(wrapper.get('.q-item').attributes('tabindex')).toBe('-1')
+      })
+    })
+
+    describe('[(prop)role]', () => {
+      test('type String has effect', async () => {
+        const wrapper = mount(QItem, {
+          props: { clickable: true, role: 'menuitemcheckbox' }
+        })
+
+        const target = wrapper.get('.q-item')
+
+        expect(target.attributes('role')).toBe('menuitemcheckbox')
+
+        await wrapper.setProps({ role: 'option' })
+        await flushPromises()
+
+        expect(target.attributes('role')).toBe('option')
       })
     })
 
@@ -349,21 +395,96 @@ describe('[QItem API]', () => {
     describe('[(event)click]', () => {
       test('is emitting', async () => {
         const router = await getRouter('/destination')
+        const onClick = vi.fn()
         const wrapper = mount(QItem, {
-          props: { to: '/destination' },
+          props: { to: '/destination', onClick },
           global: { plugins: [router] }
         })
 
         await wrapper.trigger('click')
 
-        const eventList = wrapper.emitted()
-        expect(eventList).toHaveProperty('click')
-        expect(eventList.click).toHaveLength(1)
+        expect(onClick).toHaveBeenCalledTimes(1)
 
-        const [evt, go] = eventList.click[0]
+        const [evt, go] = onClick.mock.calls[0]
         expect(evt).toBeInstanceOf(Event)
         expect(go).toBeTypeOf('function')
       })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('a non-interactive item carries no pointer listeners', async () => {
+      const onClick = vi.fn()
+      const wrapper = mount(QItem, {
+        props: { clickable: false, onClick }
+      })
+      const target = wrapper.get('.q-item')
+
+      // WCAG checkers flag click listeners on non-focusable elements,
+      // so a non-clickable item must not react to activation
+      await target.trigger('click')
+      await target.trigger('keydown', { keyCode: 13 })
+      await target.trigger('keyup', { keyCode: 13 })
+
+      expect(onClick).not.toHaveBeenCalled()
+      expect(target.attributes('tabindex')).toBeUndefined()
+
+      // bubbled key events still reach the "keyup" emit contract
+      expect(wrapper.emitted('keyup')).toHaveLength(1)
+    })
+
+    test('a clickable item activates through the keyboard', async () => {
+      const onClick = vi.fn()
+      const wrapper = mount(QItem, {
+        props: { clickable: true, onClick },
+        attachTo: document.body
+      })
+      const target = wrapper.get('.q-item')
+
+      target.element.focus()
+      await target.trigger('keyup', { keyCode: 13 })
+
+      expect(onClick).toHaveBeenCalledTimes(1)
+    })
+
+    test('derives its default ARIA role from the wrapping QList', () => {
+      const mountInList = (listProps, itemProps) =>
+        mount(QList, {
+          props: listProps,
+          slots: { default: () => h(QItem, itemProps) }
+        }).get('.q-item')
+
+      // the listitem role requires a list ancestor (WAI-ARIA),
+      // so only a default-role QList grants it
+      expect(mountInList({}, {}).attributes('role')).toBe('listitem')
+      expect(mount(QItem).get('.q-item').attributes('role')).toBeUndefined()
+
+      // role="menu" allows only menuitem* children (WAI-ARIA):
+      // actionable items become menuitems, the rest stays generic
+      const menu = { role: 'menu' }
+      expect(mountInList(menu, { clickable: true }).attributes('role')).toBe(
+        'menuitem'
+      )
+      expect(
+        mountInList(menu, { clickable: true, disable: true }).attributes('role')
+      ).toBe('menuitem')
+      expect(
+        mountInList(menu, { href: 'https://quasar.dev' }).attributes('role')
+      ).toBe('menuitem')
+      expect(mountInList(menu, {}).attributes('role')).toBeUndefined()
+
+      // a per-item role always wins over the derived one
+      expect(
+        mountInList(menu, {
+          clickable: true,
+          role: 'menuitemradio'
+        }).attributes('role')
+      ).toBe('menuitemradio')
+
+      // any other list role stops items from claiming a default role
+      expect(
+        mountInList({ role: 'listbox' }, {}).attributes('role')
+      ).toBeUndefined()
     })
   })
 })

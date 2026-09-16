@@ -4,9 +4,8 @@ desc: A set of miscellaneous Quasar methods for debouncing or throttling functio
 keys: openURL,copyToClipboard,exportFile,debounce,frameDebounce,throttle,extend,uid,event
 ---
 
-::: tip
-For usage with the UMD build see [here](/start/umd#quasar-global-object).
-:::
+> [!TIP]
+> For usage with the UMD build see [here](/start/umd#quasar-global-object).
 
 ## openURL
 
@@ -48,9 +47,8 @@ openURL(
 )
 ```
 
-::: tip
-If you want to open the telephone dialer in a Cordova app, don't use `openURL()`. Instead you should directly use `<a href="tel:123456789">` tags or `<QBtn href="tel:123456789">`
-:::
+> [!TIP]
+> If you want to open the telephone dialer in a Cordova app, don't use `openURL()`. Instead you should directly use `<a href="tel:123456789">` tags or `<QBtn href="tel:123456789">`
 
 ## copyToClipboard
 
@@ -133,7 +131,7 @@ if (status) {
 }
 ```
 
-## runSequentialPromises <q-badge label="v2.8.4+" />
+## runSequentialPromises
 
 The following is a helper to run multiple Promises sequentially. **Optionally, on multiple threads.**
 
@@ -357,6 +355,8 @@ If your App uses JavaScript to accomplish taxing tasks, a debounce function is e
 
 Debouncing enforces that a function not be called again until a certain amount of time has passed without it being called. As in "execute this function only if 100 milliseconds have passed without it being called."
 
+When `immediate` is `true`, the wait period starts before the callback runs, so calls made from within that callback are debounced too.
+
 A quick example: you have a resize listener on the window which does some element dimension calculations and (possibly) repositions a few elements. That isn't a heavy task in itself but being repeatedly fired after numerous resizes will really slow your App down. So why not limit the rate at which the function can fire?
 
 ```js
@@ -389,9 +389,8 @@ created () {
 }
 ```
 
-::: warning
-Debouncing your functions using a method declaration like `myMethod: debounce(function () { // Code }, 500)` will mean that the debounced method will be shared between _all_ rendered instances of this component, so debouncing is also shared. Moreover, `this.myMethod.cancel()` won't work, because Vue wraps each method with another function to ensure proper `this` binding. This should be avoided by following the code snippet above.
-:::
+> [!WARNING]
+> Debouncing your functions using a method declaration like `myMethod: debounce(function () { // Code }, 500)` will mean that the debounced method will be shared between _all_ rendered instances of this component, so debouncing is also shared. Moreover, `this.myMethod.cancel()` won't work, because Vue wraps each method with another function to ensure proper `this` binding. This should be avoided by following the code snippet above.
 
 There's also a `frameDebounce` available which delays calling your function until next browser frame is scheduled to run (read about `requestAnimationFrame`).
 
@@ -439,9 +438,8 @@ created () {
 }
 ```
 
-::: warning
-Throttling your functions using a method declaration like `myMethod: throttle(function () { // Code }, 500)` will mean that the throttled method will be shared between _all_ rendered instances of this component, so throttling is also shared. This should be avoided by following the code snippet above.
-:::
+> [!WARNING]
+> Throttling your functions using a method declaration like `myMethod: throttle(function () { // Code }, 500)` will mean that the throttled method will be shared between _all_ rendered instances of this component, so throttling is also shared. This should be avoided by following the code snippet above.
 
 ## extend - (Deep) Copy Objects
 

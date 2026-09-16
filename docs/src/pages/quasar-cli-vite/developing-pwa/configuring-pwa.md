@@ -34,9 +34,8 @@ You can freely edit these files. Notice a few things:
 2. `sw/custom-sw.js` will be your service worker file ONLY if workbox plugin mode is set to "InjectManifest" (quasar.config file > pwa > workboxMode: 'InjectManifest'). Otherwise, Quasar and Workbox will create a service-worker file for you. The `/src-pwa/sw/` folder is the WebWorker context. Anything inside it runs in the service worker, not the main thread.
 3. It makes sense to run [Lighthouse](https://developers.google.com/web/tools/lighthouse/) tests on production builds only.
 
-::: tip
-Read more on `register-sw.js` and how to interact with the Service Worker on [Handling Service Worker](/quasar-cli-vite/developing-pwa/handling-service-worker) documentation page.
-:::
+> [!TIP]
+> Read more on `register-sw.js` and how to interact with the Service Worker on [Handling Service Worker](/quasar-cli-vite/developing-pwa/handling-service-worker) documentation page.
 
 ## quasar.config file
 
@@ -174,8 +173,6 @@ Then, edit your `/index.html` file. The following are the actual meta tags that 
   />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="msapplication-TileImage" content="icons/ms-icon-144x144.png" />
-  <meta name="msapplication-TileColor" content="#000000" />
   <meta name="apple-mobile-web-app-title" content="<%= pwaManifest.name %>" />
   <link rel="apple-touch-icon" href="icons/apple-icon-120x120.png" />
   <link
@@ -244,9 +241,8 @@ When NOT to use GenerateSW:
 - You want to use other Service Worker features (i.e. Web Push).
 - You want to import additional scripts or add additional logic.
 
-::: tip
-Please check the available workboxOptions for this mode on [Workbox website](https://developers.google.com/web/tools/workbox/reference-docs/latest/module-workbox-build#.generateSW).
-:::
+> [!TIP]
+> Please check the available workboxOptions for this mode on [Workbox website](https://developers.google.com/web/tools/workbox/reference-docs/latest/module-workbox-build#.generateSW).
 
 ### InjectManifest
 
@@ -261,12 +257,11 @@ When NOT to use InjectManifest:
 
 - You want the easiest path to adding a service worker to your site.
 
-::: tip TIPS
-
-- If you want to use this mode, you will have to write the service worker (`/src-pwa/sw/custom-sw.js`) file by yourself.
-- Please check the available workboxOptions for this mode on [Workbox website](https://developers.google.com/web/tools/workbox/reference-docs/latest/module-workbox-build#.injectManifest).
-
-:::
+> [!TIP]
+> **TIPS**
+>
+> - If you want to use this mode, you will have to write the service worker (`/src-pwa/sw/custom-sw.js`) file by yourself.
+> - Please check the available workboxOptions for this mode on [Workbox website](https://developers.google.com/web/tools/workbox/reference-docs/latest/module-workbox-build#.injectManifest).
 
 The following snippet is the default code for a custom service worker (`/src-pwa/sw/custom-sw.js`) which mimics the behavior of `generateSW` mode:
 
@@ -367,13 +362,11 @@ pwa: {
 
 Please read about the [manifest config](https://developer.mozilla.org/en-US/docs/Web/Manifest) before diving in.
 
-::: warning
-Note that you don't need to edit your index.html file (generated from `/index.html`) to link to the manifest file. Quasar CLI takes care of embedding the right things for you.
-::::
+> [!WARNING]
+> Note that you don't need to edit your index.html file (generated from `/index.html`) to link to the manifest file. Quasar CLI takes care of embedding the right things for you.
 
-::: tip
-If your PWA is behind basic auth or requires an Authorization header, set quasar.config file > pwa > useCredentialsForManifestTag to `true` to include `crossorigin="use-credentials"` on the manifest.json meta tag.
-::::
+> [!TIP]
+> If your PWA is behind basic auth or requires an Authorization header, set quasar.config file > pwa > useCredentialsForManifestTag to `true` to include `crossorigin="use-credentials"` on the manifest.json meta tag.
 
 This option affects only the manifest request. If you add runtime caching for authenticated API responses, do not use a broad cache rule that can return one user's private response to another session. Limit matching to intended URLs and methods, avoid caching sensitive responses unless the cache is safely partitioned and cleared on sign-out, and respect the server's cache policy.
 
@@ -381,9 +374,8 @@ This option affects only the manifest request. If you add runtime caching for au
 
 More info: [PWA Checklist](https://web.dev/pwa-checklist/)
 
-::: danger
-Do not run [Lighthouse](https://developers.google.com/web/tools/lighthouse/) on your development build because at this stage the code is intentionally not optimized and contains embedded source maps (among many other things). See the [Testing and Auditing](/quasar-cli-vite/testing-and-auditing) section of these docs for more information.
-:::
+> [!CAUTION]
+> Do not run [Lighthouse](https://developers.google.com/web/tools/lighthouse/) on your development build because at this stage the code is intentionally not optimized and contains embedded source maps (among many other things). See the [Testing and Auditing](/quasar-cli-vite/testing-and-auditing) section of these docs for more information.
 
 ## Reload & Update Automatically
 
@@ -400,9 +392,9 @@ pwa: {
 
 ## Filename hashes quirk
 
-Due to how Rolldown builds the assets (through Vite), when you change any of your script source files (.js) this will also change the hash part of (almost) ALL .js files (ex: `454d87bd` in `assets/index.454d87bd.js`). The revision number of all assets will get changed in your service worker file and this means that when PWA updates it will re-download ALL your assets again. What a waste of bandwidth and such a longer time to get the PWA updated!
+Due to how Rolldown builds the assets (through Vite), when you change any of your script source files (.js) this will also change the hash part of (almost) ALL .js files (ex: `454d87bd` in `assets/index.454d87bd.js`). The revision number of all assets will get changed in your service worker file and this means that when PWA updates it will re-download ALL your assets again.
 
-By default, Vite builds all filenames **with the hash part**. However, should you want your filenames to NOT contain the hash part, you need to edit the `/quasar.config` file:
+By default, Vite builds all filenames **with the hash part**. Should you want your filenames to NOT contain it, so that only the changed files get re-downloaded, edit the `/quasar.config` file:
 
 ```js /quasar.config file
 build: {
@@ -410,4 +402,33 @@ build: {
 }
 ```
 
-When filename hashes are disabled it would be wise to also make sure that your webserver has cache set accordingly (as low as possible) to ensure consistent resource delivery to your clients that can't use the PWA functionality.
+Two things then need your attention:
+
+1. Configure your webserver cache for these files as low as possible (they keep their names across deploys), so that the visitors which don't use the PWA functionality get consistent resources.
+
+2. Safari keeps the scripts that a page preloaded (through `<link rel="modulepreload">`) in an in-memory cache and reuses them across the reload that follows a service worker update, without asking the service worker. With stable filenames the reloaded page then runs the new entry file together with old chunks and fails with `SyntaxError: Importing binding name '...' is not found.`, leaving a blank page on every reload of that tab. So before a page reloads to apply an update, and in every open tab that the new worker takes over, fetch the precached scripts through the new worker; a `fetch()` of a URL evicts its stale entry:
+
+```js /src-pwa/register-service-worker.js
+navigator.serviceWorker.addEventListener('controllerchange', async () => {
+  // (skip this for the very first install, nothing stale can exist yet)
+  const urls = []
+
+  for (const name of await caches.keys()) {
+    if (!name.includes('precache')) continue
+
+    const cache = await caches.open(name)
+    for (const req of await cache.keys()) {
+      const url = req.url.split('?')[0]
+      if (url.endsWith('.js')) urls.push(url)
+    }
+  }
+
+  await Promise.allSettled(
+    urls.map(url => fetch(url).then(res => res.body?.cancel()))
+  )
+
+  window.location.reload()
+})
+```
+
+The quasar.dev website does this itself (`docs/src-pwa/register-sw.js` in the Quasar repository), with a waiting service worker (`skipWaiting: false`) so that the update is applied only when the user asks for it.

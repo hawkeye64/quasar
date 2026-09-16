@@ -1,9 +1,16 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, test } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { getRouter } from 'testing/runtime/router.js'
 
+import QBtn from '../btn/QBtn.js'
 import QFab from './QFab.js'
+
+// the props QFab consumes itself: QBtn does not declare them, so forwarding
+// them to the trigger would render each one as a stray DOM attribute
+const fabOnlyPropNames = Object.keys(QFab.props)
+  .filter(name => QBtn.props[name] === void 0)
+  .map(name => name.toLowerCase())
 
 function mountFab(props = {}, slots = {}, global = {}) {
   return mount(QFab, {
@@ -13,12 +20,29 @@ function mountFab(props = {}, slots = {}, global = {}) {
   })
 }
 
+function withFakeTimers() {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+}
+
 function getTrigger(wrapper) {
   return wrapper.get('.q-btn')
 }
 
 function getLabel(wrapper) {
   return wrapper.get('.q-fab__label')
+}
+
+function expectStacked(wrapper, stacked) {
+  const content = wrapper.get('.q-btn__content')
+
+  expect(content.classes()).toContain(stacked ? 'column' : 'row')
 }
 
 function expectButtonType(wrapper, type) {
@@ -152,6 +176,7 @@ describe('[QFab API]', () => {
         expect(getLabel(wrapper).classes()).toContain(
           'q-fab__label--internal-top'
         )
+        expectStacked(wrapper, true)
       })
 
       test('value "right" has effect', () => {
@@ -163,6 +188,7 @@ describe('[QFab API]', () => {
         expect(getLabel(wrapper).classes()).toContain(
           'q-fab__label--internal-right'
         )
+        expectStacked(wrapper, false)
       })
 
       test('value "bottom" has effect', () => {
@@ -174,6 +200,7 @@ describe('[QFab API]', () => {
         expect(getLabel(wrapper).classes()).toContain(
           'q-fab__label--internal-bottom'
         )
+        expectStacked(wrapper, true)
       })
 
       test('value "left" has effect', () => {
@@ -185,6 +212,17 @@ describe('[QFab API]', () => {
         expect(getLabel(wrapper).classes()).toContain(
           'q-fab__label--internal-left'
         )
+        expectStacked(wrapper, false)
+      })
+
+      test('does not stack an external label', () => {
+        const wrapper = mountFab({
+          label: 'Create',
+          labelPosition: 'top',
+          externalLabel: true
+        })
+
+        expectStacked(wrapper, false)
       })
     })
 
@@ -416,6 +454,121 @@ describe('[QFab API]', () => {
       })
     })
 
+    describe('[(prop)hover]', () => {
+      withFakeTimers()
+
+      test('type Boolean has effect', async () => {
+        const wrapper = mountFab({ hover: true })
+
+        await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
+
+        expect(wrapper.classes()).toContain('q-fab--opened')
+
+        await wrapper.trigger('pointerleave', { pointerType: 'mouse' })
+        await vi.runAllTimersAsync()
+        await flushPromises()
+
+        expect(wrapper.classes()).toContain('q-fab--closed')
+      })
+
+      test('a touch pointer does not trigger it', async () => {
+        const wrapper = mountFab({ hover: true })
+
+        await wrapper.trigger('pointerenter', { pointerType: 'touch' })
+        await vi.runAllTimersAsync()
+
+        expect(wrapper.classes()).toContain('q-fab--closed')
+      })
+
+      test('the pointer returning during the grace period keeps it open', async () => {
+        const wrapper = mountFab({ hover: true })
+
+        await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
+        await wrapper.trigger('pointerleave', { pointerType: 'mouse' })
+        await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
+        await vi.runAllTimersAsync()
+        await flushPromises()
+
+        expect(wrapper.classes()).toContain('q-fab--opened')
+      })
+
+      test('a click landing while the actions animate in does not close it', async () => {
+        const wrapper = mountFab({ hover: true })
+
+        await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
+        await getTrigger(wrapper).trigger('click')
+
+        expect(wrapper.classes()).toContain('q-fab--opened')
+
+        // once the actions have fully shown, a click plain-toggles again
+        await vi.advanceTimersByTimeAsync(500)
+        await getTrigger(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(wrapper.classes()).toContain('q-fab--closed')
+      })
+    })
+
+    describe('[(prop)hover-delay]', () => {
+      withFakeTimers()
+
+      test('type Number has effect', async () => {
+        const wrapper = mountFab({ hover: true, hoverDelay: 500 })
+
+        await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
+        await vi.advanceTimersByTimeAsync(499)
+
+        expect(wrapper.classes()).toContain('q-fab--closed')
+
+        await vi.advanceTimersByTimeAsync(1)
+        await flushPromises()
+
+        expect(wrapper.classes()).toContain('q-fab--opened')
+      })
+    })
+
+    describe('[(prop)hover-hide-delay]', () => {
+      withFakeTimers()
+
+      test('type Number has effect', async () => {
+        const wrapper = mountFab({ hover: true, hoverHideDelay: 500 })
+
+        await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
+        await wrapper.trigger('pointerleave', { pointerType: 'mouse' })
+        await vi.advanceTimersByTimeAsync(499)
+
+        expect(wrapper.classes()).toContain('q-fab--opened')
+
+        await vi.advanceTimersByTimeAsync(1)
+        await flushPromises()
+
+        expect(wrapper.classes()).toContain('q-fab--closed')
+      })
+    })
+
+    describe('[(prop)stagger]', () => {
+      test('type Number has effect', () => {
+        const wrapper = mountFab({ stagger: 120 })
+        const actions = wrapper.get('.q-fab__actions').element
+
+        expect(actions.style.getPropertyValue('--q-fab-stagger')).toBe('120ms')
+      })
+
+      test('default value', () => {
+        const wrapper = mountFab()
+        const actions = wrapper.get('.q-fab__actions').element
+
+        expect(actions.style.getPropertyValue('--q-fab-stagger')).toBe('40ms')
+      })
+
+      test('value 0 has effect', () => {
+        const wrapper = mountFab({ stagger: 0 })
+        const actions = wrapper.get('.q-fab__actions').element
+
+        expect(actions.style.getPropertyValue('--q-fab-stagger')).toBe('0ms')
+      })
+    })
+
     describe('[(prop)persistent]', () => {
       test('type Boolean has effect', async () => {
         const router = await getRouter(['/one', '/two'])
@@ -579,6 +732,49 @@ describe('[QFab API]', () => {
         await wrapper.vm.$nextTick()
         expect(wrapper.classes()).toContain('q-fab--opened')
       })
+    })
+  })
+
+  describe('[Generic]', () => {
+    test('keeps its own props out of the trigger button markup', () => {
+      const wrapper = mountFab({
+        label: 'Create',
+        labelPosition: 'top',
+        externalLabel: true,
+        hideIcon: true,
+        direction: 'up',
+        persistent: true,
+        verticalActionsAlign: 'left'
+      })
+
+      const rendered = Object.keys(getTrigger(wrapper).attributes())
+
+      expect(fabOnlyPropNames.length).toBeGreaterThan(0)
+      for (const name of fabOnlyPropNames) {
+        expect(rendered).not.toContain(name)
+      }
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('the trigger discloses without claiming a popup role', async () => {
+      const wrapper = mountFab()
+      const actions = wrapper.get('.q-fab__actions')
+
+      // the actions container holds plain buttons, so neither it nor the
+      // trigger may claim menu semantics
+      expect(actions.attributes('role')).toBeUndefined()
+      expect(getTrigger(wrapper).attributes('aria-haspopup')).toBeUndefined()
+
+      expect(getTrigger(wrapper).attributes('aria-expanded')).toBe('false')
+      expect(getTrigger(wrapper).attributes('aria-controls')).toBe(
+        actions.attributes('id')
+      )
+
+      await getTrigger(wrapper).trigger('click')
+
+      expect(getTrigger(wrapper).attributes('aria-expanded')).toBe('true')
+      expect(actions.attributes('aria-hidden')).toBeUndefined()
     })
   })
 })

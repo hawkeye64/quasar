@@ -10,15 +10,14 @@ related:
 
 The QPopupEdit component can be used to edit a value “in place”, like for example a cell in QTable. By default, a cell is displayed as a String, then if you are using QPopupEdit and a user clicks/taps on the table cell, a popup will open where the user will be able to edit the value using a textfield.
 
-This component injects a [QMenu](/vue-components/menu) into its parent DOM element and enables the behavior described above, so **it can be used anywhere**, not only in QTable.
+This component injects a [QMenu](/vue-components/menu) into its parent DOM element and enables the behavior described above, so **it can be used anywhere**, not only in QTable. QMenu's props are passed through via this component (except for `model-value`, which is QPopupEdit's own edited model), along with QMenu's `escape-key` event.
 
 <DocApi file="QPopupEdit" />
 
 ## Usage
 
-::: warning
-If used on a QTable, QPopupEdit won't work with cell scoped slots.
-:::
+> [!WARNING]
+> If used on a QTable, QPopupEdit won't work with cell scoped slots.
 
 ### Standalone
 
@@ -53,9 +52,8 @@ The default slot's parameters are:
 }
 ```
 
-::: warning
-Do not destructure the slot's parameters as it will generate linting errors when using the `value` prop directly with `v-model`.
-:::
+> [!WARNING]
+> Do not destructure the slot's parameters as it will generate linting errors when using the `value` prop directly with `v-model`.
 
 <DocExample title="Default slot parameters" file="DefaultSlotParameters" />
 
@@ -63,9 +61,8 @@ Do not destructure the slot's parameters as it will generate linting errors when
 
 Since QPopupEdit wraps QInput, you can basically use any type of QInput. For instance, you can also use a text area as shown below in the "Comments" column.
 
-::: tip
-When using a multi-line control (textarea, QEditor) for input, you'll need to also use `@keyup.enter.stop` on the component in order to stop the enter key from closing the popup. You'll also need to add buttons for controlling the popup too.
-:::
+> [!TIP]
+> When using a multi-line control (textarea, QEditor) for input, you'll need to also use `@keyup.enter.stop` on the component in order to stop the enter key from closing the popup. You'll also need to add buttons for controlling the popup too.
 
 <DocExample title="QInput textarea" file="TextArea" />
 
@@ -75,12 +72,20 @@ When using a multi-line control (textarea, QEditor) for input, you'll need to al
 
 QPopupEdit also allows for simple validation of the input. To use it, you give it a callback function in the form of an arrow function and it should return a Boolean. `(value) => Boolean`. This is **demonstrated in the "Calories" column** below.
 
-::: tip Tip 1
-Notice we are using the `hide` event to also revalidate the input. If we don't, QInput's error prop will 'hang' in an invalid state.
-:::
+> [!TIP]
+> **Tip 1**
+>
+> Notice we are using the `hide` event to also revalidate the input. If we don't, QInput's error prop will 'hang' in an invalid state.
 
-::: tip Tip 2
-With this example, we are using QInput's external error handling. We could also use QInput's validation prop and emit the value to QPopupEdit's validation prop. The same concept can be implemented, when using [Regle](https://reglejs.dev/) external validation library too. In other words, the value given to QPopupEdit's validate function can come from anywhere.
-:::
+> [!TIP]
+> **Tip 2**
+>
+> With this example, we are using QInput's external error handling. We could also use QInput's validation prop and emit the value to QPopupEdit's validation prop. The same concept can be implemented, when using [Regle](https://reglejs.dev/) external validation library too. In other words, the value given to QPopupEdit's validate function can come from anywhere.
 
 <DocExample title="Edit with validation" file="WithValidation" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QPopupEdit is built on [QMenu](/vue-components/menu), so the popup itself claims no ARIA role — see [QMenu's Accessibility section](/vue-components/menu#accessibility) for the underlying keyboard and focus behavior. <kbd>Escape</kbd> cancels the edit and returns focus to the element the popup covers, and closing the popup any other way without going through validation never silently commits: depending on the `auto-save` prop, either a value that passes validation is saved or `cancel` is emitted. When using the `buttons` prop, "Set" and "Cancel" render as real buttons whose default labels come localized from the [Quasar Language Pack](/options/quasar-language-packs) (override them with `label-set` / `label-cancel`).
+
+A few responsibilities remain yours: put `autofocus` on your input so keyboard focus lands in the editor as soon as the popup opens; wire <kbd>Enter</kbd>-to-save yourself with `@keyup.enter="scope.set"` (as the examples above do); and note that the `title` prop renders purely visual text — it is not wired up as the popup's accessible name.

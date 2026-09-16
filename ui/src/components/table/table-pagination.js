@@ -1,5 +1,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
+
 function samePagination(oldPag, newPag) {
   for (const prop in newPag) {
     if (newPag[prop] !== oldPag[prop]) {
@@ -114,17 +116,13 @@ export function useTablePaginationState(vm, getCellValue) {
 
 export function useTablePagination(
   vm,
-  innerPagination,
   computedPagination,
   isServerSide,
   setPagination,
   filteredSortedRowsNumber
 ) {
-  const {
-    props,
-    emit,
-    proxy: { $q }
-  } = vm
+  const { props, emit } = vm
+  const $q = useQuasar()
 
   const computedRowsNumber = computed(() =>
     isServerSide.value
@@ -161,12 +159,17 @@ export function useTablePagination(
       : computedPagination.value.page >= pagesNumber.value
   )
 
+  // computedPagination yields a new object on every change (page turns,
+  // sorting); going through this primitive keeps the options list, and
+  // the QSelect it feeds, untouched until the page size itself moves
+  const currentRowsPerPage = computed(
+    () => computedPagination.value.rowsPerPage
+  )
+
   const computedRowsPerPageOptions = computed(() => {
-    const opts = props.rowsPerPageOptions.includes(
-      innerPagination.value.rowsPerPage
-    )
+    const opts = props.rowsPerPageOptions.includes(currentRowsPerPage.value)
       ? props.rowsPerPageOptions
-      : [innerPagination.value.rowsPerPage, ...props.rowsPerPageOptions]
+      : [currentRowsPerPage.value, ...props.rowsPerPageOptions]
 
     return opts.map(count => ({
       label: count === 0 ? $q.lang.table.allRows : String(count),

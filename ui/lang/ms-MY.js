@@ -15,6 +15,11 @@ export default {
     search: 'Cari',
     filter: 'Saring',
     refresh: 'Muat semula',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Julat',
+    noValue: 'Tiada nilai',
+    resize: 'Ubah saiz',
     expand: label => (label ? `Kembangkan "${label}"` : 'Kembangkan'),
     collapse: label => (label ? `Runtuhkan "${label}"` : 'Runtuh')
   },
@@ -40,8 +45,12 @@ export default {
     prevYear: 'Tahun sebelumnya',
     nextYear: 'Tahun depan',
     today: 'Hari ini',
-    prevRangeYears: range => `Sebelumnya ${range} tahun`,
-    nextRangeYears: range => `Seterusnya ${range} tahun`
+    prevRangeYears: range => `${range} tahun sebelumnya`,
+    nextRangeYears: range => `${range} tahun seterusnya`,
+    hour: 'Jam',
+    minute: 'Minit',
+    second: 'Saat',
+    now: 'Masa semasa'
   },
   table: {
     noData: 'Tiada data tersedia',
@@ -54,15 +63,41 @@ export default {
     recordsPerPage: 'Rekod setiap halaman:',
     allRows: 'Semua',
     pagination: (start, end, total) => start + '-' + end + ' / ' + total,
-    columns: 'Senaraikan'
+    columns: 'Senaraikan',
+    selectAllRows: 'Pilih semua baris',
+    selectRow: 'Pilih baris'
   },
   pagination: {
+    label: 'Penomboran halaman',
     first: 'Halaman pertama',
     prev: 'Halaman sebelumnya',
     next: 'Halaman seterusnya',
     last: 'Halaman terakhir'
   },
+  carousel: {
+    prevSlide: 'Slaid sebelumnya',
+    nextSlide: 'Slaid seterusnya'
+  },
+  colorPicker: {
+    spectrum: 'Spektrum',
+    tune: 'Pelarasan',
+    palette: 'Palet',
+    value: 'Nilai warna',
+    hue: 'Rona',
+    alpha: 'Kelegapan',
+    saturation: 'Ketepuan',
+    brightness: 'Kecerahan'
+  },
+  uploader: {
+    addFiles: 'Pilih fail',
+    upload: 'Muat naik fail',
+    abort: 'Batalkan muat naik',
+    removeQueued: 'Buang fail dalam giliran',
+    removeUploaded: 'Buang fail yang dimuat naik',
+    removeFile: 'Buang fail'
+  },
   editor: {
+    toolbar: 'Bar alat penyunting',
     url: 'URL',
     bold: 'Tebal',
     italic: 'Italik',
@@ -87,14 +122,14 @@ export default {
     fontSize: 'Saiz Huruf',
     align: 'Selaraskan',
     hr: 'Masukkan Garisan Mendatar',
-    undo: 'Undo',
-    redo: 'Redo',
-    heading1: 'Heading 1',
-    heading2: 'Heading 2',
-    heading3: 'Heading 3',
-    heading4: 'Heading 4',
-    heading5: 'Heading 5',
-    heading6: 'Heading 6',
+    undo: 'Buat asal',
+    redo: 'Buat semula',
+    heading1: 'Tajuk 1',
+    heading2: 'Tajuk 2',
+    heading3: 'Tajuk 3',
+    heading4: 'Tajuk 4',
+    heading5: 'Tajuk 5',
+    heading6: 'Tajuk 6',
     paragraph: 'Perenggan',
     code: 'Kod',
     size1: 'Paling Kecil',

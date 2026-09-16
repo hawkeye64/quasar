@@ -1,6 +1,7 @@
-import { computed, getCurrentInstance, h } from 'vue'
+import { computed, h } from 'vue'
 
 import { createComponent } from '../../utils/private.create/create.js'
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -19,16 +20,14 @@ export default /*#__PURE__*/ createComponent({
   },
 
   setup(props, { slots }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
+    const $q = useQuasar()
     const isDark = useDark(props, $q)
 
     const classes = computed(
       () =>
         'q-banner row items-center' +
         (props.dense ? ' q-banner--dense' : '') +
-        (isDark.value ? ' q-banner--dark q-dark' : '') +
+        (isDark() ? ' q-banner--dark q-dark' : '') +
         (props.rounded ? ' rounded-borders' : '')
     )
 

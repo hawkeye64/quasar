@@ -25,6 +25,11 @@ export default {
     search: 'Поиск',
     filter: 'Фильтр',
     refresh: 'Обновить',
+    minimum: 'Минимум',
+    maximum: 'Максимум',
+    range: 'Диапазон',
+    noValue: 'Нет значения',
+    resize: 'Изменить размер',
     expand: label => (label ? `Расширьте "${label}"` : 'Расширять'),
     collapse: label => (label ? `Свернуть "${label}"` : 'Крах')
   },
@@ -46,8 +51,14 @@ export default {
     prevYear: 'Предыдущий год',
     nextYear: 'Следующий год',
     today: 'Сегодня',
-    prevRangeYears: range => `Предыдущий ${range} Годы`,
-    nextRangeYears: range => `Далее ${range} годы`
+    prevRangeYears: range =>
+      `Предыдущие ${range} ${plurals(range, ['год', 'года', 'лет'])}`,
+    nextRangeYears: range =>
+      `Следующие ${range} ${plurals(range, ['год', 'года', 'лет'])}`,
+    hour: 'Час',
+    minute: 'Минута',
+    second: 'Секунда',
+    now: 'Текущее время'
   },
   table: {
     noData: 'Нет данных',
@@ -63,15 +74,41 @@ export default {
     recordsPerPage: 'Строк на странице:',
     allRows: 'Все',
     pagination: (start, end, total) => start + '-' + end + ' из ' + total,
-    columns: 'Колонки'
+    columns: 'Колонки',
+    selectAllRows: 'Выбрать все строки',
+    selectRow: 'Выбрать строку'
   },
   pagination: {
+    label: 'Постраничная навигация',
     first: 'Первая страница',
     prev: 'Предыдущая страница',
     next: 'Следующая страница',
     last: 'Последняя страница'
   },
+  carousel: {
+    prevSlide: 'Предыдущий слайд',
+    nextSlide: 'Следующий слайд'
+  },
+  colorPicker: {
+    spectrum: 'Спектр',
+    tune: 'Настройка',
+    palette: 'Палитра',
+    value: 'Значение цвета',
+    hue: 'Оттенок',
+    alpha: 'Непрозрачность',
+    saturation: 'Насыщенность',
+    brightness: 'Яркость'
+  },
+  uploader: {
+    addFiles: 'Выбрать файлы',
+    upload: 'Загрузить файлы',
+    abort: 'Прервать загрузку',
+    removeQueued: 'Удалить файлы из очереди',
+    removeUploaded: 'Удалить загруженные файлы',
+    removeFile: 'Удалить файл'
+  },
   editor: {
+    toolbar: 'Панель инструментов редактора',
     url: 'URL',
     bold: 'Полужирный',
     italic: 'Курсив',

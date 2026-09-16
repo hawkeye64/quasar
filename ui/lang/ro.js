@@ -15,6 +15,11 @@ export default {
     search: 'Caută',
     filter: 'Filtrează',
     refresh: 'Actualizează',
+    minimum: 'Minim',
+    maximum: 'Maxim',
+    range: 'Interval',
+    noValue: 'Fără valoare',
+    resize: 'Redimensionează',
     expand: label => (label ? `Deschideți "${label}"` : 'Deschide'),
     collapse: label => (label ? `Închide "${label}"` : 'Închide')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Anul precedent',
     nextYear: 'Anul viitor',
     today: 'Astăzi',
-    prevRangeYears: range => `Anterior ${range} ani`,
-    nextRangeYears: range => `Următorul ${range} ani`
+    prevRangeYears: range => `${range} de ani anteriori`,
+    nextRangeYears: range => `${range} de ani următori`,
+    hour: 'Oră',
+    minute: 'Minut',
+    second: 'Secundă',
+    now: 'Ora curentă'
   },
   table: {
     noData: 'Nu sunt date disponibile',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Înregistrări pe pagină:',
     allRows: 'Toate',
     pagination: (start, end, total) => start + '-' + end + ' din ' + total,
-    columns: 'Coloane'
+    columns: 'Coloane',
+    selectAllRows: 'Selectează toate rândurile',
+    selectRow: 'Selectează rândul'
   },
   pagination: {
+    label: 'Paginare',
     first: 'Prima pagină',
     prev: 'Pagina anterioară',
     next: 'Pagina următoare',
     last: 'Ultima pagină'
   },
+  carousel: {
+    prevSlide: 'Diapozitivul anterior',
+    nextSlide: 'Diapozitivul următor'
+  },
+  colorPicker: {
+    spectrum: 'Spectru',
+    tune: 'Ajustare',
+    palette: 'Paletă',
+    value: 'Valoarea culorii',
+    hue: 'Nuanță',
+    alpha: 'Opacitate',
+    saturation: 'Saturație',
+    brightness: 'Luminozitate'
+  },
+  uploader: {
+    addFiles: 'Alege fișiere',
+    upload: 'Încarcă fișierele',
+    abort: 'Anulează încărcarea',
+    removeQueued: 'Elimină fișierele în așteptare',
+    removeUploaded: 'Elimină fișierele încărcate',
+    removeFile: 'Elimină fișierul'
+  },
   editor: {
+    toolbar: 'Bara de instrumente a editorului',
     url: 'URL',
     bold: 'Îngroșat',
     italic: 'Înclinat',
@@ -83,12 +118,12 @@ export default {
     hr: 'Adaugă linie orizontală',
     undo: 'Schimbă inapoi',
     redo: 'Refă',
-    heading1: 'Heading 1',
-    heading2: 'Heading 2',
-    heading3: 'Heading 3',
-    heading4: 'Heading 4',
-    heading5: 'Heading 5',
-    heading6: 'Heading 6',
+    heading1: 'Titlu 1',
+    heading2: 'Titlu 2',
+    heading3: 'Titlu 3',
+    heading4: 'Titlu 4',
+    heading5: 'Titlu 5',
+    heading6: 'Titlu 6',
     paragraph: 'Paragraf',
     code: 'Cod',
     size1: 'Foarte mic',

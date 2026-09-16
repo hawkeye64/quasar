@@ -9,7 +9,14 @@
       <q-header elevated class="bg-cyan-8">
         <q-toolbar>
           <q-toolbar-title>Header</q-toolbar-title>
-          <q-btn flat @click="drawer = !drawer" round dense icon="menu" />
+          <q-btn
+            aria-label="Toggle drawer"
+            flat
+            @click="drawer = !drawer"
+            round
+            dense
+            icon="menu"
+          />
         </q-toolbar>
       </q-header>
 
@@ -21,7 +28,7 @@
             border-right: 1px solid #ddd;
           "
         >
-          <q-list padding>
+          <q-list padding role="none">
             <q-item clickable v-ripple>
               <q-item-section avatar>
                 <q-icon name="inbox" />
@@ -65,7 +72,10 @@
         >
           <div class="absolute-bottom bg-transparent">
             <q-avatar size="56px" class="q-mb-sm">
-              <img src="https://cdn.quasar.dev/img/boy-avatar.png" />
+              <img
+                alt="User avatar"
+                src="https://cdn.quasar.dev/img/boy-avatar.png"
+              />
             </q-avatar>
             <div class="text-weight-bold">Razvan Stoenescu</div>
             <div>@rstoenescu</div>

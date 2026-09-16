@@ -3,7 +3,8 @@
     "composables/private.use-model-toggle/use-model-toggle",
     "composables/private.use-portal/use-portal",
     "composables/private.use-anchor/use-anchor",
-    "composables/private.use-transition/use-transition"
+    "composables/private.use-transition/use-transition",
+    "composables/private.use-hover/use-hover"
   ],
 
   "meta": {
@@ -75,19 +76,30 @@
 
     "offset": {
       "type": "Array",
-      "desc": "An array of two numbers to offset the menu horizontally and vertically in pixels",
+      "desc": "An array of two numbers (in pixels) which expands the anchor element's bounding box outward horizontally and vertically; the menu is then positioned against the expanded box, so the visible effect depends on the 'anchor'/'self' points in use",
       "examples": ["[8, 8]", "[5, 10]"],
       "category": "position"
-    },
-
-    "scroll-target": {
-      "extends": "scroll-target"
     },
 
     "touch-position": {
       "type": "Boolean",
       "desc": "Allows for the target position to be set by the mouse position, when the target of the menu is either clicked or touched",
       "category": "behavior"
+    },
+
+    "hover": {
+      "desc": "Also opens the menu when the pointer hovers its target and closes it when the pointer leaves both the target and the menu; Click/tap and keyboard interactions keep toggling as usual (touch devices fall back to them), so activating the target closes a hover-shown menu, unless it is still animating into view (which keeps a single move-and-click gesture from closing what it just opened); A hover-opened menu does not switch focus on itself and ignores 'touch-position'; Mutually exclusive with 'context-menu', which takes precedence",
+      "addedIn": "v2.26"
+    },
+
+    "hover-delay": {
+      "desc": "Delay (in milliseconds) between the pointer entering the target and the menu showing up; Requires the 'hover' prop",
+      "addedIn": "v2.26"
+    },
+
+    "hover-hide-delay": {
+      "desc": "Grace period (in milliseconds) in which the pointer can re-enter the target or the menu before it gets closed; Requires the 'hover' prop",
+      "addedIn": "v2.26"
     },
 
     "persistent": {
@@ -172,7 +184,7 @@
 
   "methods": {
     "updatePosition": {
-      "desc": "There are some custom scenarios for which Quasar cannot automatically reposition the menu without significant performance drawbacks so the optimal solution is for you to call this method when you need it",
+      "desc": "The menu follows its target automatically (through any scrolling container) and this method only re-checks whether the intended placement still fits the viewport (which side the menu opens to and its maximum size); call it for the scenarios Quasar cannot detect, e.g. after replacing the menu's content while it is shown",
       "params": null,
       "returns": null
     },

@@ -15,6 +15,11 @@ export default {
     search: 'Suche',
     filter: 'Filter',
     refresh: 'Aktualisieren',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Bereich',
+    noValue: 'Kein Wert',
+    resize: 'Größe ändern',
     expand: label => (label ? `Erweitern Sie "${label}"` : 'Erweitern'),
     collapse: label => (label ? `"${label}" minimieren` : 'Zusammenbruch')
   },
@@ -37,7 +42,11 @@ export default {
     nextYear: 'Nächstes Jahr',
     today: 'Heute',
     prevRangeYears: range => `Vorherige ${range} Jahre`,
-    nextRangeYears: range => `Nächste ${range} Jahre`
+    nextRangeYears: range => `Nächste ${range} Jahre`,
+    hour: 'Stunde',
+    minute: 'Minute',
+    second: 'Sekunde',
+    now: 'Aktuelle Uhrzeit'
   },
   table: {
     noData: 'Keine Daten vorhanden.',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Zeilen pro Seite',
     allRows: 'Alle',
     pagination: (start, end, total) => start + '–' + end + ' von ' + total,
-    columns: 'Spalten'
+    columns: 'Spalten',
+    selectAllRows: 'Alle Zeilen auswählen',
+    selectRow: 'Zeile auswählen'
   },
   pagination: {
+    label: 'Seitennummerierung',
     first: 'Erste Seite',
     prev: 'Vorherige Seite',
     next: 'Nächste Seite',
     last: 'Letzte Seite'
   },
+  carousel: {
+    prevSlide: 'Vorherige Folie',
+    nextSlide: 'Nächste Folie'
+  },
+  colorPicker: {
+    spectrum: 'Spektrum',
+    tune: 'Feinabstimmung',
+    palette: 'Palette',
+    value: 'Farbwert',
+    hue: 'Farbton',
+    alpha: 'Deckkraft',
+    saturation: 'Sättigung',
+    brightness: 'Helligkeit'
+  },
+  uploader: {
+    addFiles: 'Dateien auswählen',
+    upload: 'Dateien hochladen',
+    abort: 'Hochladen abbrechen',
+    removeQueued: 'Wartende Dateien entfernen',
+    removeUploaded: 'Hochgeladene Dateien entfernen',
+    removeFile: 'Datei entfernen'
+  },
   editor: {
+    toolbar: 'Symbolleiste des Editors',
     url: 'URL',
     bold: 'Fett',
     italic: 'Kursiv',

@@ -1,8 +1,14 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-gutter-sm">
-      <q-btn-dropdown disable class="glossy" color="primary" label="Default">
-        <q-list>
+      <q-btn-dropdown
+        disable
+        class="glossy"
+        color="primary"
+        label="Default"
+        aria-haspopup="menu"
+      >
+        <q-list role="menu">
           <q-item clickable v-close-popup>
             <q-item-section avatar>
               <q-avatar icon="folder" color="primary" text-color="white" />
@@ -24,8 +30,9 @@
         class="glossy"
         color="primary"
         label="Only main btn"
+        toggle-aria-haspopup="menu"
       >
-        <q-list>
+        <q-list role="menu">
           <q-item clickable v-close-popup>
             <q-item-section avatar>
               <q-avatar icon="folder" color="primary" text-color="white" />
@@ -64,8 +71,9 @@
         class="glossy"
         color="primary"
         label="Only dropdown"
+        toggle-aria-haspopup="menu"
       >
-        <q-list>
+        <q-list role="menu">
           <q-item clickable v-close-popup>
             <q-item-section avatar>
               <q-avatar icon="folder" color="primary" text-color="white" />

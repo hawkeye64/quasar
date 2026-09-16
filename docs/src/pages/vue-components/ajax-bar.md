@@ -13,9 +13,8 @@ In most mobile apps and even some desktop apps, you will most likely have some A
 
 QAjaxBar is a component which displays a loading bar (like Youtube) whenever an Ajax call (regardless of Ajax library used) is in progress. It can be manually triggered as well.
 
-::: tip
-If you'd like **a simpler and more convenient way** to offer an Ajax Bar to your users, have a look at the [Loading Bar Plugin](/quasar-plugins/loading-bar), which is actually **the recommended way**.
-:::
+> [!TIP]
+> If you'd like **a simpler and more convenient way** to offer an Ajax Bar to your users, have a look at the [Loading Bar Plugin](/quasar-plugins/loading-bar), which is actually **the recommended way**.
 
 <DocApi file="QAjaxBar" />
 
@@ -31,7 +30,7 @@ The example below triggers events manually for demonstrating purposes only. This
 
 Please check out the API section for all properties that you can use.
 
-### Ajax filter <q-badge label="v2.4.5+" />
+### Ajax filter
 
 Should you want QAjaxBar to trigger only for some URLs (and not for all, like in the default behavior), then you can use the `hijackFilter` property:
 
@@ -53,3 +52,7 @@ Should you want QAjaxBar to trigger only for some URLs (and not for all, like in
 - If multiple events are captured by Ajax Bar simultaneously, `@start` and `@stop` will still be triggered only once: when bar starts showing up and when it becomes hidden.
 - Each Ajax call makes a `start()` call when it is triggered. When it ends, it calls `stop()`. So yes, if you also manually trigger QAjaxBar you must call `start()` each time a new event is starting and `stop()` each time an event finished. QAjaxBar knows to handle multiple events simultaneously.
 - The automatic capture is designed to function exclusively with libraries utilizing [XMLHttpRequest (XHR)](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest). Consequently, if you opt for the native browser [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), it won't initiate the loading bar automatically.
+
+## Accessibility <q-badge label="v2.25+" />
+
+While running, the bar exposes `role="progressbar"` with the usual value attributes, and it is hidden from assistive technology (`aria-hidden`) when idle. Its progress values are synthetic — incremented on a timer, not measured — so treat it as decorative feedback: give it an `aria-label` (e.g. "Page loading"), and announce long-running operations that actually matter through a live region of your own, since the bar's start and completion are not announced.

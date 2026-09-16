@@ -42,7 +42,9 @@ export function useTableColumnSelection(
 
     return cols.map(col => {
       const align = col.align || 'right'
-      const alignClass = `text-${align}`
+      const baseClass =
+        `text-${align}` +
+        (col.autoWidth === true ? ' q-table--col-auto-width' : '')
 
       return {
         ...col,
@@ -57,12 +59,15 @@ export function useTableColumnSelection(
               : 'none'
             : void 0,
         __thClass:
-          alignClass +
+          baseClass +
           (col.headerClasses !== void 0 ? ' ' + col.headerClasses : '') +
           (col.sortable ? ' sortable' : '') +
           (col.name === sortBy
             ? ` sorted ${descending ? 'sort-desc' : ''}`
-            : ''),
+            : // preview the first-click sort direction on hover
+              col.sortable && (col.sortOrder || props.columnSortOrder) === 'da'
+              ? ' sort-desc'
+              : ''),
 
         __tdStyle:
           col.style !== void 0
@@ -74,9 +79,9 @@ export function useTableColumnSelection(
         __tdClass:
           col.classes !== void 0
             ? typeof col.classes !== 'function'
-              ? () => alignClass + ' ' + col.classes
-              : row => alignClass + ' ' + col.classes(row)
-            : () => alignClass
+              ? () => baseClass + ' ' + col.classes
+              : row => baseClass + ' ' + col.classes(row)
+            : () => baseClass
       }
     })
   })

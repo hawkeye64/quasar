@@ -1,8 +1,12 @@
-import { Transition, nextTick } from 'vue'
-import { mount } from '@vue/test-utils'
+import { Transition, defineComponent, h, nextTick } from 'vue'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import QIntersection from './QIntersection.js'
+
+// observers are pooled per config, so every test must give its element
+// back or the next test would silently reuse this one's observer
+enableAutoUnmount(afterEach)
 
 let observers
 
@@ -29,12 +33,16 @@ afterEach(() => {
 })
 
 function show(observer = observers[0]) {
-  observer.callback([
-    {
-      isIntersecting: true,
-      rootBounds: {}
-    }
-  ])
+  observer.callback(
+    [
+      {
+        target: observer.observe.mock.lastCall[0],
+        isIntersecting: true,
+        rootBounds: {}
+      }
+    ],
+    observer
+  )
 }
 
 describe('[QIntersection API]', () => {
@@ -64,6 +72,24 @@ describe('[QIntersection API]', () => {
 
         expect(wrapper.text()).toBe('Visible content')
         expect(observers[0].disconnect).toHaveBeenCalledOnce()
+      })
+
+      test('toggling disable does not re-arm it', async () => {
+        const slotContent = 'Visible content'
+        const wrapper = mount(QIntersection, {
+          props: { once: true },
+          slots: { default: () => slotContent }
+        })
+
+        show()
+        await nextTick()
+
+        await wrapper.setProps({ disable: true })
+        await wrapper.setProps({ disable: false })
+
+        // once means once: re-enabling must not start observing again
+        expect(observers).toHaveLength(1)
+        expect(wrapper.text()).toBe(slotContent)
       })
     })
 
@@ -181,6 +207,39 @@ describe('[QIntersection API]', () => {
 
         expect(wrapper.text()).toBe('Hidden content')
         expect(observers).toHaveLength(0)
+      })
+
+      test('toggling it keeps the content mounted', async () => {
+        const mountedFn = vi.fn()
+        const unmountedFn = vi.fn()
+        const Probe = defineComponent({
+          name: 'ContentProbe',
+          mounted: mountedFn,
+          unmounted: unmountedFn,
+          render: () => h('span', 'Visible content')
+        })
+
+        const wrapper = mount(QIntersection, {
+          slots: { default: () => h(Probe) }
+        })
+
+        show()
+        await nextTick()
+
+        const contentEl = wrapper.get('span').element
+        expect(mountedFn).toHaveBeenCalledOnce()
+
+        await wrapper.setProps({ disable: true })
+
+        expect(unmountedFn).not.toHaveBeenCalled()
+        expect(wrapper.get('span').element).toBe(contentEl)
+        expect(observers[0].disconnect).toHaveBeenCalledOnce()
+
+        await wrapper.setProps({ disable: false })
+
+        expect(unmountedFn).not.toHaveBeenCalled()
+        expect(wrapper.get('span').element).toBe(contentEl)
+        expect(observers).toHaveLength(2)
       })
     })
   })

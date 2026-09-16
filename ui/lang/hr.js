@@ -15,6 +15,11 @@ export default {
     search: 'Traži',
     filter: 'Filter',
     refresh: 'Osvježi',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Raspon',
+    noValue: 'Bez vrijednosti',
+    resize: 'Promijeni veličinu',
     expand: label => (label ? `Proširi "${label}"` : 'Proširiti'),
     collapse: label => (label ? `Sažmi "${label}"` : 'Kolaps')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Prethodna godina',
     nextYear: 'Sljedeće godine',
     today: 'Danas',
-    prevRangeYears: range => `Prethodno ${range} godine`,
-    nextRangeYears: range => `Sljedeće ${range} godine`
+    prevRangeYears: range => `Prethodnih ${range} godina`,
+    nextRangeYears: range => `Sljedećih ${range} godina`,
+    hour: 'Sat',
+    minute: 'Minuta',
+    second: 'Sekunda',
+    now: 'Trenutno vrijeme'
   },
   table: {
     noData: 'Nema podataka',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Redova po stranici:',
     allRows: 'Sve',
     pagination: (start, end, total) => start + '-' + end + ' od ' + total,
-    columns: 'Stupci'
+    columns: 'Stupci',
+    selectAllRows: 'Odaberi sve retke',
+    selectRow: 'Odaberi redak'
   },
   pagination: {
+    label: 'Paginacija',
     first: 'Prva stranica',
     prev: 'Prethodna stranica',
     next: 'Sljedeća stranica',
     last: 'Posljednja stranica'
   },
+  carousel: {
+    prevSlide: 'Prethodni slajd',
+    nextSlide: 'Sljedeći slajd'
+  },
+  colorPicker: {
+    spectrum: 'Spektar',
+    tune: 'Ugađanje',
+    palette: 'Paleta',
+    value: 'Vrijednost boje',
+    hue: 'Nijansa',
+    alpha: 'Neprozirnost',
+    saturation: 'Zasićenost',
+    brightness: 'Svjetlina'
+  },
+  uploader: {
+    addFiles: 'Odaberi datoteke',
+    upload: 'Prenesi datoteke',
+    abort: 'Prekini prijenos',
+    removeQueued: 'Ukloni datoteke na čekanju',
+    removeUploaded: 'Ukloni prenesene datoteke',
+    removeFile: 'Ukloni datoteku'
+  },
   editor: {
+    toolbar: 'Alatna traka uređivača',
     url: 'URL',
     bold: 'Podebljano',
     italic: 'Nakošeno',

@@ -15,6 +15,11 @@ export default {
     search: 'Bilatu',
     filter: 'Iragazi',
     refresh: 'Eguneratu',
+    minimum: 'Minimoa',
+    maximum: 'Maximoa',
+    range: 'Tartea',
+    noValue: 'Baliorik ez',
+    resize: 'Tamaina aldatu',
     expand: label => (label ? `Zabaldu "${label}"` : 'Zabaldu'),
     collapse: label => (label ? `Tolestu "${label}"` : 'Tolestu')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Aurreko urtean',
     nextYear: 'Datorren urtean',
     today: 'Gaur',
-    prevRangeYears: range => `Aurrekoa ${range} urteak`,
-    nextRangeYears: range => `Hurrengoa ${range} urte`
+    prevRangeYears: range => `Aurreko ${range} urteak`,
+    nextRangeYears: range => `Hurrengo ${range} urteak`,
+    hour: 'Ordua',
+    minute: 'Minutua',
+    second: 'Segundoa',
+    now: 'Uneko ordua'
   },
   table: {
     noData: 'Daturik ez',
@@ -49,15 +58,41 @@ export default {
     allRows: 'Denak',
     pagination: (start, end, total) =>
       start + 'tik -' + end + 'ra, guztira ' + total,
-    columns: 'Zutabeak'
+    columns: 'Zutabeak',
+    selectAllRows: 'Hautatu errenkada guztiak',
+    selectRow: 'Hautatu errenkada'
   },
   pagination: {
+    label: 'Orrikatzea',
     first: 'Lehen orria',
     prev: 'Aurreko orria',
     next: 'Hurrengo orria',
     last: 'Azken orria'
   },
+  carousel: {
+    prevSlide: 'Aurreko diapositiba',
+    nextSlide: 'Hurrengo diapositiba'
+  },
+  colorPicker: {
+    spectrum: 'Espektroa',
+    tune: 'Doikuntza',
+    palette: 'Paleta',
+    value: 'Kolorearen balioa',
+    hue: 'Ñabardura',
+    alpha: 'Opakutasuna',
+    saturation: 'Saturazioa',
+    brightness: 'Distira'
+  },
+  uploader: {
+    addFiles: 'Aukeratu fitxategiak',
+    upload: 'Kargatu fitxategiak',
+    abort: 'Utzi karga',
+    removeQueued: 'Kendu zain dauden fitxategiak',
+    removeUploaded: 'Kendu kargatutako fitxategiak',
+    removeFile: 'Kendu fitxategia'
+  },
   editor: {
+    toolbar: 'Editorearen tresna-barra',
     url: 'URL',
     bold: 'Lodia',
     italic: 'Italikoa',

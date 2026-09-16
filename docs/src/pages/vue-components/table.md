@@ -21,9 +21,8 @@ QTable is a component that allows you to display data in a tabular manner. It's 
 - Custom top and/or bottom Table controls
 - Responsive design
 
-::: tip
-If you don't need pagination, sorting, filtering, and all other features of QTable, then you may want to check out [QMarkupTable](/vue-components/markup-table) component instead.
-:::
+> [!TIP]
+> If you don't need pagination, sorting, filtering, and all other features of QTable, then you may want to check out [QMarkupTable](/vue-components/markup-table) component instead.
 
 <DocApi file="QTable" />
 
@@ -100,7 +99,11 @@ columns: [
 
     // header th:
     headerStyle: 'width: 500px',
-    headerClasses: 'my-special-class'
+    headerClasses: 'my-special-class',
+
+    // (optional) shrink both th and td to the minimum width
+    // required by their content
+    autoWidth: true
   },
   { name: 'calories', label: 'Calories', field: 'calories', sortable: true },
   { name: 'fat', label: 'Fat (g)', field: 'fat', sortable: true },
@@ -132,9 +135,8 @@ columns: [
 
 <DocExample title="Dense" file="Dense" />
 
-::: tip
-You can use the `dense` prop along with `$q.screen` to create a responsive behavior. Example: `:dense="$q.screen.lt.md"`. More info: [Screen Plugin](/options/screen-plugin).
-:::
+> [!TIP]
+> You can use the `dense` prop along with `$q.screen` to create a responsive behavior. Example: `:dense="$q.screen.lt.md"`. More info: [Screen Plugin](/options/screen-plugin).
 
 ## Omitting columns definition
 
@@ -144,15 +146,19 @@ You can omit specifying the `columns`. QTable will infer the columns from the pr
 
 ## Sticky header/column
 
-::: warning
-Sticky headers and columns are achieved through CSS with `position: sticky`. This is NOT supported on all browsers. Check [caniuse.com](https://caniuse.com/#search=sticky) before using this technique.
-:::
+> [!WARNING]
+> Sticky headers and columns are achieved through CSS with `position: sticky`. This is NOT supported on all browsers. Check [caniuse.com](https://caniuse.com/#search=sticky) before using this technique.
 
-::: tip
-Pay attention to the code in the "style" section in the following examples, especially around `position: sticky`.
-:::
+> [!TIP]
+> Pay attention to the code in the "style" section in the following examples, especially around `position: sticky`.
+>
+> The browser paints each sticky cell independently and table cells can have fractional sizes, so on some display scalings or browser zoom levels (Windows 125% scaling, for example) hairline gaps can appear between sticky cells, revealing the content scrolled behind them. The 1px `box-shadow` in the same color as the cell background that you will see in the examples below covers such gaps.
 
 <DocExample title="Sticky header" file="StickyHeader" />
+
+The `footer` slot (rendered as a real `<tfoot>` element) can be made sticky the same way. A good use case for it is a totals row:
+
+<DocExample title="Sticky footer (v2.26+)" file="StickyFooter" />
 
 <DocExample title="Sticky first column" file="StickyColumn" />
 
@@ -170,9 +176,8 @@ Pay attention to the code in the "style" section in the following examples, espe
 
 <DocExample title="Custom column" file="CustomColumn" />
 
-::: tip
-For all the styling component properties, please check the API card at the top of the page.
-:::
+> [!TIP]
+> For all the styling component properties, please check the API card at the top of the page.
 
 <DocExample title="Custom coloring" file="CustomColor" />
 
@@ -196,6 +201,10 @@ The example below shows how virtual scroll can be used along with a sticky heade
 
 <DocExample title="Virtual scroll with sticky header" file="VirtscrollSticky" />
 
+Sticky columns work with virtual scroll too, with one precaution: scope any positional `td` selector (like `td:first-child`) to the data rows, as in the example below. Virtual scroll emulates the full height of the list through two hidden filler rows (`q-virtual-scroll__padding`), and their cells match such selectors as well; making them sticky breaks scrolling (dragging the scrollbar would run away to the end of the table).
+
+<DocExample title="Virtual scroll with sticky header and column" file="VirtscrollStickyColumn" />
+
 There are 2 utility CSS classes that control VirtualScroll size calculation:
 
 - Use `q-virtual-scroll--with-prev` class on an element rendered by the VirtualScroll to indicate that the element should be grouped with the previous one (main use case is for multiple table rows generated from the same row of data).
@@ -203,15 +212,13 @@ There are 2 utility CSS classes that control VirtualScroll size calculation:
 
 <DocExample title="Virtual scroll with multiple rows for a data row" file="VirtscrollMultipleRows" />
 
-::: tip
-When rendering more than one `QTr` for the same row of data (through the `body` slot), give each `QTr` a distinct `key` and add the `q-virtual-scroll--with-prev` class to every extra `QTr` after the first one. This tells VirtualScroll to group their sizes together with the previous element, so the total height of the data row is measured correctly. If a row should not be measured at all (for example, a separator), use `q-virtual-scroll--skip` instead. This is especially important when also using a sticky header or row expansion, otherwise you may notice an incorrect scroll height or a jumping scroll position.
-:::
+> [!TIP]
+> When rendering more than one `QTr` for the same row of data (through the `body` slot), give each `QTr` a distinct `key` and add the `q-virtual-scroll--with-prev` class to every extra `QTr` after the first one. This tells VirtualScroll to group their sizes together with the previous element, so the total height of the data row is measured correctly. If a row should not be measured at all (for example, a separator), use `q-virtual-scroll--skip` instead. This is especially important when also using a sticky header or row expansion, otherwise you may notice an incorrect scroll height or a jumping scroll position.
 
 ## Selection
 
-::: warning
-The property `row-key` must be set in order for selection to work properly.
-:::
+> [!WARNING]
+> The property `row-key` must be set in order for selection to work properly.
 
 <DocExample title="Single selection" file="SingleSelection" />
 
@@ -233,9 +240,10 @@ Please note that columns marked as `required` (in the column definition) cannot 
 
 ## Popup editing
 
-::: tip
-Below is an example with the user being able to edit “in place” with the help of **QPopupEdit** component. Please note that we are using the `body` scoped slot. **QPopupEdit** won’t work with cell scoped slots.
-:::
+> [!TIP]
+> Below is an example with the user being able to edit “in place” with the help of **QPopupEdit** component. Please note that we are using the `body` scoped slot. **QPopupEdit** won’t work with cell scoped slots.
+>
+> QPopupEdit edits one cell at a time. To edit a whole row at once, or to offer per row actions (like Edit and Remove), render your own buttons in a `body-cell` scoped slot and open a [QDialog](/vue-components/dialog) holding a form for that row.
 
 <DocExample title="Popup editing" file="PopupEditing" />
 
@@ -245,9 +253,8 @@ Below is an example with the user being able to edit “in place” with the hel
 
 ## Grid style
 
-::: tip
-You can use the `grid` prop along with `$q.screen` to create a responsive behavior. Example: `:grid="$q.screen.lt.md"`. More info: [Screen Plugin](/options/screen-plugin).
-:::
+> [!TIP]
+> You can use the `grid` prop along with `$q.screen` to create a responsive behavior. Example: `:grid="$q.screen.lt.md"`. More info: [Screen Plugin](/options/screen-plugin).
 
 In the example below, we let QTable deal with displaying the grid mode (not using the specific slot):
 
@@ -268,9 +275,8 @@ However, if you want to fully customize the content, check the example below, wh
 
 ## Expanding rows
 
-::: warning
-Add unique (distinct) `key` on QTr if you generate more than one QTr from a row in data.
-:::
+> [!WARNING]
+> Add unique (distinct) `key` on QTr if you generate more than one QTr from a row in data.
 
 <DocExample title="Internal expansion model" file="ExpandedRowInternal" />
 
@@ -285,19 +291,19 @@ If you are using virtual scroll with QTable, you should know that there are 2 ut
 
 <DocExample title="Virtual scroll with expansion model" file="VirtscrollExpandedRow" />
 
-::: tip
-An expanded row is just another `QTr` rendered for the same row of data, so the same rules from "Virtual scrolling" apply: give it its own unique `key` and the `q-virtual-scroll--with-prev` class, so its height is added to the main row when VirtualScroll calculates sizes — even while it's hidden with `v-show`.
-:::
+> [!TIP]
+> An expanded row is just another `QTr` rendered for the same row of data, so the same rules from "Virtual scrolling" apply: give it its own unique `key` and the `q-virtual-scroll--with-prev` class, so its height is added to the main row when VirtualScroll calculates sizes — even while it's hidden with `v-show`.
 
 ## Before/after slots
+
+Note the difference between `bottom-row` and `footer`: the former renders extra rows inside the table body, while the latter renders a real `<tfoot>` element (which, for example, can be made sticky through CSS; see the "Sticky footer" example above).
 
 <DocExample title="Before/After slots (header/footer)" file="BeforeAfterHeaderFooter" />
 
 ## Pagination
 
-::: tip
-When `pagination` has a property named `rowsNumber`, then this means that you’ll be configuring Table for **server**-side pagination (& sorting & filtering). See _"Server side pagination, filter and sorting"_ section.
-:::
+> [!TIP]
+> When `pagination` has a property named `rowsNumber`, then this means that you’ll be configuring Table for **server**-side pagination (& sorting & filtering). See _"Server side pagination, filter and sorting"_ section.
 
 Below are two examples of handling the pagination (and sorting and rows per page).
 
@@ -330,6 +336,9 @@ For learning purposes, we will customize the pagination controls with the defaul
 The example below shows how you can use a slot to customize the entire row:
 
 <DocExample title="Body slot" file="SlotBody" />
+
+> [!TIP]
+> When used in the `body` slot, each QTd needs to know which column it belongs to. Set its `col-name` prop (v2.27+) to the column's `name` from the `columns` definition, as in the example above. The Vue `key` attribute is also supported for backwards compatibility, but since `key` is a reserved attribute Vue does not pass it along through `$attrs`, so it cannot be used when wrapping QTd inside a custom component. The same applies to QTh in the `header` slot.
 
 Below, we use a slot which gets applied to each body cell:
 
@@ -391,23 +400,31 @@ When your database contains a big number of rows for a Table, obviously it’s n
 
 3. It’s best that you also specify the `loading` prop in order to notify the user that a background process is in progress.
 
-::: tip
-In the example below, steps have been taken to emulate an ajax call to a server. While the concepts are similar, if you use this code you will need to make the appropriate changes to connect to your own data source.
-:::
+> [!TIP]
+> In the example below, steps have been taken to emulate an ajax call to a server. While the concepts are similar, if you use this code you will need to make the appropriate changes to connect to your own data source.
 
 <DocExample title="Synchronizing with server" file="Synchronizing" />
 
 ## Exporting data
 
-Below is an example of a naive csv encoding and then exporting table data by using the [exportFile](/quasar-utils/other-utils#export-file) Quasar util. The browser should trigger a file download. For a more professional approach in regards to encoding we do recommend using [csv-parse](https://csv.js.org/parse/) and [csv-stringify](https://csv.js.org/stringify/) packages.
+Below is an example of a naive csv encoding and then exporting table data by using the [exportFile](/quasar-utils/other-utils#exportfile) Quasar util. The browser should trigger a file download. For a more professional approach in regards to encoding we do recommend using [csv-parse](https://csv.js.org/parse/) and [csv-stringify](https://csv.js.org/stringify/) packages.
 
-::: tip
-You could also make use of the `filteredSortedRows` internal computed property of QTable should you want to export the user filtered + sorted data.
-:::
+> [!TIP]
+> You could also make use of the `filteredSortedRows` internal computed property of QTable should you want to export the user filtered + sorted data.
 
 <DocExample title="Export to csv" file="ExportCsv" />
 
-## Keyboard navigation
+## Accessibility <q-badge label="v2.25+" />
+
+QTable renders a native `<table>` with `thead`/`tbody`, so the tabular semantics come for free. Sortable column headers are focusable, sort on <kbd>Enter</kbd> or <kbd>Space</kbd> and expose [`aria-sort`](https://www.w3.org/TR/wai-aria-1.2/#aria-sort); this behavior lives in QTh, so custom `header`/`header-cell` slots should render QTh rather than a plain `th` to keep it. The horizontally scrolling body is a Tab stop, so a wide table can be scrolled with the arrow keys. The selection checkboxes (and their otherwise empty column header), the pagination controls, the rows-per-page select and the loading progress bar carry localized accessible names from the [Quasar Language Pack](/options/quasar-language-packs).
+
+A few aspects remain in your hands:
+
+- Clickable rows (`@row-click` & co.) are pointer-only: rows receive no focus and no key handling. Offer row actions as real buttons inside a cell, or add keyboard handling yourself — the [Keyboard navigation](#keyboard-navigation) example above shows the technique.
+- `grid` mode trades the table semantics for plain cards.
+- The `title` prop renders a visual heading, not a `<caption>` — associate a name with the table through `aria-label`/`aria-labelledby` if it needs one.
+
+### Keyboard navigation
 
 Below is an example of keyboard navigation in the table using selected row. Use <kbd>Arrow Up</kbd>, <kbd>Arrow Down</kbd>, <kbd>Page Up</kbd>, <kbd>Page Down</kbd>, <kbd>Home</kbd> and <kbd>End</kbd> keys to navigate.
 

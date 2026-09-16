@@ -2,17 +2,33 @@
   <q-card flat bordered>
     <div class="q-pa-md text-center">
       <q-btn class="call-to-action-btn" label="Test me" style="width: 200px">
-        <q-tooltip :anchor="anchor" :self="self"> Here I am! </q-tooltip>
+        <q-tooltip
+          :anchor="anchor"
+          :self="self"
+          :cursor-position="cursorPosition"
+        >
+          Here I am!
+        </q-tooltip>
       </q-btn>
     </div>
 
     <q-separator />
 
+    <div class="q-pt-sm">
+      <div class="flex flex-center q-gutter-md">
+        <q-toggle v-model="cursorPosition" label="Cursor Position" />
+      </div>
+    </div>
+
     <q-card-section class="row">
       <div class="column items-center col-6">
         <div class="text-weight-bold">Anchor Origin</div>
         <div class="flex q-gutter-sm">
-          <div class="column q-gutter-y-xs">
+          <div
+            class="column q-gutter-y-xs"
+            role="radiogroup"
+            aria-label="Anchor origin vertical"
+          >
             <div class="text-center">Vertical</div>
             <q-radio
               dense
@@ -33,7 +49,11 @@
               label="Bottom"
             />
           </div>
-          <div class="column q-gutter-y-xs">
+          <div
+            class="column q-gutter-y-xs"
+            role="radiogroup"
+            aria-label="Anchor origin horizontal"
+          >
             <div class="text-center">Horizontal</div>
             <q-radio
               dense
@@ -71,7 +91,11 @@
       <div class="column items-center col-6">
         <div class="text-weight-bold">Self Origin</div>
         <div class="flex q-gutter-sm">
-          <div class="column q-gutter-y-xs">
+          <div
+            class="column q-gutter-y-xs"
+            role="radiogroup"
+            aria-label="Self origin vertical"
+          >
             <div class="text-center">Vertical</div>
             <q-radio
               dense
@@ -92,7 +116,11 @@
               label="Bottom"
             />
           </div>
-          <div class="column q-gutter-y-xs">
+          <div
+            class="column q-gutter-y-xs"
+            role="radiogroup"
+            aria-label="Self origin horizontal"
+          >
             <div class="text-center">Horizontal</div>
             <q-radio
               dense
@@ -136,7 +164,7 @@
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 
 import DocCode from '@/components/DocCode.vue'
 
@@ -149,8 +177,10 @@ const anchor = computed(
 
 const self = computed(() => `${selfOrigin.vertical} ${selfOrigin.horizontal}`)
 
+const cursorPosition = ref(false)
+
 const tooltipExport = computed(
-  () => `<q-tooltip anchor="${anchor.value}" self="${self.value}">
+  () => `<q-tooltip${cursorPosition.value ? ' cursor-position' : ''} anchor="${anchor.value}" self="${self.value}">
   Here I am!
 </q-tooltip>`
 )

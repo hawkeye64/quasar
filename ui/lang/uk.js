@@ -25,6 +25,11 @@ export default {
     search: 'Пошук',
     filter: 'Фільтр',
     refresh: 'Оновити',
+    minimum: 'Мінімум',
+    maximum: 'Максимум',
+    range: 'Діапазон',
+    noValue: 'Немає значення',
+    resize: 'Змінити розмір',
     expand: label => (label ? `Розгорнути "${label}"` : 'Розгорнути'),
     collapse: label => (label ? `Згорнути "${label}"` : 'Згорнути')
   },
@@ -40,36 +45,69 @@ export default {
     format24h: true,
     pluralDay: 'днів',
     prevMonth: 'Попередній місяць',
-    nextMonth: 'Наступного місяця',
+    nextMonth: 'Наступний місяць',
     prevYear: 'Попередній рік',
-    nextYear: 'Наступного року',
+    nextYear: 'Наступний рік',
     today: 'Сьогодні',
-    prevRangeYears: range => `Попередній ${range} роки`,
-    nextRangeYears: range => `Далі ${range} роки`
+    prevRangeYears: range =>
+      `Попередні ${range} ${plurals(range, ['рік', 'роки', 'років'])}`,
+    nextRangeYears: range =>
+      `Наступні ${range} ${plurals(range, ['рік', 'роки', 'років'])}`,
+    hour: 'Година',
+    minute: 'Хвилина',
+    second: 'Секунда',
+    now: 'Поточний час'
   },
   table: {
     noData: 'Немає даних',
-    noResults: 'Співпадінь не знайдено',
+    noResults: 'Збігів не знайдено',
     loading: 'Завантаження...',
     selectedRecords: rows =>
       rows > 0
-        ? rows +
+        ? 'Обрано ' +
+          rows +
           ' ' +
-          plurals(rows, ['рядок обраний', 'рядки обрані', 'рядків обрано']) +
+          plurals(rows, ['рядок', 'рядки', 'рядків']) +
           '.'
-        : 'Жодного рядку не обрано.',
+        : 'Жодного рядка не обрано.',
     recordsPerPage: 'Рядків на сторінці:',
     allRows: 'Усі',
     pagination: (start, end, total) => start + '-' + end + ' з ' + total,
-    columns: 'Колонки'
+    columns: 'Стовпці',
+    selectAllRows: 'Вибрати всі рядки',
+    selectRow: 'Вибрати рядок'
   },
   pagination: {
+    label: 'Посторінкова навігація',
     first: 'Перша сторінка',
     prev: 'Попередня сторінка',
     next: 'Наступна сторінка',
     last: 'Остання сторінка'
   },
+  carousel: {
+    prevSlide: 'Попередній слайд',
+    nextSlide: 'Наступний слайд'
+  },
+  colorPicker: {
+    spectrum: 'Спектр',
+    tune: 'Налаштування',
+    palette: 'Палітра',
+    value: 'Значення кольору',
+    hue: 'Відтінок',
+    alpha: 'Непрозорість',
+    saturation: 'Насиченість',
+    brightness: 'Яскравість'
+  },
+  uploader: {
+    addFiles: 'Вибрати файли',
+    upload: 'Завантажити файли',
+    abort: 'Перервати завантаження',
+    removeQueued: 'Видалити файли з черги',
+    removeUploaded: 'Видалити завантажені файли',
+    removeFile: 'Видалити файл'
+  },
   editor: {
+    toolbar: 'Панель інструментів редактора',
     url: 'URL',
     bold: 'Напівжирний',
     italic: 'Курсив',
@@ -77,15 +115,15 @@ export default {
     underline: 'Підкреслений',
     unorderedList: 'Маркований список',
     orderedList: 'Нумерований список',
-    subscript: 'Підрядковий',
-    superscript: 'Надрядковий',
+    subscript: 'Нижній індекс',
+    superscript: 'Верхній індекс',
     hyperlink: 'Гіперпосилання',
-    toggleFullscreen: 'Повноекранний режим',
+    toggleFullscreen: 'Перемкнути повноекранний режим',
     quote: 'Цитата',
-    left: 'Вирівнювання по лівому краю',
-    center: 'Вирівнювання по центру',
-    right: 'Вирівнювання по правому краю',
-    justify: 'Вирівнювання по ширині',
+    left: 'Вирівняти ліворуч',
+    center: 'Вирівняти за центром',
+    right: 'Вирівняти праворуч',
+    justify: 'Вирівняти за шириною',
     print: 'Друк',
     outdent: 'Зменшити відступ',
     indent: 'Збільшити відступ',
@@ -94,7 +132,7 @@ export default {
     fontSize: 'Розмір шрифту',
     align: 'Вирівнювання',
     hr: 'Вставити горизонтальну лінію',
-    undo: 'Відмінити',
+    undo: 'Скасувати',
     redo: 'Повторити',
     heading1: 'Заголовок 1',
     heading2: 'Заголовок 2',
@@ -102,20 +140,20 @@ export default {
     heading4: 'Заголовок 4',
     heading5: 'Заголовок 5',
     heading6: 'Заголовок 6',
-    paragraph: 'Параграф',
+    paragraph: 'Абзац',
     code: 'Код',
     size1: 'Дуже маленький',
     size2: 'Маленький',
     size3: 'Нормальний',
-    size4: 'Середній',
+    size4: 'Середньо-великий',
     size5: 'Великий',
     size6: 'Дуже великий',
-    size7: 'Величезний',
-    defaultFont: 'Шрифт за замовчуванням',
-    viewSource: 'Переглянути джерело'
+    size7: 'Максимальний',
+    defaultFont: 'Типовий шрифт',
+    viewSource: 'Переглянути код'
   },
   tree: {
     noNodes: 'Немає доступних вузлів',
-    noResults: 'Співпадінь не знайдено'
+    noResults: 'Збігів не знайдено'
   }
 }

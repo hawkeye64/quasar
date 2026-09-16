@@ -1,4 +1,13 @@
-import { computed, getCurrentInstance, h, nextTick, ref, watch } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  h,
+  nextTick,
+  ref,
+  shallowRef,
+  watch,
+  withDirectives
+} from 'vue'
 
 import TouchPan from '../../directives/touch-pan/TouchPan.js'
 
@@ -10,6 +19,7 @@ import QTab from '../tabs/QTab.js'
 import QTabPanels from '../tab-panels/QTabPanels.js'
 import QTabPanel from '../tab-panels/QTabPanel.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -22,7 +32,8 @@ import {
 import { createComponent } from '../../utils/private.create/create.js'
 import { testPattern } from '../../utils/patterns/patterns.js'
 import throttle from '../../utils/throttle/throttle.js'
-import { stop } from '../../utils/event/event.js'
+import { between } from '../../utils/format/format.js'
+import { stop, stopAndPrevent } from '../../utils/event/event.js'
 import {
   hexToRgb,
   hsvToRgb,
@@ -32,7 +43,6 @@ import {
   rgbToString,
   textToRgb
 } from '../../utils/colors/colors.js'
-import { hDir } from '../../utils/private.render/render.js'
 
 const palette = [
   'rgb(255,204,204)',
@@ -185,15 +195,20 @@ export default /*#__PURE__*/ createComponent({
 
   emits: ['update:modelValue', 'change'],
 
-  setup(props, { emit }) {
+  setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
     const { getCache } = useRenderCache()
 
-    const spectrumRef = ref(null)
-    const errorIconRef = ref(null)
+    const spectrumRef = shallowRef(null)
+    const errorIconRef = shallowRef(null)
+    const swatchRoverRef = shallowRef(null)
+
+    // roving tabindex for the palette swatches: the swatch that
+    // currently owns the palette's single Tab stop
+    const focusedSwatch = ref(null)
 
     const forceHex = computed(() =>
       props.formatModel === 'auto' ? null : props.formatModel.includes('hex')
@@ -233,11 +248,11 @@ export default /*#__PURE__*/ createComponent({
       forceHex.value !== null ? forceHex.value : isHex.value
     )
 
-    const formAttrs = computed(() => ({
+    const formAttrs = () => ({
       type: 'hidden',
       name: props.name,
       value: model.value[isOutputHex.value ? 'hex' : 'rgb']
-    }))
+    })
 
     const injectFormInput = useFormInject(formAttrs)
 
@@ -276,6 +291,41 @@ export default /*#__PURE__*/ createComponent({
         : palette
     )
 
+    const paletteRgb = computed(() =>
+      computedPalette.value.map(color =>
+        typeof color === 'string' &&
+        testPattern.anyColor(color.replaceAll(' ', ''))
+          ? textToRgb(color)
+          : null
+      )
+    )
+
+    // alpha is ignored: picking a swatch without one keeps the model's
+    function isModelColor(rgb) {
+      return (
+        rgb !== null &&
+        model.value.hex !== void 0 &&
+        rgb.r === model.value.r &&
+        rgb.g === model.value.g &&
+        rgb.b === model.value.b
+      )
+    }
+
+    const selectedSwatch = computed(() =>
+      paletteRgb.value.findIndex(isModelColor)
+    )
+
+    const swatchRover = computed(() => {
+      if (
+        focusedSwatch.value !== null &&
+        focusedSwatch.value < computedPalette.value.length
+      ) {
+        return focusedSwatch.value
+      }
+
+      return selectedSwatch.value !== -1 ? selectedSwatch.value : 0
+    })
+
     const classes = computed(
       () =>
         'q-color-picker' +
@@ -283,17 +333,45 @@ export default /*#__PURE__*/ createComponent({
         (props.square ? ' q-color-picker--square no-border-radius' : '') +
         (props.flat ? ' q-color-picker--flat no-shadow' : '') +
         (props.disable ? ' disabled' : '') +
-        (isDark.value ? ' q-color-picker--dark q-dark' : '')
+        (isDark() ? ' q-color-picker--dark q-dark' : '')
     )
 
     const attributes = computed(() =>
       props.disable ? { 'aria-disabled': 'true' } : {}
     )
 
+    // the spectrum is a WAI-ARIA slider over two axes: aria-valuenow
+    // carries the saturation, aria-valuetext spells out both
+    const spectrumAttrs = computed(() => {
+      const acc = {
+        role: 'slider',
+        tabindex: editable.value ? 0 : -1,
+        'aria-label': $q.lang.colorPicker?.spectrum,
+        'aria-valuemin': 0,
+        'aria-valuemax': 100,
+        'aria-valuenow': model.value.s,
+        'aria-valuetext':
+          model.value.hex === void 0
+            ? $q.lang.label.noValue
+            : getSpectrumValueText()
+      }
+
+      if (props.disable) {
+        acc['aria-disabled'] = 'true'
+      } else if (props.readonly) {
+        acc['aria-readonly'] = 'true'
+      }
+
+      return acc
+    })
+
     const spectrumDirective = computed(() => [
       [
         TouchPan,
-        onSpectrumPan,
+        // TouchPan only acquires gestures while its value is a function;
+        // detaching the directive instead would re-create the spectrum
+        // markup on every disable/readonly toggle
+        editable.value ? onSpectrumPan : void 0,
         void 0,
         { prevent: true, stop: true, mouse: true }
       ]
@@ -386,19 +464,87 @@ export default /*#__PURE__*/ createComponent({
       let x = Math.min(width, Math.max(0, left - rect.left))
       if ($q.lang.rtl) x = width - x
 
-      const y = Math.min(height, Math.max(0, top - rect.top)),
-        s = Math.round((100 * x) / width),
-        v = Math.round(100 * Math.max(0, Math.min(1, -(y / height) + 1))),
-        rgb = hsvToRgb({
-          h: model.value.h,
-          s,
-          v,
-          a: hasAlpha.value ? model.value.a : void 0
-        })
+      const y = Math.min(height, Math.max(0, top - rect.top))
+
+      setSpectrum(
+        Math.round((100 * x) / width),
+        Math.round(100 * Math.max(0, Math.min(1, -(y / height) + 1))),
+        change
+      )
+    }
+
+    function setSpectrum(s, v, change) {
+      const rgb = hsvToRgb({
+        h: model.value.h,
+        s,
+        v,
+        a: hasAlpha.value ? model.value.a : void 0
+      })
 
       model.value.s = s
       model.value.v = v
       updateModel(rgb, change)
+    }
+
+    function getSpectrumValueText() {
+      const lang = $q.lang.colorPicker
+      const fmt = $q.lang.formatNumber
+      const s = String(model.value.s)
+      const v = String(model.value.v)
+      const sText = (fmt?.(s) ?? s) + '%'
+      const vText = (fmt?.(v) ?? v) + '%'
+
+      // a language pack predating the axis labels still gets the numbers
+      return lang?.saturation !== void 0 && lang.brightness !== void 0
+        ? `${lang.saturation} ${sText}, ${lang.brightness} ${vText}`
+        : `${sText}, ${vText}`
+    }
+
+    // keyboard edits step the spectrum in place; like QSlider, "change"
+    // fires once on keyup so key repeat does not flood it
+    let spectrumKeyPending = false
+
+    function onSpectrumKeydown(e) {
+      const { keyCode } = e
+
+      if (keyCode < 33 || keyCode > 40) return
+
+      stopAndPrevent(e)
+
+      let { s, v } = model.value
+      const step = e.shiftKey ? 10 : 1
+
+      if (keyCode === 36 /* Home */) {
+        s = 0
+      } else if (keyCode === 35 /* End */) {
+        s = 100
+      } else if (keyCode === 33 /* PageUp */) {
+        v += 10
+      } else if (keyCode === 34 /* PageDown */) {
+        v -= 10
+      } else if (keyCode === 38 /* Up */) {
+        v += step
+      } else if (keyCode === 40 /* Down */) {
+        v -= step
+      } else {
+        // Left/Right follow the visual direction, like QSlider does
+        s += (keyCode === 39 ? 1 : -1) * ($q.lang.rtl === true ? -1 : 1) * step
+      }
+
+      s = between(s, 0, 100)
+      v = between(v, 0, 100)
+
+      if (s === model.value.s && v === model.value.v) return
+
+      spectrumKeyPending = true
+      setSpectrum(s, v)
+    }
+
+    function onSpectrumKeyup(e) {
+      if (spectrumKeyPending && e.keyCode >= 33 && e.keyCode <= 40) {
+        spectrumKeyPending = false
+        emit('change', model.value[isOutputHex.value ? 'hex' : 'rgb'])
+      }
     }
 
     function onHue(val, change) {
@@ -543,6 +689,8 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function onPalettePick(color) {
+      if (!editable.value) return
+
       const def = parseModel(color)
       const rgb = { r: def.r, g: def.g, b: def.b, a: def.a }
 
@@ -571,17 +719,14 @@ export default /*#__PURE__*/ createComponent({
 
     function onSpectrumClick(evt) {
       changeSpectrum(
-        evt.pageX - window.pageXOffset,
-        evt.pageY - window.pageYOffset,
+        evt.pageX - window.scrollX,
+        evt.pageY - window.scrollY,
         true
       )
     }
 
     function onActivate(evt) {
-      changeSpectrum(
-        evt.pageX - window.pageXOffset,
-        evt.pageY - window.pageYOffset
-      )
+      changeSpectrum(evt.pageX - window.scrollX, evt.pageY - window.scrollY)
     }
 
     function updateErrorIcon(val) {
@@ -594,6 +739,48 @@ export default /*#__PURE__*/ createComponent({
 
     function setTopView(val) {
       topView.value = val
+    }
+
+    function onSwatchKeydown(e, index) {
+      const { keyCode } = e
+
+      if (keyCode < 35 || keyCode > 40) return
+
+      stopAndPrevent(e)
+
+      const last = computedPalette.value.length - 1
+      let target
+
+      if (keyCode === 36 /* Home */) {
+        target = 0
+      } else if (keyCode === 35 /* End */) {
+        target = last
+      } else {
+        let step
+
+        if (keyCode === 38 /* Up */ || keyCode === 40 /* Down */) {
+          // one visual row; measured so a restyled swatch width still
+          // lands on the swatch straight above/below
+          const el = e.target
+          const cols =
+            Math.max(
+              1,
+              Math.round(el.parentNode.clientWidth / el.offsetWidth)
+            ) || 1
+          step = (keyCode === 38 ? -1 : 1) * cols
+        } else {
+          // Left/Right follow the visual direction
+          step = (keyCode === 37 ? -1 : 1) * ($q.lang.rtl === true ? -1 : 1)
+        }
+
+        target = index + step
+        if (target < 0 || target > last) return
+      }
+
+      focusedSwatch.value = target
+      nextTick(() => {
+        swatchRoverRef.value?.focus()
+      })
     }
 
     function getHeader() {
@@ -636,6 +823,7 @@ export default /*#__PURE__*/ createComponent({
           [
             h('input', {
               class: 'fit',
+              'aria-label': $q.lang.colorPicker?.value,
               value: model.value[topView.value],
               ...(editable.value ? {} : { readonly: true }),
               ...getCache('topIn', {
@@ -687,11 +875,14 @@ export default /*#__PURE__*/ createComponent({
           animated: true
         },
         () => [
+          // every view carries its own Tab stop, so the panels' default
+          // one (there for panels without focusable content) is noise
           h(
             QTabPanel,
             {
               class: 'q-color-picker__spectrum-tab overflow-hidden',
-              name: 'spectrum'
+              name: 'spectrum',
+              tabindex: -1
             },
             getSpectrumTab
           ),
@@ -700,7 +891,8 @@ export default /*#__PURE__*/ createComponent({
             QTabPanel,
             {
               class: 'q-pa-md q-color-picker__tune-tab',
-              name: 'tune'
+              name: 'tune',
+              tabindex: -1
             },
             getTuneTab
           ),
@@ -709,7 +901,8 @@ export default /*#__PURE__*/ createComponent({
             QTabPanel,
             {
               class: 'q-color-picker__palette-tab',
-              name: 'palette'
+              name: 'palette',
+              tabindex: -1
             },
             getPaletteTab
           )
@@ -741,19 +934,22 @@ export default /*#__PURE__*/ createComponent({
               h(QTab, {
                 icon: $q.iconSet.colorPicker.spectrum,
                 name: 'spectrum',
-                ripple: false
+                ripple: false,
+                'aria-label': $q.lang.colorPicker?.spectrum
               }),
 
               h(QTab, {
                 icon: $q.iconSet.colorPicker.tune,
                 name: 'tune',
-                ripple: false
+                ripple: false,
+                'aria-label': $q.lang.colorPicker?.tune
               }),
 
               h(QTab, {
                 icon: $q.iconSet.colorPicker.palette,
                 name: 'palette',
-                ripple: false
+                ripple: false,
+                'aria-label': $q.lang.colorPicker?.palette
               })
             ]
           )
@@ -768,10 +964,13 @@ export default /*#__PURE__*/ createComponent({
           'q-color-picker__spectrum non-selectable relative-position cursor-pointer' +
           (editable.value ? '' : ' readonly'),
         style: spectrumStyle.value,
+        ...spectrumAttrs.value,
         ...(editable.value
           ? {
               onClick: onSpectrumClick,
-              onMousedown: onActivate
+              onMousedown: onActivate,
+              onKeydown: onSpectrumKeydown,
+              onKeyup: onSpectrumKeyup
             }
           : {})
       }
@@ -805,6 +1004,7 @@ export default /*#__PURE__*/ createComponent({
           selectionColor: 'transparent',
           readonly: !editable.value,
           thumbPath,
+          'aria-label': $q.lang.colorPicker?.hue,
           'onUpdate:modelValue': onHue,
           onChange: onHueChange
         })
@@ -823,8 +1023,8 @@ export default /*#__PURE__*/ createComponent({
             selectionColor: 'transparent',
             trackImg: alphaTrackImg,
             readonly: !editable.value,
-            hideSelection: true,
             thumbPath,
+            'aria-label': $q.lang.colorPicker?.alpha,
             ...getCache('alphaSlide', {
               'onUpdate:modelValue': value => onNumericChange(value, 'a', 100),
               onChange: value => onNumericChange(value, 'a', 100, void 0, true)
@@ -834,14 +1034,7 @@ export default /*#__PURE__*/ createComponent({
       }
 
       return [
-        hDir(
-          'div',
-          data,
-          child,
-          'spec',
-          editable.value,
-          () => spectrumDirective.value
-        ),
+        withDirectives(h('div', data, child), spectrumDirective.value),
         h('div', { class: 'q-color-picker__sliders' }, sliders)
       ]
     }
@@ -855,7 +1048,7 @@ export default /*#__PURE__*/ createComponent({
             min: 0,
             max: 255,
             color: 'red',
-            dark: isDark.value,
+            dark: isDark(),
             readonly: !editable.value,
             ...getCache('rSlide', {
               'onUpdate:modelValue': value => onNumericChange(value, 'r', 255),
@@ -882,7 +1075,7 @@ export default /*#__PURE__*/ createComponent({
             min: 0,
             max: 255,
             color: 'green',
-            dark: isDark.value,
+            dark: isDark(),
             readonly: !editable.value,
             ...getCache('gSlide', {
               'onUpdate:modelValue': value => onNumericChange(value, 'g', 255),
@@ -910,7 +1103,7 @@ export default /*#__PURE__*/ createComponent({
             max: 255,
             color: 'blue',
             readonly: !editable.value,
-            dark: isDark.value,
+            dark: isDark(),
             ...getCache('bSlide', {
               'onUpdate:modelValue': value => onNumericChange(value, 'b', 255),
               onChange: value => onNumericChange(value, 'b', 255, void 0, true)
@@ -936,7 +1129,7 @@ export default /*#__PURE__*/ createComponent({
                 modelValue: model.value.a,
                 color: 'grey',
                 readonly: !editable.value,
-                dark: isDark.value,
+                dark: isDark(),
                 ...getCache('aSlide', {
                   'onUpdate:modelValue': value =>
                     onNumericChange(value, 'a', 100),
@@ -962,14 +1155,37 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function getPaletteTab() {
-      const fn = color =>
-        h('div', {
+      if (slots.palette !== void 0) {
+        return slots.palette({
+          palette: computedPalette.value,
+          select: onPalettePick,
+          editable: editable.value
+        })
+      }
+
+      const rover = swatchRover.value
+
+      const fn = (color, index) =>
+        h('button', {
+          type: 'button',
           class: 'q-color-picker__cube col-auto',
           style: { backgroundColor: color },
+          tabindex: editable.value && index === rover ? 0 : -1,
+          ref: index === rover ? swatchRoverRef : void 0,
+          'aria-label': color,
+          'aria-pressed': isModelColor(paletteRgb.value[index])
+            ? 'true'
+            : 'false',
           ...(editable.value
-            ? getCache('palette#' + color, {
+            ? getCache('palette#' + index, {
                 onClick: () => {
-                  onPalettePick(color)
+                  onPalettePick(computedPalette.value[index])
+                },
+                onFocus: () => {
+                  focusedSwatch.value = index
+                },
+                onKeydown: e => {
+                  onSwatchKeydown(e, index)
                 }
               })
             : {})
@@ -981,7 +1197,9 @@ export default /*#__PURE__*/ createComponent({
           {
             class:
               'row items-center q-color-picker__palette-rows' +
-              (editable.value ? ' q-color-picker__palette-rows--editable' : '')
+              (editable.value ? ' q-color-picker__palette-rows--editable' : ''),
+            role: 'group',
+            'aria-label': $q.lang.colorPicker?.palette
           },
           computedPalette.value.map(fn)
         )

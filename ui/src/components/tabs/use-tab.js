@@ -5,7 +5,7 @@ import {
   inject,
   onBeforeUnmount,
   onMounted,
-  ref,
+  shallowRef,
   withDirectives
 } from 'vue'
 
@@ -52,6 +52,8 @@ export const useTabProps = {
   }
 }
 
+const rippleKeyCodes = [13, 32]
+
 export default function useTab(props, slots, emit, routeData) {
   const $tabs = inject(tabsKey, emptyRenderFn)
   if ($tabs === emptyRenderFn) {
@@ -61,55 +63,56 @@ export default function useTab(props, slots, emit, routeData) {
 
   const { proxy } = getCurrentInstance()
 
-  const blurTargetRef = ref(null)
-  const rootRef = ref(null)
-  const tabIndicatorRef = ref(null)
+  const blurTargetRef = shallowRef(null)
+  const rootRef = shallowRef(null)
+  const tabIndicatorRef = shallowRef(null)
 
-  const ripple = computed(() =>
-    props.disable || props.ripple === false
+  function getRipple() {
+    return props.disable || props.ripple === false
       ? false
       : {
-          keyCodes: [13, 32],
+          keyCodes: rippleKeyCodes,
           early: true,
           ...(props.ripple === true ? {} : props.ripple)
         }
-  )
+  }
 
-  const isActive = computed(() => $tabs.currentModel.value === props.name)
+  function getClasses(isActive) {
+    const tabProps = $tabs.tabProps.value
 
-  const classes = computed(
-    () =>
+    return (
       'q-tab relative-position self-stretch flex flex-center text-center' +
-      (isActive.value
+      (isActive
         ? ' q-tab--active' +
-          ($tabs.tabProps.value.activeClass
-            ? ' ' + $tabs.tabProps.value.activeClass
-            : '') +
-          ($tabs.tabProps.value.activeColor
-            ? ` text-${$tabs.tabProps.value.activeColor}`
-            : '') +
-          ($tabs.tabProps.value.activeBgColor
-            ? ` bg-${$tabs.tabProps.value.activeBgColor}`
-            : '')
+          (tabProps.activeClass ? ' ' + tabProps.activeClass : '') +
+          (tabProps.activeColor ? ` text-${tabProps.activeColor}` : '') +
+          (tabProps.activeBgColor ? ` bg-${tabProps.activeBgColor}` : '')
         : ' q-tab--inactive') +
-      (props.icon && props.label && !$tabs.tabProps.value.inlineLabel
+      (props.icon && props.label && !tabProps.inlineLabel
         ? ' q-tab--full'
         : '') +
-      (props.noCaps || $tabs.tabProps.value.noCaps ? ' q-tab--no-caps' : '') +
+      (props.noCaps || tabProps.noCaps ? ' q-tab--no-caps' : '') +
       (props.disable
         ? ' disabled'
         : ' q-focusable q-hoverable cursor-pointer') +
       (routeData !== void 0 ? routeData.linkClass.value : '')
-  )
+    )
+  }
 
-  const innerClass = computed(
-    () =>
+  function getInnerClass() {
+    return (
       'q-tab__content self-stretch flex-center relative-position q-anchor--skip non-selectable ' +
       ($tabs.tabProps.value.inlineLabel
         ? 'row no-wrap q-tab__content--inline'
         : 'column') +
       (props.contentClass !== void 0 ? ` ${props.contentClass}` : '')
-  )
+    )
+  }
+
+  // computeds on purpose: these two are the only reads of $tabs state that
+  // changes while a tab is alive, so an unchanged value here is what keeps
+  // a model switch from re-rendering every tab instead of the two involved
+  const isActive = computed(() => $tabs.currentModel.value === props.name)
 
   const tabIndex = computed(() => {
     if (props.disable || $tabs.hasFocus.value) return -1
@@ -188,28 +191,34 @@ export default function useTab(props, slots, emit, routeData) {
   }
 
   function onKeydown(e) {
+    // emitted before acting on the key, so that a consumer
+    // can cancel our handling of it (same as with onClick)
+    emit('keydown', e)
+
+    if (e.defaultPrevented) return
+
     if (isKeyCode(e, [13, 32])) {
       onClick(e, true)
     } else if (
-      !shouldIgnoreKey(e) &&
       e.keyCode >= 35 &&
       e.keyCode <= 40 &&
       !e.altKey &&
       !e.metaKey &&
+      !shouldIgnoreKey(e) &&
+      // keep last: it navigates
       $tabs.onKbdNavigate(e.keyCode, proxy.$el)
     ) {
       stopAndPrevent(e)
     }
-
-    emit('keydown', e)
   }
 
   function getContent() {
-    const narrow = $tabs.tabProps.value.narrowIndicator,
+    const tabProps = $tabs.tabProps.value,
+      narrow = tabProps.narrowIndicator,
       content = [],
       indicator = h('div', {
         ref: tabIndicatorRef,
-        class: ['q-tab__indicator', $tabs.tabProps.value.indicatorClass]
+        class: ['q-tab__indicator', tabProps.indicatorClass]
       })
 
     if (props.icon !== void 0) {
@@ -245,7 +254,7 @@ export default function useTab(props, slots, emit, routeData) {
 
     const node = [
       h('div', { class: 'q-focus-helper', tabindex: -1, ref: blurTargetRef }),
-      h('div', { class: innerClass.value }, hMergeSlot(slots.default, content))
+      h('div', { class: getInnerClass() }, hMergeSlot(slots.default, content))
     ]
 
     if (!narrow) node.push(indicator)
@@ -272,7 +281,7 @@ export default function useTab(props, slots, emit, routeData) {
   function renderTab(tag, customData) {
     const data = {
       ref: rootRef,
-      class: classes.value,
+      class: getClasses(isActive.value),
       tabindex: tabIndex.value,
       role: 'tab',
       'aria-selected': isActive.value ? 'true' : 'false',
@@ -282,7 +291,7 @@ export default function useTab(props, slots, emit, routeData) {
       ...customData
     }
 
-    return withDirectives(h(tag, data, getContent()), [[Ripple, ripple.value]])
+    return withDirectives(h(tag, data, getContent()), [[Ripple, getRipple()]])
   }
 
   return { renderTab, $tabs }

@@ -1,5 +1,6 @@
+import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import QChip, { defaultSizes } from './QChip.js'
 
@@ -383,6 +384,31 @@ describe('[QChip API]', () => {
 
         expect(target.$computedStyle('cursor')).toBe('pointer')
       })
+
+      test('a click listener implies clickability when the prop is not set', async () => {
+        const onClick = vi.fn()
+        const wrapper = mount(QChip, {
+          props: { onClick }
+        })
+        const target = wrapper.get('.q-chip')
+
+        expect(target.classes()).toContain('q-chip--clickable')
+        expect(target.attributes('tabindex')).toBe('0')
+
+        await target.trigger('click')
+
+        expect(onClick).toHaveBeenCalledTimes(1)
+      })
+
+      test('an explicit false wins over a click listener', () => {
+        const wrapper = mount(QChip, {
+          props: { clickable: false, onClick: () => {} }
+        })
+        const target = wrapper.get('.q-chip')
+
+        expect(target.classes()).not.toContain('q-chip--clickable')
+        expect(target.attributes('tabindex')).toBeUndefined()
+      })
     })
 
     describe('[(prop)removable]', () => {
@@ -465,13 +491,16 @@ describe('[QChip API]', () => {
 
         expect(wrapper.attributes('tabindex')).toBe(String(propVal))
 
-        // we'll test clickable + disable
+        // we'll test clickable + disable: the chip leaves the tab order
+        // but keeps its button role, announced as dimmed
         await wrapper.setProps({ disable: true })
         await flushPromises()
 
-        expect(wrapper.attributes('tabindex')).toBeUndefined()
+        expect(wrapper.attributes('tabindex')).toBe('-1')
 
-        expect(wrapper.attributes('aria-disabled')).toBeUndefined()
+        expect(wrapper.attributes('aria-disabled')).toBe('true')
+
+        expect(wrapper.attributes('role')).toBe('button')
 
         // we'll now test removable + disable
         await wrapper.setProps({
@@ -509,6 +538,34 @@ describe('[QChip API]', () => {
 
         expect(wrapper.get('.q-chip').classes()).toContain('disabled')
       })
+
+      test('toggling it keeps the content mounted and mutes the ripple', async () => {
+        const unmountedFn = vi.fn()
+        const Probe = defineComponent({
+          name: 'ContentProbe',
+          unmounted: unmountedFn,
+          render: () => h('span', 'Content')
+        })
+
+        const wrapper = mount(QChip, {
+          slots: { default: () => h(Probe) }
+        })
+        const contentEl = wrapper.get('span').element
+
+        await wrapper.setProps({ disable: true })
+        await wrapper.trigger('click')
+
+        expect(unmountedFn).not.toHaveBeenCalled()
+        expect(wrapper.get('span').element).toBe(contentEl)
+        expect(wrapper.find('.q-ripple').exists()).toBe(false)
+
+        await wrapper.setProps({ disable: false })
+        await wrapper.trigger('click')
+
+        expect(unmountedFn).not.toHaveBeenCalled()
+        expect(wrapper.get('span').element).toBe(contentEl)
+        expect(wrapper.find('.q-ripple').exists()).toBe(true)
+      })
     })
   })
 
@@ -530,74 +587,64 @@ describe('[QChip API]', () => {
   describe('[Events]', () => {
     describe('[(event)click]', () => {
       test('is emitting when clickable', async () => {
+        const onClick = vi.fn()
         const wrapper = mount(QChip, {
-          props: {
-            clickable: true
-          }
+          props: { clickable: true, onClick }
         })
 
         await wrapper.trigger('click')
 
-        const eventList = wrapper.emitted()
-        expect(eventList).toHaveProperty('click')
-        expect(eventList.click).toHaveLength(1)
+        expect(onClick).toHaveBeenCalledTimes(1)
 
-        const [evt] = eventList.click[0]
+        const [evt] = onClick.mock.calls[0]
         expect(evt).toBeInstanceOf(Event)
       })
 
       test('is emitting when selected', async () => {
+        const onClick = vi.fn()
         const wrapper = mount(QChip, {
-          props: {
-            selected: true
-          }
+          props: { selected: true, onClick }
         })
 
         await wrapper.trigger('click')
 
-        const eventList = wrapper.emitted()
-        expect(eventList).toHaveProperty('click')
-        expect(eventList.click).toHaveLength(1)
+        expect(onClick).toHaveBeenCalledTimes(1)
 
-        const [evt] = eventList.click[0]
+        const [evt] = onClick.mock.calls[0]
         expect(evt).toBeInstanceOf(Event)
       })
 
-      test('is NOT emitting when not clickable or removable', async () => {
-        const wrapper = mount(QChip)
+      test('is NOT emitting when clickable is explicitly false', async () => {
+        const onClick = vi.fn()
+        const wrapper = mount(QChip, {
+          props: { clickable: false, onClick }
+        })
 
         await wrapper.trigger('click')
 
-        const eventList = wrapper.emitted()
-        expect(eventList).not.toHaveProperty('click')
+        expect(onClick).not.toHaveBeenCalled()
       })
 
       test('is NOT emitting when disable + clickable', async () => {
+        const onClick = vi.fn()
         const wrapper = mount(QChip, {
-          props: {
-            clickable: true,
-            disable: true
-          }
+          props: { clickable: true, disable: true, onClick }
         })
 
         await wrapper.trigger('click')
 
-        const eventList = wrapper.emitted()
-        expect(eventList).not.toHaveProperty('click')
+        expect(onClick).not.toHaveBeenCalled()
       })
 
       test('is NOT emitting when disable + selected', async () => {
+        const onClick = vi.fn()
         const wrapper = mount(QChip, {
-          props: {
-            selected: true,
-            disable: true
-          }
+          props: { selected: true, disable: true, onClick }
         })
 
         await wrapper.trigger('click')
 
-        const eventList = wrapper.emitted()
-        expect(eventList).not.toHaveProperty('click')
+        expect(onClick).not.toHaveBeenCalled()
       })
     })
 
@@ -681,6 +728,30 @@ describe('[QChip API]', () => {
         const [value] = eventList['update:modelValue'][0]
         expect(value).toBe(false)
       })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('plain action chips do not claim toggle semantics', () => {
+      const wrapper = mount(QChip, {
+        props: { clickable: true }
+      })
+
+      expect(wrapper.attributes('role')).toBe('button')
+      expect(wrapper.attributes('aria-pressed')).toBeUndefined()
+    })
+
+    test('selection chips expose aria-pressed', async () => {
+      const wrapper = mount(QChip, {
+        props: { selected: false }
+      })
+
+      expect(wrapper.attributes('role')).toBe('button')
+      expect(wrapper.attributes('aria-pressed')).toBe('false')
+
+      await wrapper.setProps({ selected: true })
+
+      expect(wrapper.attributes('aria-pressed')).toBe('true')
     })
   })
 })

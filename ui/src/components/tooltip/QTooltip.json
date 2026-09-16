@@ -85,14 +85,17 @@
 
     "offset": {
       "type": "Array",
-      "desc": "An array of two numbers to offset the Tooltip horizontally and vertically in pixels",
+      "desc": "An array of two numbers (in pixels) which expands the anchor element's bounding box outward horizontally and vertically; the Tooltip is then positioned against the expanded box, so the visible effect depends on the 'anchor'/'self' points in use",
       "default": "[14, 14]",
       "examples": ["[8, 8]", "[5, 10]"],
       "category": "position"
     },
 
-    "scroll-target": {
-      "extends": "scroll-target"
+    "cursor-position": {
+      "type": "Boolean",
+      "desc": "Position the Tooltip at the pointer instead of relative to its target; the pointer must settle for a moment first, and the position is then frozen for as long as the Tooltip stays shown. Ignored when the Tooltip is shown through keyboard focus or its model, since neither reports a pointer position",
+      "addedIn": "v2.30",
+      "category": "position"
     },
 
     "delay": {
@@ -124,7 +127,7 @@
 
   "methods": {
     "updatePosition": {
-      "desc": "There are some custom scenarios for which Quasar cannot automatically reposition the tooltip without significant performance drawbacks so the optimal solution is for you to call this method when you need it",
+      "desc": "The Tooltip follows its target automatically (through any scrolling container) and this method only re-checks whether the intended placement still fits the viewport (which side the Tooltip opens to and its maximum size); call it for the scenarios Quasar cannot detect",
       "params": null,
       "returns": null
     }

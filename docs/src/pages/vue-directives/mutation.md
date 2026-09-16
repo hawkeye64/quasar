@@ -1,7 +1,7 @@
 ---
-title: Mutation Directive
+title: v-mutation directive
 desc: Vue directive that uses Mutation Observer API to watch for changes being made to the DOM tree.
-keys: mutation
+keys: mutation,v-mutation
 examples: Mutation
 ---
 
@@ -22,6 +22,12 @@ The handler Function takes one parameter, which is an Array of [MutationRecord](
 By not specifying any modifiers (except for "once"), the Mutation directive will enable all of them.
 
 <DocExample title="Catch everything" file="CatchAll" />
+
+### Disable
+
+Passing in Boolean `false` (or `undefined`) instead of a Function disables the directive: the Mutation Observer is dropped until a handler is supplied again. The DOM element is untouched in the process, so whatever it wraps keeps its state.
+
+<DocExample title="Disable" file="Disable" />
 
 ### Drag and drop example
 

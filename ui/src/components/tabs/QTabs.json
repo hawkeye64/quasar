@@ -64,18 +64,14 @@
     },
 
     "content-class": {
-      "type": "String",
-      "desc": "Class definitions to be attributed to the content wrapper",
-      "examples": ["'my-special-class'"],
-      "category": "style"
+      "extends": "content-class"
     },
 
     "active-class": {
       "type": "String",
       "desc": "The class to be set on the active tab",
       "examples": ["'my-active-class'"],
-      "category": "style",
-      "addedIn": "v2.1.4"
+      "category": "style"
     },
 
     "left-icon": {
@@ -123,9 +119,7 @@
     },
 
     "no-caps": {
-      "type": "Boolean",
-      "desc": "Turns off capitalizing all letters within the tab (which is the default)",
-      "category": "content"
+      "extends": "tab-no-caps"
     },
 
     "dense": {

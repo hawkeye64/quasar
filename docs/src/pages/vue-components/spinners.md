@@ -16,9 +16,8 @@ A Spinner is used to show the user a timely process is currently taking place. I
 
 <DocApi file="QSpinner" />
 
-::: tip
-The API below applies to all spinners, except for QSpinner. Making an example with QSpinnerCube.
-:::
+> [!TIP]
+> The API below applies to all spinners, except for QSpinner. Making an example with QSpinnerCube.
 
 <DocApi file="QSpinnerCube" title="Other Spinners API" />
 
@@ -37,3 +36,7 @@ Please note that by default, QSpinner and all other spinners inherit the font-si
 <DocExample title="Size" file="Size" />
 
 <DocExample title="Standard sizes" file="StandardSizes" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+Spinners render a bare animated SVG with no ARIA at all, so the loading state is invisible to screen readers. Pair a spinner with a live region that says so — an element with `role="status"` containing visually-hidden "Loading…" text — or mark the spinner itself `aria-hidden="true"` when a text alternative already exists elsewhere.

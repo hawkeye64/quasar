@@ -55,6 +55,96 @@ function keydownEvent(props) {
   }
 }
 
+/**
+ * Drives one edit the way a browser does: the control already holds the new
+ * text and the caret when the input event fires, so the value is patched at
+ * the selection first and updateMaskValue() is told which edit produced it.
+ * Backspace goes through the keydown hook first, as QInput wires it, since
+ * that is what pre-selects across a mask literal.
+ */
+async function applyUserEdit({ mask, input }, op, char) {
+  if (op === 'type') {
+    const start = input.selectionStart,
+      end = input.selectionEnd,
+      val = input.value.slice(0, start) + char + input.value.slice(end)
+
+    input.value = val
+    input.setSelectionRange(start + 1, start + 1)
+    mask.updateMaskValue(val, false, 'insertText')
+  } else {
+    mask.onMaskedKeydown(keydownEvent({ keyCode: 8 }))
+
+    const end = input.selectionEnd
+    let start = input.selectionStart
+
+    if (start === end) {
+      if (start === 0) return
+      start--
+    }
+
+    const val = input.value.slice(0, start) + input.value.slice(end)
+    input.value = val
+    input.setSelectionRange(start, start)
+    mask.updateMaskValue(val, false, 'deleteContentBackward')
+  }
+
+  // the value lands synchronously, the caret a tick later
+  await nextTick()
+  await nextTick()
+}
+
+/**
+ * Replays one edit sequence against two otherwise identical masks that
+ * differ only in their fill char: one that can never be data ("_" against
+ * "#") and one that doubles as a valid data char ("0"). Only the rendered
+ * padding may differ. Returns a per-step trace of what must not: the
+ * unmasked model and the caret.
+ *
+ * The model is left out for reverseFillMask, where the two genuinely
+ * disagree: right-aligned content strips its leading fill run, so a leading
+ * "0" is padding under fill-mask="0" and data under fill-mask="_". That is
+ * the documented currency behavior, not a divergence to fix.
+ */
+async function traceFillCharParity(maskProps, ops, fillMask) {
+  const ctx = createMask({ ...maskProps, fillMask, unmaskedValue: true })
+  const trace = []
+
+  for (const [op, char] of ops) {
+    ctx.input.focus()
+    await applyUserEdit(ctx, op, char)
+
+    const model = ctx.emitValue.mock.calls.at(-1)?.[0] ?? ''
+    trace.push(
+      `${op}${char ?? ''} ` +
+        (maskProps.reverseFillMask === true ? '' : `model=${model} `) +
+        `caret=${ctx.input.selectionStart}`
+    )
+  }
+
+  return trace
+}
+
+/**
+ * Closes the v-model loop. useMask only emits; without the value coming
+ * back its own "did this really change?" guard compares against a stale
+ * model and skips emissions a real binding would make.
+ */
+function syncModel(ctx) {
+  const last = ctx.emitValue.mock.calls.at(-1)
+  if (last !== void 0) ctx.props.modelValue = last[0]
+}
+
+/** Removes a range the way cut, ctrl-backspace and ctrl-delete do. */
+function removeRange(ctx, from, to, inputType) {
+  const { mask, input } = ctx,
+    val = input.value.slice(0, from) + input.value.slice(to)
+
+  input.value = val
+  input.setSelectionRange(from, from)
+  mask.updateMaskValue(val, false, inputType)
+  syncModel(ctx)
+}
+
 describe('[useMask API]', () => {
   describe('[Variables]', () => {
     describe('[(variable)useMaskProps]', () => {
@@ -125,6 +215,16 @@ describe('[useMask API]', () => {
       })
 
       test.each([
+        ['digits', '###', '٣٤٥'],
+        ['letters', 'SSS', 'éàü'],
+        ['alphanumerics', 'NNN', 'é３ü']
+      ])('rejects non-ASCII %s', (_, maskDef, modelValue) => {
+        const { mask } = createMask({ modelValue, mask: maskDef })
+
+        expect(mask.innerValue.value).toBe('')
+      })
+
+      test.each([
         ['date', '2020/01/02', '20200102'],
         ['datetime', '2020/01/02 03:04', '202001020304'],
         ['time', '03:04', '0304'],
@@ -135,6 +235,19 @@ describe('[useMask API]', () => {
         const { mask } = createMask({ modelValue, mask: named })
 
         expect(mask.innerValue.value).toBe(expected)
+      })
+
+      test.each([
+        ['date', '20260824', '2026/08/24'],
+        ['datetime', '202608241530', '2026/08/24 15:30'],
+        ['time', '1530', '15:30'],
+        ['fulltime', '153045', '15:30:45'],
+        ['phone', '1234567890', '(123) 456 - 7890'],
+        ['card', '1234567812345678', '1234 5678 1234 5678']
+      ])('expands the named mask %s', (mask, modelValue, expected) => {
+        const { mask: m } = createMask({ modelValue, mask })
+
+        expect(m.innerValue.value).toBe(expected)
       })
 
       test('treats an unknown token as a literal', () => {
@@ -205,6 +318,123 @@ describe('[useMask API]', () => {
         expect(mask.innerValue.value).toBe('12/345')
       })
 
+      test('re-anchors the caret after its slots when the mask changes (#7777)', async () => {
+        const { mask, props, input } = createMask({
+          modelValue: '',
+          mask: '###.#.###'
+        })
+
+        input.focus()
+        mask.updateMaskValue('18', false, 'insertText')
+        await nextTick()
+        expect(input.value).toBe('18')
+        input.setSelectionRange(2, 2)
+
+        // a computed mask flipping on the value just typed (#7777's setup)
+        props.mask = '#.###.###'
+        await nextTick() // the watcher re-masks...
+        await nextTick() // ...and re-anchors the caret a tick later
+
+        expect(input.value).toBe('1.8')
+        // still after its 2 data chars, so the next char continues the value
+        // instead of landing between "1" and "8"
+        expect(input.selectionStart).toBe(3)
+      })
+
+      test('rides a length-switching mask up and down its threshold', async () => {
+        // the "Multiple masks" docs pattern (#7920), see
+        // docs/src/examples/QInput/MaskMultiple.vue: the shorter mask
+        // carries a spare trailing token so the switching digit can land
+        const SHORT = '(##) ####-#####'
+        const LONG = '(##) #####-####'
+        const { mask, props, input } = createMask({
+          modelValue: '',
+          mask: SHORT
+        })
+
+        input.focus()
+
+        // the browser applies the edit (value + caret) before the input
+        // event fires, so mirror that ordering here
+        function applyEdit(val, inputType) {
+          input.value = val
+          input.setSelectionRange(val.length, val.length)
+          mask.updateMaskValue(val, false, inputType)
+        }
+
+        for (const digit of '1123456789') {
+          applyEdit(input.value + digit, 'insertText')
+          await nextTick()
+        }
+        expect(input.value).toBe('(11) 2345-6789')
+
+        // the 11th digit lands in the spare token, then the computed
+        // property switches masks and the value re-lays out
+        applyEdit(input.value + '0', 'insertText')
+        await nextTick()
+        expect(input.value).toBe('(11) 2345-67890')
+
+        props.mask = LONG
+        await nextTick()
+        await nextTick()
+        expect(input.value).toBe('(11) 23456-7890')
+        expect(input.selectionStart).toBe(input.value.length)
+
+        // deleting that digit switches back down
+        applyEdit('(11) 23456-789', 'deleteContentBackward')
+        await nextTick()
+        props.mask = SHORT
+        await nextTick()
+        await nextTick()
+        expect(input.value).toBe('(11) 2345-6789')
+        expect(input.selectionStart).toBe(input.value.length)
+      })
+
+      // A mask that mixes token TYPES cannot be unmasked by skipping over
+      // each token's own negate class: that class also matches every other
+      // type's data. Reverse filling hit it hardest, its overflow entry
+      // running before the later tokens ever saw their chars (#18523)
+      test.each([
+        ['AA-##', 'ab12', 'AB-12'],
+        ['AA-##', 'AB-12', 'AB-12'],
+        ['AA-##', '12', '12'],
+        ['A#A#', 'a5', 'A5'],
+        ['A#A#', 'a5b6', 'A5B6'],
+        ['SS##', 'ab12', 'ab12'],
+        ['##-AA', '12ab', '12-AB']
+      ])('reverse fills %s from the model %s', (mask, modelValue, expected) => {
+        const { mask: m } = createMask({
+          modelValue,
+          mask,
+          reverseFillMask: true
+        })
+
+        expect(m.innerValue.value).toBe(expected)
+      })
+
+      test.each([
+        ['####/##/##', false, '20260824'],
+        ['(###) ###-####', false, '1234567890'],
+        ['##:##', false, '1234'],
+        ['#.##', true, '123'],
+        ['AA-##', false, 'ab12'],
+        ['AA-##', true, 'ab12'],
+        ['A#A#', true, 'a5b6'],
+        ['##-AA', false, '12ab']
+      ])(
+        'renders %s (reverse: %s) as a fixed point',
+        (mask, reverseFillMask, modelValue) => {
+          const { mask: m } = createMask({ modelValue, mask, reverseFillMask })
+          const rendered = m.innerValue.value
+
+          // what the control displays must unmask back to what produced it,
+          // or a parent echoing the model would erode the value
+          m.updateMaskValue(rendered)
+
+          expect(m.innerValue.value).toBe(rendered)
+        }
+      )
+
       test('gives the unmasked value back when the mask goes away', async () => {
         const { mask, props, emit } = createMask({
           modelValue: '12:34',
@@ -219,6 +449,22 @@ describe('[useMask API]', () => {
           'update:modelValue',
           '1234'
         )
+      })
+
+      test('drops the fill padding when the mask goes away (#18523)', async () => {
+        const { mask, props, emit } = createMask({
+          modelValue: '12',
+          mask: '###-##',
+          fillMask: '0'
+        })
+
+        expect(mask.innerValue.value).toBe('120-00')
+
+        props.mask = void 0
+        await nextTick()
+
+        // the model already holds the only data there was
+        expect(emit).not.toHaveBeenCalled()
       })
 
       test('stays quiet when the model already holds the unmasked value', async () => {
@@ -291,6 +537,368 @@ describe('[useMask API]', () => {
         expect(emitValue).toHaveBeenCalledExactlyOnceWith('123-45', true)
       })
 
+      test('keeps a typed char that matches an upcoming mask literal (#8354)', () => {
+        const { mask } = createMask({
+          modelValue: '',
+          mask: '+1 123 ### ## ##'
+        })
+
+        // the digit literals of the prefix must not swallow the typed "1"
+        mask.updateMaskValue('1')
+        expect(mask.innerValue.value).toBe('+1 123 1')
+
+        mask.updateMaskValue('+1 123 1234567')
+        expect(mask.innerValue.value).toBe('+1 123 123 45 67')
+      })
+
+      test('keeps a typed digit that equals a digit literal (#15624, #18051)', () => {
+        const { mask, input } = createMask({ modelValue: '', mask: '11##' })
+
+        // "1" is typed into the empty field; it must land in the first
+        // token slot instead of being read as one of the "11" literals
+        mask.updateMaskValue('1', false, 'insertText')
+        expect(mask.innerValue.value).toBe('111')
+
+        // the next "1" gets appended by the browser to what is displayed
+        mask.updateMaskValue(input.value + '1', false, 'insertText')
+        expect(mask.innerValue.value).toBe('1111')
+      })
+
+      test('keeps a typed "0" that equals a "0" literal (#18051)', () => {
+        const { mask, input } = createMask({
+          modelValue: '',
+          mask: '04## ### ###'
+        })
+
+        mask.updateMaskValue('0', false, 'insertText')
+        expect(mask.innerValue.value).toBe('040')
+
+        mask.updateMaskValue(input.value + '0', false, 'insertText')
+        expect(mask.innerValue.value).toBe('0400 ')
+      })
+
+      test('re-lays out the data when typing into the middle', () => {
+        const { mask } = createMask({ modelValue: '12345', mask: '###-##' })
+
+        // "9" inserted right after "123" of the displayed "123-45"
+        mask.updateMaskValue('1239-45', false, 'insertText')
+        expect(mask.innerValue.value).toBe('123-94')
+      })
+
+      test('clears out when deleting the only typed char behind literals', () => {
+        const { mask, input } = createMask({ modelValue: '', mask: '11##' })
+
+        mask.updateMaskValue('1', false, 'insertText')
+        expect(input.value).toBe('111')
+
+        mask.updateMaskValue('11', false, 'deleteContentBackward')
+        expect(mask.innerValue.value).toBe('')
+      })
+
+      test('drops a typed char its token slot rejects, keeping the rest', () => {
+        const { mask } = createMask({ modelValue: 'ab12', mask: 'AA##' })
+
+        // digit typed at the front, where a letter is expected
+        mask.updateMaskValue('5AB12', false, 'insertText')
+        expect(mask.innerValue.value).toBe('AB12')
+      })
+
+      test('types over the fill chars, not into them', () => {
+        const { mask } = createMask({
+          modelValue: '12',
+          mask: '###-##',
+          fillMask: true
+        })
+
+        // "3" typed at the cursor, which sits on the first fill char
+        mask.updateMaskValue('123_-__', false, 'insertText')
+        expect(mask.innerValue.value).toBe('123-__')
+      })
+
+      // The fill char is only distinguishable from a data char by the
+      // position it sits at: "0" satisfies the "#" token just as a typed
+      // digit does, so a fill char must never be recognized by testing it
+      test('shifts the digits while reverse filling with "0" (#18523)', () => {
+        const { mask, input } = createMask({
+          mask: '#.##',
+          fillMask: '0',
+          reverseFillMask: true
+        })
+
+        const rendered = [mask.innerValue.value]
+
+        // typing appends at the caret, which reverse filling keeps at the end
+        for (const char of ['1', '0', '0', '5']) {
+          input.value = mask.innerValue.value + char
+          input.setSelectionRange(input.value.length, input.value.length)
+          mask.updateMaskValue(input.value, false, 'insertText')
+          input.value = mask.innerValue.value
+          rendered.push(mask.innerValue.value)
+        }
+
+        expect(rendered).toEqual(['0.00', '0.01', '0.10', '1.00', '10.05'])
+      })
+
+      test('backspacing a "0" fill char drops a data char (#18523)', () => {
+        const { mask, input } = createMask({
+          modelValue: '12',
+          mask: '###-##',
+          fillMask: '0'
+        })
+
+        expect(mask.innerValue.value).toBe('120-00')
+
+        // the trailing fill char is deleted, so remasking would restore it
+        // and leave the edit a no-op; the adjacent data char goes instead
+        input.value = mask.innerValue.value.slice(0, -1)
+        input.setSelectionRange(input.value.length, input.value.length)
+        mask.updateMaskValue(input.value, false, 'deleteContentBackward')
+
+        expect(mask.innerValue.value).toBe('100-00')
+      })
+
+      test('types a leading "0" before the next digit, not after (#18523)', async () => {
+        const ctx = createMask({
+          mask: '##:##',
+          fillMask: '0',
+          unmaskedValue: true
+        })
+
+        ctx.input.focus()
+        await applyUserEdit(ctx, 'type', '0')
+        await applyUserEdit(ctx, 'type', '1')
+
+        // the render cannot show the difference, the model must
+        expect(ctx.input.value).toBe('01:00')
+        expect(ctx.emitValue).toHaveBeenLastCalledWith('01', true)
+      })
+
+      test('advances the caret when a typed char leaves the render alone (#18523)', async () => {
+        const ctx = createMask({
+          mask: '###-##',
+          fillMask: '0',
+          unmaskedValue: true
+        })
+
+        ctx.input.focus()
+
+        // every one of these renders as "000-00", so the caret is the only
+        // thing that can move; if it stops, the next char lands in front of
+        // what was typed before it
+        for (const expected of ['0', '00', '000', '0000', '00000']) {
+          await applyUserEdit(ctx, 'type', '0')
+          expect(ctx.input.value).toBe('000-00')
+          expect(ctx.emitValue).toHaveBeenLastCalledWith(expected, true)
+        }
+      })
+
+      test.each([
+        [
+          '###-##',
+          false,
+          [
+            ['type', '0'],
+            ['type', '6'],
+            ['type', '0'],
+            ['type', '3']
+          ]
+        ],
+        [
+          '###-##',
+          false,
+          [
+            ['type', '0'],
+            ['type', '0'],
+            ['type', '0'],
+            ['type', '0']
+          ]
+        ],
+        [
+          '###-##',
+          false,
+          [['type', '1'], ['type', '2'], ['bksp'], ['type', '0'], ['bksp']]
+        ],
+        [
+          '(###) ###-####',
+          false,
+          [
+            ['type', '0'],
+            ['type', '9'],
+            ['type', '0'],
+            ['type', '1']
+          ]
+        ],
+        [
+          '##:##',
+          false,
+          [
+            ['type', '0'],
+            ['type', '1'],
+            ['type', '0'],
+            ['type', '2']
+          ]
+        ],
+        [
+          '####',
+          false,
+          [
+            ['type', '0'],
+            ['type', '0'],
+            ['type', '1']
+          ]
+        ],
+        [
+          '#.##',
+          true,
+          [
+            ['type', '1'],
+            ['type', '0'],
+            ['type', '0'],
+            ['type', '5']
+          ]
+        ],
+        [
+          '#.##',
+          true,
+          [
+            ['type', '0'],
+            ['type', '0'],
+            ['type', '5']
+          ]
+        ]
+      ])(
+        'reads %s (reverse: %s) the same whether or not the fill char is data-like',
+        async (mask, reverseFillMask, ops) => {
+          const maskProps = { mask, reverseFillMask }
+
+          // "_" can never satisfy "#", "0" always does
+          expect(await traceFillCharParity(maskProps, ops, '0')).toEqual(
+            await traceFillCharParity(maskProps, ops, true)
+          )
+        }
+      )
+
+      test('re-anchors the caret past "0" fill chars on a mask change (#18523)', async () => {
+        const { mask, props, input } = createMask({
+          modelValue: '18',
+          mask: '###.#.###',
+          fillMask: '0'
+        })
+
+        input.focus()
+        input.value = mask.innerValue.value
+        expect(input.value).toBe('180.0.000')
+
+        // the caret sits where the fill region parks it, past the data
+        input.setSelectionRange(9, 9)
+
+        props.mask = '#.###.###'
+        await nextTick() // the watcher re-masks...
+        await nextTick() // ...and re-anchors the caret a tick later
+
+        expect(input.value).toBe('1.800.000')
+        // back after its 2 data chars, not stranded at the end of the fill
+        expect(input.selectionStart).toBe(3)
+      })
+
+      test('accepts a typed digit literal look-alike when reverse filling', () => {
+        const { mask } = createMask({
+          modelValue: '123',
+          mask: '##:##',
+          reverseFillMask: true
+        })
+
+        mask.updateMaskValue('1:234', false, 'insertText')
+        expect(mask.innerValue.value).toBe('12:34')
+      })
+
+      test('backspacing a literal deletes the data char before it (#17639)', () => {
+        const { mask } = createMask({ modelValue: '1234', mask: 'card' })
+        expect(mask.innerValue.value).toBe('1234 ')
+
+        // soft-keyboard backspace (no keydown hook): the browser removed
+        // only the trailing space literal
+        mask.updateMaskValue('1234', false, 'deleteContentBackward')
+        expect(mask.innerValue.value).toBe('123')
+      })
+
+      test('forward-deleting a literal deletes the data char after it', () => {
+        const { mask } = createMask({ modelValue: '12345', mask: '###-##' })
+        expect(mask.innerValue.value).toBe('123-45')
+
+        // caret after "123"; DELETE removed only the "-" literal
+        mask.updateMaskValue('12345', false, 'deleteContentForward')
+        expect(mask.innerValue.value).toBe('123-5')
+      })
+
+      // deleteByCut and the two word deletes take the same unmaskEditValue
+      // path as a plain backspace, but hand it a whole range at once
+      test.each([
+        ['a cut of the leading data', {}, 0, 3, 'deleteByCut', '45'],
+        ['a cut spanning the literal', {}, 1, 4, 'deleteByCut', '145-'],
+        ['a word delete of the tail', {}, 4, 6, 'deleteWordBackward', '123-'],
+        ['a word delete of everything', {}, 0, 6, 'deleteWordBackward', ''],
+        ['a forward word delete', {}, 0, 4, 'deleteWordForward', '45'],
+        [
+          'a cut while filling',
+          { fillMask: true },
+          0,
+          3,
+          'deleteByCut',
+          '45_-__'
+        ]
+      ])(
+        're-lays out the value after %s',
+        (_, extra, from, to, inputType, expected) => {
+          const ctx = createMask({
+            modelValue: '12345',
+            mask: '###-##',
+            ...extra
+          })
+
+          removeRange(ctx, from, to, inputType)
+
+          expect(ctx.mask.innerValue.value).toBe(expected)
+        }
+      )
+
+      test('drops a right-aligned separator nothing filled', async () => {
+        const ctx = createMask({ mask: 'AA-##', reverseFillMask: true })
+
+        ctx.input.focus()
+
+        // the digits reach the "#" slots, the "A" slots stay empty, so the
+        // "-" between them has nothing to separate and must not show up
+        for (const char of ['0', '5', '7']) {
+          await applyUserEdit(ctx, 'type', char)
+          syncModel(ctx)
+        }
+
+        expect(ctx.mask.innerValue.value).toBe('57')
+      })
+
+      test('backspacing a literal with no data before it stays put', () => {
+        const { mask } = createMask({ modelValue: '1', mask: '+1 ###' })
+        expect(mask.innerValue.value).toBe('+1 1')
+
+        // caret after "+"; backspace removed only the "+" literal
+        mask.updateMaskValue('1 1', false, 'deleteContentBackward')
+        expect(mask.innerValue.value).toBe('+1 1')
+      })
+
+      test('still strips the literals out of a pasted masked value', () => {
+        const { mask, emitValue } = createMask({
+          modelValue: '',
+          mask: '+1 123 ### ## ##',
+          unmaskedValue: true
+        })
+
+        mask.updateMaskValue('+1 123 456 78 90', false, 'insertFromPaste')
+
+        expect(mask.innerValue.value).toBe('+1 123 456 78 90')
+        expect(emitValue).toHaveBeenCalledExactlyOnceWith('4567890', true)
+      })
+
       test('reports the unmasked value when asked to', () => {
         const { mask, input, emitValue } = createMask({
           modelValue: '',
@@ -302,6 +910,26 @@ describe('[useMask API]', () => {
 
         expect(input.value).toBe('123-45')
         expect(emitValue).toHaveBeenCalledExactlyOnceWith('12345', true)
+      })
+
+      test('leaves the fill chars out of the unmasked value (#18523)', () => {
+        const { mask, input, emitValue } = createMask({
+          modelValue: '',
+          mask: '###-##',
+          fillMask: '0',
+          unmaskedValue: true
+        })
+
+        // "1" typed at the cursor, which sits on the first fill char
+        mask.updateMaskValue(
+          '1' + mask.innerValue.value.slice(1),
+          false,
+          'insertText'
+        )
+
+        expect(input.value).toBe('100-00')
+        // the five "0"s are padding, not the digits the user typed
+        expect(emitValue).toHaveBeenCalledExactlyOnceWith('1', true)
       })
 
       test('stays quiet when the value did not really change', () => {
@@ -361,7 +989,8 @@ describe('[useMask API]', () => {
 
       test.each([
         ['ALT is held', { keyCode: 39, altKey: true }],
-        ['the key is a modifier', { keyCode: 16 }]
+        ['the key is a modifier', { keyCode: 16 }],
+        ['the event was prevented', { keyCode: 39, defaultPrevented: true }]
       ])('leaves the cursor alone when %s', (_, eventProps) => {
         const { mask, input } = createMask({
           modelValue: '12345',
@@ -441,6 +1070,110 @@ describe('[useMask API]', () => {
 
         expect(input.selectionStart).toBe(1)
         expect(input.selectionEnd).toBeGreaterThan(1)
+      })
+
+      // Sweeps the props that interact -- mask shape, fill char, fill
+      // direction, what the model carries, custom tokens -- and holds each
+      // combination to the two properties that must survive all of them:
+      // what is displayed unmasks back to itself, and the model handed
+      // upwards re-renders to the same thing when handed back down. The
+      // second is the loop a parent closes on every keystroke, so a
+      // combination that fails it erodes the value as the user types.
+      test('holds its ground across the prop combinations', async () => {
+        const CUSTOM_TOKENS = {
+          Z: { pattern: '[A-Z]', negate: '[^A-Z]' },
+          d: { pattern: '[0-9]', negate: '[^0-9]' }
+        }
+        const SETS = [
+          [
+            void 0,
+            '1234567890abXY',
+            [
+              'date',
+              'datetime',
+              'time',
+              'fulltime',
+              'phone',
+              'card',
+              '###-##',
+              '#.##',
+              'AA-##',
+              'A#A#',
+              String.raw`\###`,
+              'NNN/NN'
+            ]
+          ],
+          [CUSTOM_TOKENS, 'ABCD1234', ['ZZ-dd', 'Zd.dd', 'dddd']]
+        ]
+        const failures = []
+
+        for (const [maskTokens, pool, masks] of SETS) {
+          for (const mask of masks) {
+            for (const fillMask of [false, true, '0', 'A']) {
+              for (const reverseFillMask of [false, true]) {
+                for (const unmaskedValue of [false, true]) {
+                  const props = {
+                    mask,
+                    fillMask,
+                    reverseFillMask,
+                    unmaskedValue,
+                    maskTokens
+                  }
+                  const ctx = createMask(props)
+
+                  ctx.input.focus()
+                  for (let i = 0; i < 6; i++) {
+                    await applyUserEdit(
+                      ctx,
+                      'type',
+                      pool[(i * 3) % pool.length]
+                    )
+                    syncModel(ctx)
+                  }
+
+                  removeRange(
+                    ctx,
+                    0,
+                    Math.min(2, ctx.input.value.length),
+                    'deleteByCut'
+                  )
+                  for (let i = 0; i < 3; i++) {
+                    await applyUserEdit(
+                      ctx,
+                      'type',
+                      pool[(i * 5) % pool.length]
+                    )
+                    syncModel(ctx)
+                  }
+
+                  const rendered = ctx.mask.innerValue.value,
+                    model = unmaskedValue ? ctx.props.modelValue : rendered,
+                    label = `mask=${mask} fill=${fillMask} reverse=${reverseFillMask} unmasked=${unmaskedValue}`
+
+                  ctx.mask.updateMaskValue(rendered)
+                  await nextTick()
+
+                  if (ctx.mask.innerValue.value !== rendered) {
+                    failures.push(
+                      `${label}: displaying ${rendered} unmasked to ${ctx.mask.innerValue.value}`
+                    )
+                    continue
+                  }
+
+                  const echoed = createMask({ ...props, modelValue: model })
+
+                  if (echoed.mask.innerValue.value !== rendered) {
+                    failures.push(
+                      `${label}: model ${model} re-rendered as ${echoed.mask.innerValue.value}, not ${rendered}`
+                    )
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        expect(failures).toEqual([])
       })
 
       test('anchors a paste on the first free slot', () => {

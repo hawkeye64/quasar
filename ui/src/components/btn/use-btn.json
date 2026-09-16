@@ -18,16 +18,11 @@
     },
 
     "to": {
-      "type": ["String", "Object"],
-      "desc": "Equivalent to Vue Router <router-link> 'to' property; Superseded by 'href' prop if used",
-      "examples": ["'/home/dashboard'", "{ name: 'my-route-name' }"],
-      "category": "navigation"
+      "extends": "router-link-to"
     },
 
     "replace": {
-      "type": "Boolean",
-      "desc": "Equivalent to Vue Router <router-link> 'replace' property; Superseded by 'href' prop if used",
-      "category": "navigation"
+      "extends": "router-link-replace"
     },
 
     "href": {
@@ -37,16 +32,14 @@
         "'https://quasar.dev'",
         "# href=\"https://quasar.dev\" target=\"_blank\""
       ],
-      "category": "navigation",
-      "addedIn": "v2.4"
+      "category": "navigation"
     },
 
     "target": {
       "type": "String",
       "desc": "Native <a> link target attribute; Use it only with 'to' or 'href' props",
       "examples": ["'_blank'", "'_self'", "'_parent'", "'_top'"],
-      "category": "navigation",
-      "addedIn": "v2.4"
+      "category": "navigation"
     },
 
     "label": {
@@ -95,8 +88,7 @@
     },
 
     "square": {
-      "extends": "square",
-      "addedIn": "v2.7.6"
+      "extends": "square"
     },
 
     "glossy": {

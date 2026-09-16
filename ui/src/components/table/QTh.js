@@ -2,6 +2,8 @@ import { getCurrentInstance, h } from 'vue'
 
 import QIcon from '../icon/QIcon.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
+
 import { createComponent } from '../../utils/private.create/create.js'
 import { hSlot, hUniqueSlot } from '../../utils/private.render/render.js'
 
@@ -10,6 +12,7 @@ export default /*#__PURE__*/ createComponent({
 
   props: {
     props: Object,
+    colName: String,
     autoWidth: Boolean
   },
 
@@ -17,9 +20,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const vm = getCurrentInstance()
-    const {
-      proxy: { $q }
-    } = vm
+    const $q = useQuasar()
 
     const onClick = evt => {
       emit('click', evt)
@@ -46,7 +47,7 @@ export default /*#__PURE__*/ createComponent({
       }
 
       let col, child
-      const name = vm.vnode.key
+      const name = props.colName !== void 0 ? props.colName : vm.vnode.key
 
       if (name !== null) {
         col = props.props.colsMap[name]

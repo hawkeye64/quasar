@@ -15,6 +15,11 @@ export default {
     search: 'Tìm kiếm',
     filter: 'Bộ lọc',
     refresh: 'Làm mới',
+    minimum: 'Tối thiểu',
+    maximum: 'Tối đa',
+    range: 'Phạm vi',
+    noValue: 'Không có giá trị',
+    resize: 'Thay đổi kích thước',
     expand: label => (label ? `Mở rộng "${label}"` : 'Mở rộng'),
     collapse: label => (label ? `Thu gọn "${label}"` : 'Sụp đổ')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Năm trước',
     nextYear: 'Năm sau',
     today: 'Hôm nay',
-    prevRangeYears: range => `Trước ${range} năm`,
-    nextRangeYears: range => `Tiếp theo ${range} năm`
+    prevRangeYears: range => `${range} năm trước`,
+    nextRangeYears: range => `${range} năm sau`,
+    hour: 'Giờ',
+    minute: 'Phút',
+    second: 'Giây',
+    now: 'Thời gian hiện tại'
   },
   table: {
     noData: 'Không có dữ liệu',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Hàng trên mỗi trang:',
     allRows: 'Tất cả',
     pagination: (start, end, total) => start + '-' + end + ' của ' + total,
-    columns: 'Cột'
+    columns: 'Cột',
+    selectAllRows: 'Chọn tất cả các hàng',
+    selectRow: 'Chọn hàng'
   },
   pagination: {
+    label: 'Phân trang',
     first: 'Trang đầu tiên',
     prev: 'Trang trước',
     next: 'Trang tiếp theo',
     last: 'Trang cuối cùng'
   },
+  carousel: {
+    prevSlide: 'Trang chiếu trước',
+    nextSlide: 'Trang chiếu tiếp theo'
+  },
+  colorPicker: {
+    spectrum: 'Quang phổ',
+    tune: 'Tinh chỉnh',
+    palette: 'Bảng màu',
+    value: 'Giá trị màu',
+    hue: 'Sắc màu',
+    alpha: 'Độ mờ đục',
+    saturation: 'Độ bão hòa',
+    brightness: 'Độ sáng'
+  },
+  uploader: {
+    addFiles: 'Chọn tệp',
+    upload: 'Tải tệp lên',
+    abort: 'Hủy tải lên',
+    removeQueued: 'Xóa tệp đang chờ',
+    removeUploaded: 'Xóa tệp đã tải lên',
+    removeFile: 'Xóa tệp'
+  },
   editor: {
+    toolbar: 'Thanh công cụ soạn thảo',
     url: 'URL',
     bold: 'Đậm',
     italic: 'Nghiêng',

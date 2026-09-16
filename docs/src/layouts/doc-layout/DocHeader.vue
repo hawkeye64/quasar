@@ -34,28 +34,29 @@
         :menu="primaryToolbarLinks"
         mq-prefix="gt"
         nav-class="text-uppercase text-size-16 letter-spacing-300"
+        aria-label="Primary"
       />
 
       <DocSearch />
 
-      <div
-        v-if="showThemeChanger"
-        class="doc-header-icon-links q-ml-sm row no-wrap items-center"
-      >
+      <div class="doc-header-icon-links q-ml-sm row no-wrap items-center">
         <q-btn
           class="header-btn"
-          type="a"
           flat
           round
           :icon="mdiCompare"
+          aria-label="Toggle dark mode"
           @click="docStore.toggleDark"
-        />
+        >
+          <q-tooltip>Toggle dark mode</q-tooltip>
+        </q-btn>
       </div>
     </q-toolbar>
 
     <q-toolbar class="doc-header__secondary q-pl-lg q-pr-md no-wrap">
       <q-btn
-        class="header-btn doc-header__leftmost q-mr-xs lt-1300"
+        class="header-btn doc-header__leftmost q-mr-xs"
+        :class="docStore.$route.meta.fullscreen ? '' : 'lt-1300'"
         flat
         round
         icon="menu"
@@ -74,11 +75,13 @@
           :menu="secondaryToolbarLinks"
           nav-class="text-size-14 letter-spacing-100"
           mq-prefix="gt"
+          aria-label="Secondary"
         />
         <DocHeaderTextLinks
           :menu="moreLinks"
           nav-class="text-size-14 letter-spacing-100 lt-1400"
           mq-prefix="lt"
+          aria-label="More links"
         />
       </div>
 
@@ -87,10 +90,11 @@
       <DocHeaderTextLinks
         :menu="versionLinks"
         nav-class="text-size-14 letter-spacing-100 doc-header__version q-ml-sm"
+        aria-label="Quasar version"
       />
 
       <div
-        v-if="hasToc"
+        v-if="docStore.state.value.hasToc"
         class="doc-header-icon-links q-ml-sm lt-md row no-wrap items-center"
       >
         <q-btn
@@ -137,14 +141,6 @@ const logo = computed(() => {
     text: `/logo/logotype${opt}.svg`
   }
 })
-
-const showThemeChanger = computed(() => docStore.$route.meta.dark !== true)
-const hasToc = computed(
-  () =>
-    docStore.$route.meta.fullwidth !== true &&
-    docStore.$route.meta.fullscreen !== true &&
-    docStore.state.value.toc.length !== 0
-)
 </script>
 
 <style lang="sass">
@@ -222,19 +218,36 @@ const hasToc = computed(
   box-shadow: none !important
   background-color: #fff
 
-  .q-item
+  &__item
+    display: flex
+    align-items: center
     height: 36px
+    padding: 0 16px
+    color: inherit
+    text-decoration: none
+    cursor: pointer
+    outline: none
+
+    .q-icon
+      font-size: $item-section-side-icon-font-size
+      color: $brand-primary
+
+    // the leading icon
+    > .q-icon:first-child
+      margin-right: 16px
+
+    > .doc-header-menu__arrow
+      margin: 0 -8px 0 auto
+
+    &:hover,
+    &:focus-visible
+      background: rgba(#000, 0.05)
 
   .q-item__label--header
     color: $brand-accent
     padding: 16px
     &:first-child
       padding-top: 8px
-  .q-item__section--side .q-icon
-    color: $brand-primary
-
-  &__arrow
-    margin-right: -8px
 
 .doc-header-text-links__item
   .q-icon
@@ -246,6 +259,10 @@ body.body--dark
   .doc-header-menu
     background: $dark-bg
     border-color: $separator-dark-color
+
+    &__item:hover,
+    &__item:focus-visible
+      background: rgba(#fff, 0.1)
 
   .doc-header
     &__version

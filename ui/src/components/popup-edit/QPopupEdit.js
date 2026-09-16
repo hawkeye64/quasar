@@ -1,7 +1,9 @@
-import { computed, getCurrentInstance, h, nextTick, ref } from 'vue'
+import { computed, getCurrentInstance, h, nextTick, ref, shallowRef } from 'vue'
 
 import QMenu from '../menu/QMenu.js'
 import QBtn from '../btn/QBtn.js'
+
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import clone from '../../utils/clone/clone.js'
@@ -53,9 +55,9 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
-    const menuRef = ref(null)
+    const menuRef = shallowRef(null)
 
     const initialValue = ref('')
     const currentModel = ref('')

@@ -11,16 +11,14 @@ QResponsive is a component which forces the content to maintain an aspect ratio 
 
 ## Usage
 
-::: tip TIPS
+> [!TIP]
+> **TIPS**
+>
+> - The component can be used with any content, as long you specify **only one direct child**. If you need multiple elements inside of it, wrap them in a `<div>`.
+> - It is your responsibility to make sure that your content won't overflow the container.
 
-- The component can be used with any content, as long you specify **only one direct child**. If you need multiple elements inside of it, wrap them in a `<div>`.
-- It is your responsibility to make sure that your content won't overflow the container.
-
-:::
-
-::: warning
-Do not use it on Quasar components that already have a `ratio` property, like QImg or QVideo, or on components that have a forced height.
-:::
+> [!WARNING]
+> Do not use it on Quasar components that already have a `ratio` property, like QImg or QVideo, or on components that have a forced height.
 
 ### Basic
 
@@ -30,7 +28,7 @@ Do not use it on Quasar components that already have a `ratio` property, like QI
 
 Note below that we are using a vertical alignment (`items-start`) other than the default (`stretch`), so that flexbox won't force the height on each QResponsive component.
 
-<DocExample title="Basic usage" file="FlexRow" />
+<DocExample title="Flex row" file="FlexRow" />
 
 ### On some components
 
@@ -50,4 +48,8 @@ Notice that we will not supply a `height` prop to QCarousel when we use QRespons
 
 Apply the max height (or max width, etc etc) directly on the QResponsive component through a CSS class or inline. Remember that it is still your responsibility to ensure that the content won't overflow the container.
 
-<DocExample title="On QCard" file="MaxHeight" />
+<DocExample title="Max height" file="MaxHeight" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QResponsive is a purely presentational aspect-ratio wrapper with no accessibility surface of its own.

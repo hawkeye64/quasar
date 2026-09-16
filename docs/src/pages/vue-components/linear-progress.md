@@ -25,9 +25,8 @@ The QLinearProgress component displays a colored loading bar. The bar can either
 
 <DocExample title="Indeterminate state" file="Indeterminate" />
 
-::: tip
-For indeterminate state (above) or query state (below) you don't need to specify the `value` property.
-:::
+> [!TIP]
+> For indeterminate state (above) or query state (below) you don't need to specify the `value` property.
 
 <DocExample title="Query state" file="Query" />
 
@@ -57,3 +56,7 @@ To add a label to the progress bar you can use the default slot. Take care to:
 - set a text color for the label so that it is visible both on the filled and unfilled areas, or use text-shadow CSS, or use a QBadge as in the example below
 
 <DocExample title="With a label" file="Label" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QLinearProgress exposes `role="progressbar"` with `aria-valuemin="0"`, `aria-valuemax="1"` and `aria-valuenow` set to the current value — note that the scale is 0..1, matching the `value` prop. While `indeterminate` (or in `query` mode, which animates the same way), `aria-valuenow` is dropped, as the pattern requires. The bar has no accessible name of its own, so add an `aria-label` describing what is progressing.

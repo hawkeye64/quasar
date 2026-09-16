@@ -6,12 +6,8 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
 .q-field
   font-size: $input-font-size
 
-  ::-ms-clear,
   ::-ms-reveal
     display: none
-
-  &--with-bottom
-    padding-bottom: $field-with-bottom-padding-bottom
 
   &__marginal
     height: 56px
@@ -41,21 +37,19 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
 
   &__bottom
     font-size: $field-bottom-font-size
-    min-height: 20px
+    // in-flow so long messages grow the field instead of overlapping what
+    // follows; min-height keeps one line reserved to avoid layout shift
+    min-height: $field-with-bottom-padding-bottom
     line-height: $field-bottom-line-height
     color: rgba(0,0,0,.54)
     padding: 8px 12px 0
     backface-visibility: hidden
 
-    &--animated
-      transform: translateY(100%)
-      position: absolute
-      left: 0
-      right: 0
-      bottom: 0
-
   &__messages
     line-height: 1
+
+    &--animated
+      animation: q-field-message .6s cubic-bezier(.86,0,.07,1)
 
     > div
       word-break: break-word
@@ -126,10 +120,11 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
     min-width: 0 // needed for FF
     outline: 0 !important // needed for FF
     user-select: auto
+    -webkit-user-select: auto /* Safari, older Chrome */
 
-    &:-webkit-autofill
-      -webkit-animation-name: q-autofill
-      -webkit-animation-fill-mode: both
+    &:autofill
+      animation-name: q-autofill
+      animation-fill-mode: both
 
     &:invalid
       box-shadow: none
@@ -188,10 +183,9 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
     text-transform: inherit
     transform-origin: left top
     transition: transform $field-transition, max-width $field-transition-label-right-up
-    backface-visibility: hidden
 
     &:has(+ :is(.q-field__native, .q-field__input):is(
-      :-webkit-autofill,
+      :autofill,
       [type="color"],
       [type="date"],
       [type="datetime-local"],
@@ -209,6 +203,8 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
   &--highlighted
     .q-field__label
       color: currentColor
+
+  &--focused
     .q-field__shadow
       opacity: .5
 
@@ -232,7 +228,7 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
         height: 2px
         top: auto
         transform-origin: center bottom
-        transform: scale3d(0, 1, 1)
+        transform: scaleX(0)
         background: currentColor
         transition: transform $field-transition
 
@@ -245,7 +241,7 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
           opacity: 1
           background: rgba(0,0,0,.12)
         &:after
-          transform: scale3d(1, 1, 1)
+          transform: scaleX(1)
 
     &.q-field--dark
       .q-field__control, .q-field__control:before
@@ -279,7 +275,7 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
 
     .q-field__native,
     .q-field__input
-      &:-webkit-autofill
+      &:autofill
         margin-top: 1px
         margin-bottom: 1px
 
@@ -293,7 +289,7 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
       .q-field__control:after
         border-color: currentColor
         border-width: 2px
-        transform: scale3d(1, 1, 1)
+        transform: scaleX(1)
 
     &.q-field--readonly
       .q-field__control:before
@@ -315,13 +311,13 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
         border-bottom-left-radius: inherit
         border-bottom-right-radius: inherit
         transform-origin: center bottom
-        transform: scale3d(0, 1, 1)
+        transform: scaleX(0)
         background: currentColor
         transition: transform $field-transition
 
     &.q-field--highlighted
       .q-field__control:after
-        transform: scale3d(1, 1, 1)
+        transform: scaleX(1)
 
     &.q-field--readonly
       .q-field__control:before
@@ -410,9 +406,6 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
         padding-bottom: 2px
 
   &--dense
-    .q-field--with-bottom
-      padding-bottom: $field-dense-with-bottom-padding-bottom
-
     .q-field__shadow
       top: 0
     .q-field__control, .q-field__marginal
@@ -438,7 +431,7 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
       transform: translateY(-30%) scale(.75)
 
     .q-field__label:has(+ :is(.q-field__native, .q-field__input):is(
-      :-webkit-autofill,
+      :autofill,
       [type="color"],
       [type="date"],
       [type="datetime-local"],
@@ -517,17 +510,10 @@ $field-transition-label-right-up: .324s cubic-bezier(.4,0,.2,1)
   &--square .q-field__control
     border-radius: 0 !important
 
-.q-transition--field-message
-  &-enter-active,
-  &-leave-active
-    transition: transform .6s cubic-bezier(.86,0,.07,1), opacity .6s cubic-bezier(.86,0,.07,1)
-
-  &-enter-from, &-leave-to
+@keyframes q-field-message
+  from
     opacity: 0
     transform: translateY(-10px)
-
-  &-leave-from, &-leave-active
-    position: absolute
 
 @keyframes q-field-label
   40%

@@ -1,9 +1,12 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import {
   addDetachedFullscreen,
+  addDetachedFullscreenListener,
+  clickIsInDetachedFullscreen,
   focusIsInDetachedFullscreen,
-  removeDetachedFullscreen
+  removeDetachedFullscreen,
+  removeDetachedFullscreenListener
 } from './detached-fullscreen.js'
 
 let nodeList = []
@@ -196,6 +199,123 @@ describe('[detachedFullscreen API]', () => {
         addDetachedFullscreen(fillerB, { $el: movedB })
 
         expect(focusIsInDetachedFullscreen(rootEl, targetEl)).toBe(false)
+      })
+    })
+
+    describe('[(function)addDetachedFullscreenListener]', () => {
+      test('has correct return value', () => {
+        const fn = vi.fn()
+
+        expect(addDetachedFullscreenListener(fn)).toBeUndefined()
+
+        removeDetachedFullscreenListener(fn)
+      })
+
+      test('notifies on registry changes only', () => {
+        const fn = vi.fn()
+        addDetachedFullscreenListener(fn)
+
+        const rootEl = createNode()
+        const { fillerNode } = detach(rootEl)
+
+        expect(fn).toHaveBeenCalledTimes(1)
+
+        removeDetachedFullscreen(fillerNode)
+
+        expect(fn).toHaveBeenCalledTimes(2)
+
+        // removing a filler that is not registered is not a change
+        removeDetachedFullscreen(fillerNode)
+
+        expect(fn).toHaveBeenCalledTimes(2)
+
+        removeDetachedFullscreenListener(fn)
+      })
+    })
+
+    describe('[(function)removeDetachedFullscreenListener]', () => {
+      test('has correct return value', () => {
+        const fn = vi.fn()
+        addDetachedFullscreenListener(fn)
+
+        expect(removeDetachedFullscreenListener(fn)).toBeUndefined()
+      })
+
+      test('stops the notifications', () => {
+        const fn = vi.fn()
+        addDetachedFullscreenListener(fn)
+        removeDetachedFullscreenListener(fn)
+
+        detach(createNode())
+
+        expect(fn).not.toHaveBeenCalled()
+      })
+
+      test('does not error out for an unregistered listener', () => {
+        expect(removeDetachedFullscreenListener(() => {})).toBeUndefined()
+      })
+
+      test('a listener removing itself does not starve the others', () => {
+        // notification runs over a snapshot: un/subscribing from within a
+        // listener must not shift the iteration off the remaining ones
+        const first = vi.fn(() => {
+          removeDetachedFullscreenListener(first)
+        })
+        const second = vi.fn()
+
+        addDetachedFullscreenListener(first)
+        addDetachedFullscreenListener(second)
+
+        detach(createNode())
+
+        expect(first).toHaveBeenCalledTimes(1)
+        expect(second).toHaveBeenCalledTimes(1)
+
+        removeDetachedFullscreenListener(second)
+      })
+    })
+
+    describe('[(function)clickIsInDetachedFullscreen]', () => {
+      test('has correct return value', () => {
+        const rootEl = createNode()
+        const { movedEl, targetEl } = detach(rootEl)
+
+        expect(clickIsInDetachedFullscreen(rootEl, targetEl)).toBe(true)
+        expect(clickIsInDetachedFullscreen(rootEl, movedEl)).toBe(true)
+      })
+
+      test('does not own a filler through the focus-trap sibling rule', () => {
+        const rootEl = createNode()
+        const siblingEl = createNode()
+        const { targetEl } = detach(siblingEl)
+
+        // the focus variant owns fillers in later siblings of the root
+        // (agreeing with childHasFocus); for pointer purposes an element
+        // detached from a sibling is genuinely outside the root
+        expect(rootEl.nextElementSibling).toBe(siblingEl)
+        expect(focusIsInDetachedFullscreen(rootEl, targetEl)).toBe(true)
+        expect(clickIsInDetachedFullscreen(rootEl, targetEl)).toBe(false)
+      })
+
+      test('follows a chain of nested detached elements', () => {
+        const rootEl = createNode()
+        const outer = detach(rootEl)
+        const inner = detach(outer.movedEl)
+
+        // with strict containment every hop of the chain walk is essential:
+        // the inner filler sits inside the outer moved element, so only the
+        // outer filler physically resolves into rootEl
+        expect(rootEl.contains(inner.fillerNode)).toBe(false)
+
+        expect(clickIsInDetachedFullscreen(rootEl, inner.targetEl)).toBe(true)
+      })
+
+      test('returns false for a nullish root', () => {
+        const rootEl = createNode()
+        const { targetEl } = detach(rootEl)
+
+        expect(clickIsInDetachedFullscreen(null, targetEl)).toBe(false)
+        expect(clickIsInDetachedFullscreen(void 0, targetEl)).toBe(false)
       })
     })
   })

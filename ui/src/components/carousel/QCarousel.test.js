@@ -2,6 +2,8 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 
+import langEn from '../../../lang/en-US.js'
+
 import QCarousel from './QCarousel.js'
 import QCarouselSlide from './QCarouselSlide.js'
 
@@ -215,6 +217,32 @@ describe('[QCarousel API]', () => {
         expect(wrapper.emitted('update:modelValue')).toStrictEqual([
           ['slide-b']
         ])
+      })
+
+      test('toggling it keeps the panel content mounted', async () => {
+        const wrapper = mountCarousel({ swipeable: false })
+        const container = wrapper.get('.q-carousel__slides-container')
+        const panel = wrapper.get('[data-slide="SlideA"]')
+
+        await panel.trigger('click')
+        await container.trigger('mousedown', { button: 0 })
+
+        expect(panel.text()).toBe('1')
+        expect(container.element.__qtouchswipe.event).toBeUndefined()
+
+        await wrapper.setProps({ swipeable: true })
+
+        expect(wrapper.get('[data-slide="SlideA"]').element).toBe(panel.element)
+        expect(panel.text()).toBe('1')
+
+        await container.trigger('mousedown', { button: 0 })
+
+        expect(container.element.__qtouchswipe.event).toBeDefined()
+
+        await wrapper.setProps({ swipeable: false })
+
+        expect(wrapper.get('[data-slide="SlideA"]').element).toBe(panel.element)
+        expect(panel.text()).toBe('1')
       })
     })
 
@@ -1003,6 +1031,20 @@ describe('[QCarousel API]', () => {
       await thumbnails[0].trigger('keydown', { keyCode: 39 })
       expect(document.activeElement).toBe(thumbnails[1].element)
       expect(wrapper.emitted('update:modelValue')).toStrictEqual([['slide-b']])
+    })
+
+    test('names the icon-only navigation arrows', () => {
+      const wrapper = mountCarousel({
+        modelValue: 'slide-b',
+        arrows: true
+      })
+
+      expect(
+        wrapper.get('.q-carousel__prev-arrow .q-btn').attributes('aria-label')
+      ).toBe(langEn.carousel.prevSlide)
+      expect(
+        wrapper.get('.q-carousel__next-arrow .q-btn').attributes('aria-label')
+      ).toBe(langEn.carousel.nextSlide)
     })
   })
 })

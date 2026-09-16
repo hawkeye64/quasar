@@ -6,7 +6,7 @@ const portalTypeList = []
 let portalIndex = 1
 let target = __QUASAR_SSR_SERVER__ ? void 0 : document.body
 
-export function createGlobalNode(id, portalType) {
+export function createGlobalNode(id, portalType, parentEl) {
   const el = document.createElement('div')
 
   el.id =
@@ -19,7 +19,7 @@ export function createGlobalNode(id, portalType) {
     }
   }
 
-  target.append(el)
+  ;(parentEl || target).append(el)
   nodesList.push(el)
   portalTypeList.push(portalType)
 
@@ -35,6 +35,32 @@ export function removeGlobalNode(el) {
   }
 
   el.remove()
+}
+
+/**
+ * Re-appends the global nodes living directly under the current target, in
+ * their creation order. Portals paint above a same-z-index sibling only while
+ * they come later in the DOM, which holds naturally until something else gets
+ * appended to <body> after them -- the fullscreen mixin does exactly that
+ * with the element it detaches, burying every already-open popup (#18513).
+ */
+export function bringGlobalNodesToFront() {
+  const activeEl = document.activeElement
+
+  nodesList.forEach(node => {
+    if (node.parentElement === target) {
+      target.append(node)
+    }
+  })
+
+  // moving a node drops the focus it holds; restore it
+  if (
+    activeEl !== null &&
+    activeEl !== document.activeElement &&
+    activeEl.isConnected
+  ) {
+    activeEl.focus({ preventScroll: true })
+  }
 }
 
 export function changeGlobalNodesTarget(newTarget) {

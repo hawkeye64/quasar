@@ -7,7 +7,10 @@
       </q-chip>
       <q-chip>
         <q-avatar>
-          <img src="https://cdn.quasar.dev/img/boy-avatar.png" />
+          <img
+            alt="User avatar"
+            src="https://cdn.quasar.dev/img/boy-avatar.png"
+          />
         </q-avatar>
         John
       </q-chip>
@@ -16,19 +19,19 @@
     <div class="q-gutter-x-sm">
       <q-btn round color="white">
         <q-avatar size="28px">
-          <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+          <img alt="Quasar" src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
         </q-avatar>
       </q-btn>
       <!-- #region -->
       <q-btn round color="white">
         <q-avatar size="32px">
-          <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+          <img alt="Quasar" src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
         </q-avatar>
       </q-btn>
       <!-- #endregion -->
       <q-btn round color="white">
         <q-avatar size="40px">
-          <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+          <img alt="Quasar" src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
         </q-avatar>
       </q-btn>
     </div>
@@ -36,7 +39,7 @@
     <q-item clickable v-ripple>
       <q-item-section side>
         <q-avatar rounded size="48px">
-          <img src="https://cdn.quasar.dev/img/avatar.png" />
+          <img alt="User avatar" src="https://cdn.quasar.dev/img/avatar.png" />
           <q-badge floating color="teal">new</q-badge>
         </q-avatar>
       </q-item-section>
@@ -48,13 +51,13 @@
     </q-item>
 
     <q-banner rounded class="bg-primary text-white">
-      <template v-slot:avatar>
+      <template #avatar>
         <q-avatar icon="signal_wifi_off" color="white" text-color="primary" />
       </template>
 
       You have lost connection to the internet. This app is offline.
 
-      <template v-slot:action>
+      <template #action>
         <q-btn flat color="white" label="Turn ON Wifi" />
       </template>
     </q-banner>

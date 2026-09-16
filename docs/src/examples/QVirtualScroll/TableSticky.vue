@@ -8,7 +8,7 @@
       :virtual-scroll-sticky-size-end="32"
       :items="heavyList"
     >
-      <template v-slot:before>
+      <template #before>
         <thead class="thead-sticky text-left">
           <tr>
             <th>Index</th>
@@ -19,7 +19,7 @@
         </thead>
       </template>
 
-      <template v-slot:after>
+      <template #after>
         <tfoot class="tfoot-sticky text-left">
           <tr>
             <th>Index</th>
@@ -30,7 +30,7 @@
         </tfoot>
       </template>
 
-      <template v-slot="{ item: row, index }">
+      <template #default="{ item: row, index }">
         <tr :key="index">
           <td>#{{ index }}</td>
           <td v-for="col in columns" :key="index + '-' + col.name">
@@ -50,6 +50,8 @@
   z-index: 1
   background: black
   color: white
+  /* covers any sub-pixel gap between sticky cells */
+  box-shadow: -1px 0 0 black
 
 .thead-sticky tr:last-child > *
   top: 0

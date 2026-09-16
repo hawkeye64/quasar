@@ -15,6 +15,11 @@ export default {
     search: 'Axtar',
     filter: 'Filtrlə',
     refresh: 'Yenilə',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Aralıq',
+    noValue: 'Dəyər yoxdur',
+    resize: 'Ölçüsünü dəyiş',
     expand: label => (label ? `"${label}" genişləndirin` : 'Genişləndirin'),
     collapse: label => (label ? `"${label}" yığcamlaşdırın` : 'Yıxılma')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Ötən il',
     nextYear: 'Gələn il',
     today: 'Bu gün',
-    prevRangeYears: range => `Əvvəlki ${range} illər`,
-    nextRangeYears: range => `Ardı ${range} illər`
+    prevRangeYears: range => `Əvvəlki ${range} il`,
+    nextRangeYears: range => `Gələn ${range} il`,
+    hour: 'Saat',
+    minute: 'Dəqiqə',
+    second: 'Saniyə',
+    now: 'Cari vaxt'
   },
   table: {
     noData: 'Məlumat yoxdur',
@@ -45,24 +54,50 @@ export default {
     loading: 'Yüklənir...',
     selectedRecords: rows =>
       rows === 1
-        ? '1 record selected.'
-        : (rows === 0 ? 'No' : rows) + ' seçilmiş məlumat.',
+        ? '1 seçilmiş məlumat.'
+        : (rows === 0 ? 'Heç bir' : rows) + ' seçilmiş məlumat.',
     recordsPerPage: 'Hər səhifədəki məlumat:',
     allRows: 'Bütün',
     pagination: (start, end, total) => start + '-' + end + ' cəmi ' + total,
-    columns: 'Sütun'
+    columns: 'Sütun',
+    selectAllRows: 'Bütün sətirləri seç',
+    selectRow: 'Sətri seç'
   },
   pagination: {
+    label: 'Səhifələmə',
     first: 'İlk səhifə',
     prev: 'Əvvəlki səhifə',
     next: 'Növbəti səhifə',
     last: 'Son səhifə'
   },
+  carousel: {
+    prevSlide: 'Əvvəlki slayd',
+    nextSlide: 'Növbəti slayd'
+  },
+  colorPicker: {
+    spectrum: 'Spektr',
+    tune: 'Tənzimlə',
+    palette: 'Palitra',
+    value: 'Rəng dəyəri',
+    hue: 'Çalar',
+    alpha: 'Şəffaflıq',
+    saturation: 'Doyğunluq',
+    brightness: 'Parlaqlıq'
+  },
+  uploader: {
+    addFiles: 'Fayl seç',
+    upload: 'Faylları yüklə',
+    abort: 'Yükləməni dayandır',
+    removeQueued: 'Növbədəki faylları sil',
+    removeUploaded: 'Yüklənmiş faylları sil',
+    removeFile: 'Faylı sil'
+  },
   editor: {
+    toolbar: 'Redaktor alətlər paneli',
     url: 'URL',
-    bold: 'Bold',
-    italic: 'Italic',
-    strikethrough: 'Strikethrough',
+    bold: 'Qalın',
+    italic: 'Kursiv',
+    strikethrough: 'Üstündən xətt',
     underline: 'Altdan xətt',
     unorderedList: 'Sıralanmamış siyahı',
     orderedList: 'Sıralanmış siyahı',

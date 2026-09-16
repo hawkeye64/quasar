@@ -1,15 +1,38 @@
 import { createDirective } from '../../utils/private.create/create.js'
 import { css } from '../../utils/dom/dom.js'
-import { addEvt, cleanEvt, position, stop } from '../../utils/event/event.js'
+import { listenOpts, position, stop } from '../../utils/event/event.js'
 import { isKeyCode } from '../../utils/private.keyboard/key-composition.js'
-import throttle from '../../utils/throttle/throttle.js'
 import getSSRProps from '../../utils/private.noop-ssr-directive-transform/noop-ssr-directive-transform.js'
 
-function showRipple(evt, el, ctx, forceCenter) {
-  if (ctx.modifiers.stop) stop(evt)
+const enterDelay = 50
+// waits out the browser's tap-vs-scroll disambiguation, so a
+// flick-scroll started on the element gets cancelled before painting
+const touchEnterDelay = 100
+const keyThrottle = 300
 
-  const color = ctx.modifiers.color,
-    center = ctx.modifiers.center || forceCenter === true,
+const { passive } = listenOpts
+
+// ctx.bound: which listener set is on the element
+// 0: none (disabled), 1: click mode, 2: early mode
+const listeners = [
+  [],
+  [
+    ['click', onStart],
+    ['keyup', onKey]
+  ],
+  [
+    ['pointerdown', onStart],
+    ['pointercancel', onCancel],
+    ['pointerleave', onCancel],
+    ['keydown', onKey]
+  ]
+]
+
+function showRipple(evt, el, ctx, forceCenter) {
+  if (ctx.stop) stop(evt)
+
+  const color = ctx.color,
+    center = ctx.center || forceCenter === true,
     node = document.createElement('span'),
     innerNode = document.createElement('span'),
     pos = position(evt),
@@ -25,7 +48,7 @@ function showRipple(evt, el, ctx, forceCenter) {
   css(innerNode, {
     height: `${diameter}px`,
     width: `${diameter}px`,
-    transform: `translate3d(${x},${y},0) scale3d(.2,.2,1)`,
+    transform: `translate(${x},${y}) scale(.2)`,
     opacity: 0
   })
 
@@ -34,38 +57,148 @@ function showRipple(evt, el, ctx, forceCenter) {
   node.append(innerNode)
   el.append(node)
 
-  const abort = () => {
+  let timer
+  let phase = 0 // 0: pending, 1: entering, 2: leaving
+
+  const finish = () => {
     node.remove()
-    clearTimeout(timer)
+    const index = ctx.ripples.indexOf(ripple)
+    if (index !== -1) {
+      ctx.ripples.splice(index, 1)
+    }
   }
-  ctx.abort.push(abort)
 
-  let timer = setTimeout(() => {
+  const leave = () => {
+    phase = 2
+    innerNode.classList.remove('q-ripple__inner--enter')
+    innerNode.classList.add('q-ripple__inner--leave')
+    innerNode.style.opacity = 0
+    timer = setTimeout(finish, 275)
+  }
+
+  const enter = () => {
+    phase = 1
     innerNode.classList.add('q-ripple__inner--enter')
-    innerNode.style.transform = `translate3d(${centerX},${centerY},0) scale3d(1,1,1)`
+    innerNode.style.transform = `translate(${centerX},${centerY}) scale(1)`
     innerNode.style.opacity = 0.2
+    timer = setTimeout(leave, 250)
+  }
 
-    timer = setTimeout(() => {
-      innerNode.classList.remove('q-ripple__inner--enter')
-      innerNode.classList.add('q-ripple__inner--leave')
-      innerNode.style.opacity = 0
+  const ripple = {
+    // set only while the originating pointer can still turn into
+    // a scroll/pan or be dragged off the element
+    pointerId: evt.type === 'pointerdown' ? evt.pointerId : null,
 
-      timer = setTimeout(() => {
-        node.remove()
-        ctx.abort.splice(ctx.abort.indexOf(abort), 1)
-      }, 275)
-    }, 250)
-  }, 50)
+    abort() {
+      clearTimeout(timer)
+      node.remove()
+    },
+
+    cancel() {
+      ripple.pointerId = null
+      if (phase === 2) return
+      clearTimeout(timer)
+      if (phase === 0) {
+        finish()
+      } else {
+        leave()
+      }
+    }
+  }
+
+  ctx.ripples.push(ripple)
+
+  timer = setTimeout(
+    enter,
+    evt.type === 'pointerdown' && evt.pointerType === 'touch'
+      ? touchEnterDelay
+      : enterDelay
+  )
 }
 
-function updateModifiers(ctx, { modifiers, value, arg }) {
-  const cfg = { ...ctx.cfg.ripple, ...modifiers, ...value }
-  ctx.modifiers = {
-    early: cfg.early === true,
-    stop: cfg.stop === true,
-    center: cfg.center === true,
-    color: cfg.color || arg,
-    keyCodes: [cfg.keyCodes || 13].flat()
+// the listeners are shared by every element: the element is the
+// event's currentTarget and its context hangs off it
+function onStart(evt) {
+  if (!evt.qSkipRipple) {
+    const el = evt.currentTarget
+    showRipple(evt, el, el.__qripple, evt.qKeyEvent === true)
+  }
+}
+
+function onKey(evt) {
+  const el = evt.currentTarget,
+    ctx = el.__qripple
+
+  if (!evt.qSkipRipple && isKeyCode(evt, ctx.keyCodes)) {
+    const now = Date.now()
+    if (now - ctx.keyTime >= keyThrottle) {
+      ctx.keyTime = now
+      showRipple(evt, el, ctx, true)
+    }
+  }
+}
+
+// the browser claimed the gesture (scroll/pan) or the pressed
+// pointer was dragged off, so it can no longer become a tap
+function onCancel(evt) {
+  if (evt.type === 'pointerleave' && evt.buttons === 0) return
+
+  const { ripples } = evt.currentTarget.__qripple
+
+  // backwards since cancel() may splice the list
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const ripple = ripples[i]
+    if (ripple.pointerId === evt.pointerId) {
+      ripple.cancel()
+    }
+  }
+}
+
+// A compiled template builds a fresh modifiers object on every render of
+// the host (the compiler does not hoist the literal), so an identity
+// check alone would re-derive the options, and allocate, on every render
+// of every rippled element. What the object says is what matters, and it
+// can only say three things: the flags declared in Ripple.json, which is
+// the list to extend along with this one. Reading them beats walking the
+// keys and stays flat however many are set. A stable object from a
+// withDirectives() caller (QBtn, QChip, QTab, StepHeader) settles on the
+// first comparison, as does the shared empty object Vue substitutes for
+// a directive written without modifiers. An undeclared key dropped in
+// the modifiers slot still reaches setOptions() through the spread, but
+// no longer brings a re-read of its own: it belongs in the value.
+function modifiersChanged(a, b) {
+  return (
+    a !== b &&
+    (a.early !== b.early || a.stop !== b.stop || a.center !== b.center)
+  )
+}
+
+function setOptions(ctx, { modifiers, value, arg }) {
+  const cfg = { ...ctx.cfg, ...modifiers, ...value }
+  const keyCodes = cfg.keyCodes || 13
+
+  // kept for the comparisons the next update makes
+  ctx.arg = arg
+  ctx.modifiers = modifiers
+
+  ctx.early = cfg.early === true
+  ctx.stop = cfg.stop === true
+  ctx.center = cfg.center === true
+  ctx.color = cfg.color || arg
+  ctx.keyCodes = Array.isArray(keyCodes) ? keyCodes.flat() : keyCodes
+}
+
+function bind(el, ctx) {
+  const bound = ctx.enabled ? (ctx.early ? 2 : 1) : 0
+
+  if (bound !== ctx.bound) {
+    for (const [name, fn] of listeners[ctx.bound]) {
+      el.removeEventListener(name, fn, passive)
+    }
+    for (const [name, fn] of listeners[bound]) {
+      el.addEventListener(name, fn, passive)
+    }
+    ctx.bound = bound
   }
 }
 
@@ -83,67 +216,59 @@ export default /*#__PURE__*/ createDirective(
           if (cfg.ripple === false) return
 
           const ctx = {
-            cfg,
+            cfg: cfg.ripple,
             enabled: binding.value !== false,
-            modifiers: {},
-            abort: [],
-
-            start(evt) {
-              if (
-                ctx.enabled &&
-                !evt.qSkipRipple &&
-                evt.type === (ctx.modifiers.early ? 'pointerdown' : 'click')
-              ) {
-                showRipple(evt, el, ctx, evt.qKeyEvent === true)
-              }
-            },
-
-            keystart: throttle(evt => {
-              if (
-                ctx.enabled &&
-                !evt.qSkipRipple &&
-                isKeyCode(evt, ctx.modifiers.keyCodes) &&
-                evt.type === `key${ctx.modifiers.early ? 'down' : 'up'}`
-              ) {
-                showRipple(evt, el, ctx, true)
-              }
-            }, 300)
+            arg: void 0,
+            modifiers: void 0,
+            early: false,
+            stop: false,
+            center: false,
+            color: void 0,
+            keyCodes: 13,
+            keyTime: 0,
+            bound: 0,
+            ripples: []
           }
 
-          updateModifiers(ctx, binding)
-
+          setOptions(ctx, binding)
           el.__qripple = ctx
-
-          addEvt(ctx, 'main', [
-            [el, 'pointerdown', 'start', 'passive'],
-            [el, 'click', 'start', 'passive'],
-            [el, 'keydown', 'keystart', 'passive'],
-            [el, 'keyup', 'keystart', 'passive']
-          ])
+          bind(el, ctx)
         },
 
+        // the argument and the modifiers are read by setOptions() alone, so
+        // they only follow runtime changes if they take part in the decision
+        // to call it; the value cannot stand in for them, and a value going
+        // back to `true` has to drop what an earlier object set
         updated(el, binding) {
-          if (binding.oldValue !== binding.value) {
-            const ctx = el.__qripple
-            if (ctx !== void 0) {
-              ctx.enabled = binding.value !== false
+          const ctx = el.__qripple
+          if (ctx === void 0) return
 
-              if (ctx.enabled && Object(binding.value) === binding.value) {
-                updateModifiers(ctx, binding)
-              }
-            }
+          const { value, oldValue, arg, modifiers } = binding
+
+          ctx.enabled = value !== false
+
+          if (
+            ctx.enabled &&
+            (value !== oldValue ||
+              arg !== ctx.arg ||
+              modifiersChanged(modifiers, ctx.modifiers))
+          ) {
+            setOptions(ctx, binding)
           }
+
+          bind(el, ctx)
         },
 
         beforeUnmount(el) {
           const ctx = el.__qripple
-          if (ctx !== void 0) {
-            ctx.abort.forEach(fn => {
-              fn()
-            })
-            cleanEvt(ctx, 'main')
-            delete el.__qripple
-          }
+          if (ctx === void 0) return
+
+          ctx.ripples.forEach(ripple => {
+            ripple.abort()
+          })
+          ctx.enabled = false
+          bind(el, ctx)
+          el.__qripple = void 0
         }
       }
 )

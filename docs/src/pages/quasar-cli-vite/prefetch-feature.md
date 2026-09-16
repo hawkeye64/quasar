@@ -24,9 +24,8 @@ return {
 }
 ```
 
-::: warning
-When you use it to pre-fetch data, you may want to use Pinia, so make sure that your project folder has the `/src/stores` (for Pinia) folders when you create your project, otherwise generate a new project and copy the store folder contents to your current project (or use `quasar new store` command).
-:::
+> [!WARNING]
+> When you use it to pre-fetch data, you may want to use Pinia, so make sure that your project folder has the `/src/stores` (for Pinia) folders when you create your project, otherwise generate a new project and copy the store folder contents to your current project (or use `quasar new store` command).
 
 ## How PreFetch Helps SSR Mode
 
@@ -90,6 +89,18 @@ Now, let's see how the hooks are called when the user visits these routes in the
 ## Usage
 
 The hook is defined as a custom static function called `preFetch` on our route components. Note that because this function will be called before the components are instantiated, it doesn't have access to `this`.
+
+The hook receives **an object** with the following properties:
+
+| Prop name       | Description                                                                                                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store`         | Instance of Pinia - **only if your project uses Pinia (you have src/stores)**                                                                                                                                             |
+| `currentRoute`  | The Vue Router route being navigated to                                                                                                                                                                                   |
+| `previousRoute` | The previous Vue Router route                                                                                                                                                                                             |
+| `redirect`      | Function to call to redirect to another URL. Accepts String (full URL) or a Vue Router location String or Object.                                                                                                         |
+| `ssrContext`    | Available only on server-side, if building for SSR/SSG. [More info](/quasar-cli-vite/developing-ssr/ssr-context)                                                                                                          |
+| `urlPath`       | The URL being navigated to, as Vue Router sees it (path + query + hash), without the publicPath prefix or the hash-mode `#` wrapper. Same value in every Quasar mode and Vue Router mode. Equals `currentRoute.fullPath`. |
+| `publicPath`    | The configured public path.                                                                                                                                                                                               |
 
 Example below is when using Pinia:
 
@@ -169,9 +180,8 @@ Alternatively, with Composition API and `<script>`:
 </script>
 ```
 
-::: tip
-If you are developing a SSR/SSG app, then you can check out the [ssrContext](/quasar-cli-vite/developing-ssr/ssr-context) Object that gets supplied server-side.
-:::
+> [!TIP]
+> If you are developing a SSR/SSG app, then you can check out the [ssrContext](/quasar-cli-vite/developing-ssr/ssr-context) Object that gets supplied server-side.
 
 ```js
 // related action for Promise example
@@ -190,13 +200,11 @@ actions: {
 
 ### Redirecting Example
 
-::: warning
-Please be mindful when redirecting as you might configure the app to go into an infinite redirect loop.
-:::
+> [!WARNING]
+> Please be mindful when redirecting as you might configure the app to go into an infinite redirect loop. Guard the redirect with a check on the route being navigated to, e.g. `if (currentRoute.path !== '/login') { redirect({ path: '/login' }) }`.
 
-::: warning
-Please remember to return from the function immediately after calling `redirect()`.
-:::
+> [!WARNING]
+> Please remember to return from the function immediately after calling `redirect()`.
 
 Below is an example of redirecting the user under some circumstances, like when they try to access a page that only an authenticated user should see.
 
@@ -240,10 +248,11 @@ redirect({ path: '/1' }) // Vue Router location as Object
 redirect('https://quasar.dev')
 ```
 
-::: warning IMPORTANT!
-The Vue Router location (in String or Object form) does not refer to URL path (and hash), but to the actual Vue Router routes that you have defined.
-So **don't add the publicPath** to it and if you're using the Vue Router hash mode then don't add the hash to it.
-:::
+> [!WARNING]
+> **IMPORTANT!**
+>
+> The Vue Router location (in String or Object form) does not refer to URL path (and hash), but to the actual Vue Router routes that you have defined.
+> So **don't add the publicPath** to it and if you're using the Vue Router hash mode then don't add the hash to it.
 
 <br>Let's say that we have this Vue Router route defined:<br>
 

@@ -2,7 +2,35 @@
   "mixins": [
     "composables/private.use-field/use-field",
     "components/virtual-scroll/use-virtual-scroll",
-    "composables/use-form/private.use-form"
+    "composables/use-form/private.use-form",
+    "composables/private.use-hover/use-hover",
+
+    {
+      "from": "components/menu/QMenu",
+      "include": { "props": ["anchor", "self", "offset"] },
+      "rename": {
+        "props": {
+          "anchor": "menu-anchor",
+          "self": "menu-self",
+          "offset": "menu-offset"
+        }
+      },
+      "overrides": {
+        "props": {
+          "menu-anchor": {
+            "desc": "Two values setting the starting position or anchor point of the options list relative to the field (only in menu mode)"
+          },
+
+          "menu-self": {
+            "desc": "Two values setting the options list's own position relative to its target (only in menu mode)"
+          },
+
+          "menu-offset": {
+            "desc": "An array of two numbers (in pixels) which expands the anchor element's bounding box outward horizontally and vertically; the options list is then positioned against the expanded box, so the visible effect depends on the 'anchor'/'self' points in use (only in menu mode)"
+          }
+        }
+      }
+    }
   ],
 
   "meta": {
@@ -48,86 +76,15 @@
     },
 
     "option-value": {
-      "type": ["Function", "String"],
-      "desc": "Property of option which holds the 'value'; If using a function then for best performance, reference it from your scope and do not define it inline",
-      "default": "'value'",
-      "__runtimeDefault": true,
-      "params": {
-        "option": {
-          "type": ["String", "Object"],
-          "desc": "The current option being processed",
-          "examples": [
-            "'Tesla'",
-            "'iPhone'",
-            "{ label: 'Tesla', value: 'car', cannotSelect: true }"
-          ]
-        }
-      },
-      "returns": {
-        "type": "Any",
-        "desc": "Value of the current option",
-        "examples": ["'car'", "34"]
-      },
-      "examples": [
-        "'modelNumber'",
-        "item => (item === null ? null : item.modelNumber)"
-      ],
-      "category": "options"
+      "extends": "option-value"
     },
 
     "option-label": {
-      "type": ["Function", "String"],
-      "desc": "Property of option which holds the 'label'; If using a function then for best performance, reference it from your scope and do not define it inline",
-      "default": "'label'",
-      "__runtimeDefault": true,
-      "params": {
-        "option": {
-          "type": ["String", "Object"],
-          "desc": "The current option being processed",
-          "examples": [
-            "'Tesla'",
-            "'iPhone'",
-            "{ label: 'Tesla', value: 'car', cannotSelect: true }"
-          ]
-        }
-      },
-      "returns": {
-        "type": "String",
-        "desc": "Label of the current option",
-        "examples": ["'Tesla'", "'iPhone'"]
-      },
-      "examples": [
-        "'itemName'",
-        "item => (item === null ? 'Null value' : item.itemName)"
-      ],
-      "category": "options"
+      "extends": "option-label"
     },
 
     "option-disable": {
-      "type": ["Function", "String"],
-      "desc": "Property of option which tells it's disabled; The value of the property must be a Boolean; If using a function then for best performance, reference it from your scope and do not define it inline",
-      "default": "'disable'",
-      "__runtimeDefault": true,
-      "params": {
-        "option": {
-          "type": ["String", "Object"],
-          "desc": "The current option being processed",
-          "examples": [
-            "'Tesla'",
-            "'iPhone'",
-            "{ label: 'Tesla', value: 'car', cannotSelect: true }"
-          ]
-        }
-      },
-      "returns": {
-        "type": "Boolean",
-        "desc": "If true, the current option will be disabled"
-      },
-      "examples": [
-        "item => (item === null ? true : item.cannotSelect)",
-        "# option-disable=\"cannotSelect\""
-      ],
-      "category": "options"
+      "extends": "option-disable"
     },
 
     "hide-selected": {
@@ -138,8 +95,15 @@
 
     "hide-dropdown-icon": {
       "type": "Boolean",
-      "desc": "Hides dropdown icon",
+      "desc": "Hides dropdown icon; the default loading spinner is also suppressed (with the icon hidden it would change the field's width), while a 'loading' slot still renders",
       "category": "content|behavior"
+    },
+
+    "hide-dialog-close": {
+      "type": "Boolean",
+      "desc": "Hide the close button rendered inside the control when the options are displayed as a dialog",
+      "category": "content|behavior",
+      "addedIn": "v2.28"
     },
 
     "dropdown-icon": {
@@ -184,63 +148,18 @@
       "category": "options"
     },
 
+    "no-option-label": {
+      "type": "String",
+      "desc": "Message to display in the menu when there are no options to show; Gets overridden by the 'no-option' slot, which should be used instead when custom content or per-instance markup is needed",
+      "examples": ["'No results'"],
+      "category": "options",
+      "addedIn": "v2.28"
+    },
+
     "menu-shrink": {
       "type": "Boolean",
       "desc": "Allow the options list to be narrower than the field (only in menu mode)",
       "category": "options"
-    },
-
-    "menu-anchor": {
-      "type": "String",
-      "desc": "Two values setting the starting position or anchor point of the options list relative to the field (only in menu mode)",
-      "values": [
-        "'top left'",
-        "'top middle'",
-        "'top right'",
-        "'top start'",
-        "'top end'",
-        "'center left'",
-        "'center middle'",
-        "'center right'",
-        "'center start'",
-        "'center end'",
-        "'bottom left'",
-        "'bottom middle'",
-        "'bottom right'",
-        "'bottom start'",
-        "'bottom end'"
-      ],
-      "category": "position"
-    },
-
-    "menu-self": {
-      "type": "String",
-      "desc": "Two values setting the options list's own position relative to its target (only in menu mode)",
-      "values": [
-        "'top left'",
-        "'top middle'",
-        "'top right'",
-        "'top start'",
-        "'top end'",
-        "'center left'",
-        "'center middle'",
-        "'center right'",
-        "'center start'",
-        "'center end'",
-        "'bottom left'",
-        "'bottom middle'",
-        "'bottom right'",
-        "'bottom start'",
-        "'bottom end'"
-      ],
-      "category": "position"
-    },
-
-    "menu-offset": {
-      "type": "Array",
-      "desc": "An array of two numbers to offset the options list horizontally and vertically in pixels (only in menu mode)",
-      "examples": ["[8, 8]", "[5, 10]"],
-      "category": "position"
     },
 
     "popup-content-class": {
@@ -274,6 +193,13 @@
       "category": "selection"
     },
 
+    "no-chip-remove": {
+      "type": "Boolean",
+      "desc": "Hide the remove icon of the QChips (when 'use-chips' is enabled) and disable removing the last selection with Backspace; Does not affect 'clearable' behavior",
+      "category": "selection",
+      "addedIn": "v2.28"
+    },
+
     "use-input": {
       "type": "Boolean",
       "desc": "Use an input tag where users can type",
@@ -305,6 +231,13 @@
       "category": "options"
     },
 
+    "no-option-prefetch": {
+      "type": "Boolean",
+      "desc": "Do not automatically call the 'filter' handler when the (lazy loaded) options are needed to map a preloaded model value through 'map-options'; the field displays the raw model value until the options get loaded",
+      "category": "options",
+      "addedIn": "v2.28"
+    },
+
     "disable-tab-selection": {
       "type": "Boolean",
       "desc": "Prevents the tab key from confirming the currently hovered option",
@@ -326,22 +259,11 @@
     },
 
     "input-class": {
-      "type": ["String", "Array", "Object"],
-      "tsType": "VueClassProp",
-      "desc": "Class definitions to be attributed to the underlying input tag",
-      "examples": ["'my-special-class'", "{ 'my-special-class': true }"],
-      "category": "style"
+      "extends": "input-class"
     },
 
     "input-style": {
-      "type": ["String", "Array", "Object"],
-      "tsType": "VueStyleProp",
-      "desc": "Style definitions to be attributed to the underlying input tag",
-      "examples": [
-        "'background-color: #ff0000'",
-        "{ backgroundColor: '#ff0000' }"
-      ],
-      "category": "style"
+      "extends": "input-style"
     },
 
     "tabindex": {
@@ -358,7 +280,7 @@
 
     "transition-show": {
       "extends": "transition",
-      "desc": "Transition when showing the menu/dialog; One of Quasar's embedded transitions",
+      "__desc__prefix": "Transition when showing the menu/dialog; ",
       "default": "'fade'",
       "passthrough": "child",
       "category": "behavior"
@@ -366,7 +288,7 @@
 
     "transition-hide": {
       "extends": "transition",
-      "desc": "Transition when hiding the menu/dialog; One of Quasar's embedded transitions",
+      "__desc__prefix": "Transition when hiding the menu/dialog; ",
       "default": "'fade'",
       "passthrough": "child",
       "category": "behavior"
@@ -388,8 +310,23 @@
       "category": "behavior"
     },
 
+    "hover": {
+      "desc": "Also opens the options menu when the pointer hovers the control and closes it when the pointer leaves both the control and the menu; Click/tap and keyboard interactions keep toggling as usual (touch devices fall back to them), so clicking the control closes a hover-shown menu, unless it is still animating into view (in which case the click focuses the select and keeps the menu, so a single move-and-click gesture cannot close what it just opened); A hover-triggered open does not focus the select (and thus emits no @focus/@blur), until the user actually clicks or tabs into it; Only applies when the select shows its options as a menu (so not with 'behavior=dialog', nor on mobile platforms without 'behavior=menu')",
+      "addedIn": "v2.28"
+    },
+
+    "hover-delay": {
+      "desc": "Delay (in milliseconds) between the pointer entering the control and the options showing up; Requires the 'hover' prop",
+      "addedIn": "v2.28"
+    },
+
+    "hover-hide-delay": {
+      "desc": "Grace period (in milliseconds) in which the pointer can re-enter the control or the options menu before it gets closed; Requires the 'hover' prop",
+      "addedIn": "v2.28"
+    },
+
     "name": {
-      "desc": "Used to specify the name of the control; Useful if dealing with forms; If not specified, it takes the value of 'for' prop, if it exists"
+      "extends": "field-name"
     },
 
     "virtual-scroll-item-size": {
@@ -407,11 +344,11 @@
     },
 
     "before-options": {
-      "desc": "Template slot for the elements that should be rendered before the list of options"
+      "desc": "Template slot for the elements that should be rendered before the list of options; the ARIA combobox pattern keeps keyboard focus on the field while the popup is open, so interactive elements placed here are not keyboard/screen-reader accessible - prefer modeling such actions as regular options or placing them outside of the popup"
     },
 
     "after-options": {
-      "desc": "Template slot for the elements that should be rendered after the list of options"
+      "desc": "Template slot for the elements that should be rendered after the list of options; the ARIA combobox pattern keeps keyboard focus on the field while the popup is open, so interactive elements placed here are not keyboard/screen-reader accessible - prefer modeling such actions as regular options or placing them outside of the popup"
     },
 
     "no-option": {
@@ -621,7 +558,7 @@
     },
 
     "filter": {
-      "desc": "Emitted when user wants to filter a value",
+      "desc": "Emitted when user wants to filter a value; Also emitted (with an empty input value) by QSelect itself when it needs the lazy loaded options to map a preloaded model value through 'map-options' (opt out with 'no-option-prefetch')",
       "params": {
         "inputValue": {
           "type": "String",
@@ -645,7 +582,7 @@
               "desc": "Callback to call at the end after the update has been fully processed by QSelect",
               "params": {
                 "ref": {
-                  "type": "Component",
+                  "type": "ComponentInstance",
                   "tsType": "QSelect",
                   "required": true,
                   "desc": "Vue reference to the QSelect which triggered the filtering"
@@ -673,7 +610,9 @@
       "desc": "Emitted when the select options menu or dialog is shown.",
       "params": {
         "evt": {
-          "extends": "evt"
+          "extends": "evt",
+          "required": false,
+          "desc": "JS event object; Is undefined when the popup is not triggered by a direct user interaction (e.g. it opens as an async filter resolves or through the showPopup method)"
         }
       }
     },
@@ -682,7 +621,9 @@
       "desc": "Emitted when the select options menu or dialog is hidden.",
       "params": {
         "evt": {
-          "extends": "evt"
+          "extends": "evt",
+          "required": false,
+          "desc": "JS event object; Is undefined when the popup is not dismissed by a direct user interaction (e.g. it closes because an option got selected or through the hidePopup method)"
         }
       }
     },
@@ -692,7 +633,7 @@
         "details": {
           "definition": {
             "ref": {
-              "type": "Component",
+              "type": "ComponentInstance",
               "tsType": "QSelect",
               "desc": "Vue reference to the QSelect"
             }
@@ -769,8 +710,7 @@
       "returns": {
         "type": "Number",
         "desc": "Index of option from menu; It's -1 if no option is focused"
-      },
-      "addedIn": "v2.5.4"
+      }
     },
 
     "setOptionIndex": {

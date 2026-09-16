@@ -5,8 +5,7 @@
     side="right"
     class="doc-drawer"
     behavior="mobile"
-    aria-labelledby="toc-drawer-title"
-    role="navigation"
+    aria-label="Table of contents"
   >
     <div
       class="doc-drawer__header row justify-end no-wrap q-pt-sm q-pb-md q-px-sm"
@@ -17,16 +16,19 @@
         dense
         flat
         color="brand-accent"
+        aria-label="Close table of contents"
         @click="docStore.toggleTocDrawer"
       />
     </div>
 
-    <div
-      id="toc-drawer-title"
-      class="doc-drawer__title q-px-md text-weight-bold"
-      >On this page</div
-    >
-    <DocPageToc class="q-pt-sm q-px-md q-pb-lg" />
+    <nav aria-labelledby="toc-drawer-title">
+      <div
+        id="toc-drawer-title"
+        class="doc-drawer__title q-px-md text-weight-bold"
+        >On this page</div
+      >
+      <DocPageToc class="q-pt-sm q-px-md q-pb-lg" />
+    </nav>
   </q-drawer>
 </template>
 

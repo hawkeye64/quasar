@@ -9,7 +9,7 @@
     "error": {
       "type": ["Boolean", "null"],
       "default": "null",
-      "desc": "Does field have validation errors?",
+      "desc": "Does field have validation errors?; Setting it to a Boolean (even false) reserves the bottom space for the error message so the layout does not shift when the error appears; leave it at null (the default) when not using external validation, or use 'hide-bottom-space' to not reserve the space",
       "category": "validation"
     },
 
@@ -46,7 +46,7 @@
 
     "lazy-rules": {
       "type": ["Boolean", "String"],
-      "desc": "If set to boolean true then it checks validation status against the 'rules' only after field loses focus for first time; If set to 'ondemand' then it will trigger only when component's validate() method is manually called or when the wrapper QForm submits itself",
+      "desc": "If set to boolean true then it checks validation status against the 'rules' only when field loses focus; while an error is displayed it re-checks on each model change so the error clears as soon as the value becomes valid; If set to 'ondemand' then it will trigger only when component's validate() method is manually called or when the wrapper QForm submits itself",
       "default": "false",
       "values": ["true", "false", "'ondemand'"],
       "category": "validation"

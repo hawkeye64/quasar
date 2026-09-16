@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import { nextTick } from 'vue'
 
 import QSlider from './QSlider.js'
+import langEn from '../../../lang/en-US.js'
 
 function mountSlider(props, slots) {
   props ||= {}
@@ -97,13 +98,17 @@ describe('[QSlider API]', () => {
         const propVal = 0
         const wrapper = mountSlider({ min: propVal })
 
-        expect(wrapper.attributes('aria-valuemin')).toBe(String(propVal))
+        expect(getTrackContainer(wrapper).attributes('aria-valuemin')).toBe(
+          String(propVal)
+        )
         expect(getThumb(wrapper).$style('left')).toBe('50%')
 
         // half of the [-50, 100] range sits at two thirds of the track
         await wrapper.setProps({ min: -50 })
 
-        expect(wrapper.attributes('aria-valuemin')).toBe('-50')
+        expect(getTrackContainer(wrapper).attributes('aria-valuemin')).toBe(
+          '-50'
+        )
         // the browser's CSSOM serializes the percentage rounded
         // to a few decimals, so allow for that loss of precision
         expect(Number.parseFloat(getThumb(wrapper).$style('left'))).toBeCloseTo(
@@ -118,12 +123,16 @@ describe('[QSlider API]', () => {
         const propVal = 100
         const wrapper = mountSlider({ max: propVal })
 
-        expect(wrapper.attributes('aria-valuemax')).toBe(String(propVal))
+        expect(getTrackContainer(wrapper).attributes('aria-valuemax')).toBe(
+          String(propVal)
+        )
         expect(getThumb(wrapper).$style('left')).toBe('50%')
 
         await wrapper.setProps({ max: 200 })
 
-        expect(wrapper.attributes('aria-valuemax')).toBe('200')
+        expect(getTrackContainer(wrapper).attributes('aria-valuemax')).toBe(
+          '200'
+        )
         expect(getThumb(wrapper).$style('left')).toBe('25%')
       })
     })
@@ -138,7 +147,9 @@ describe('[QSlider API]', () => {
         await wrapper.setProps({ innerMin: propVal })
 
         // the model gets pushed inside of the allowed range
-        expect(wrapper.attributes('aria-valuemin')).toBe(String(propVal))
+        expect(getTrackContainer(wrapper).attributes('aria-valuemin')).toBe(
+          String(propVal)
+        )
         expect(getThumb(wrapper).$style('left')).toBe(`${propVal}%`)
         expect(getInnerTrack(wrapper).$style('left')).toBe(`${propVal}%`)
         expect(getInnerTrack(wrapper).$style('width')).toBe('90%')
@@ -154,7 +165,9 @@ describe('[QSlider API]', () => {
 
         await wrapper.setProps({ innerMax: propVal })
 
-        expect(wrapper.attributes('aria-valuemax')).toBe(String(propVal))
+        expect(getTrackContainer(wrapper).attributes('aria-valuemax')).toBe(
+          String(propVal)
+        )
         expect(getThumb(wrapper).$style('left')).toBe(`${propVal}%`)
         expect(getInnerTrack(wrapper).$style('width')).toBe(`${propVal}%`)
       })
@@ -165,7 +178,9 @@ describe('[QSlider API]', () => {
         const propVal = 1
         const wrapper = mountSlider({ step: propVal })
 
-        expect(wrapper.attributes('data-step')).toBe(String(propVal))
+        expect(getTrackContainer(wrapper).attributes('data-step')).toBe(
+          String(propVal)
+        )
 
         await getTrackContainer(wrapper).trigger('keydown', { keyCode: 39 })
 
@@ -233,14 +248,18 @@ describe('[QSlider API]', () => {
         expect(wrapper.classes()).toEqual(
           expect.arrayContaining(['q-slider--h', 'column'])
         )
-        expect(wrapper.attributes('aria-orientation')).toBe('horizontal')
+        expect(getTrackContainer(wrapper).attributes('aria-orientation')).toBe(
+          'horizontal'
+        )
 
         await wrapper.setProps({ vertical: true })
 
         expect(wrapper.classes()).toEqual(
           expect.arrayContaining(['q-slider--v', 'row'])
         )
-        expect(wrapper.attributes('aria-orientation')).toBe('vertical')
+        expect(getTrackContainer(wrapper).attributes('aria-orientation')).toBe(
+          'vertical'
+        )
         expect(getThumb(wrapper).$style('top')).toBe('50%')
         expect(getSelection(wrapper).$style('height')).toBe('50%')
       })
@@ -513,6 +532,22 @@ describe('[QSlider API]', () => {
         expect(labels[1].$style('left')).toBe('5%')
       })
 
+      test('fractional steps produce float-exact labels', () => {
+        const wrapper = mountSlider({
+          min: 0,
+          max: 0.5,
+          step: 0.1,
+          modelValue: 0.2,
+          markerLabels: true
+        })
+
+        // a plain "value += step" accumulation would render the third
+        // label as 0.30000000000000004
+        expect(
+          getMarkerLabels(wrapper).map(label => label.text())
+        ).toStrictEqual(['0', '0.1', '0.2', '0.3', '0.4', '0.5'])
+      })
+
       test('type Function has effect', () => {
         const propVal = val => 10 * val + '%'
         const wrapper = mountSlider({ step: 25, markerLabels: propVal })
@@ -674,15 +709,37 @@ describe('[QSlider API]', () => {
 
         expect(wrapper.classes()).toContain('disabled')
         expect(wrapper.classes()).not.toContain('q-slider--editable')
-        expect(wrapper.attributes('aria-disabled')).toBe('true')
+        expect(getTrackContainer(wrapper).attributes('aria-disabled')).toBe(
+          'true'
+        )
         expect(getTrackContainer(wrapper).attributes('tabindex')).toBe('-1')
-        expect(getTrackContainer(wrapper).element.__qtouchpan).toBeUndefined()
         // nothing gets submitted while disabled
         expect(wrapper.find('input[type="hidden"]').exists()).toBe(false)
 
         await getTrackContainer(wrapper).trigger('keydown', { keyCode: 39 })
 
         expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+      })
+
+      test('toggling it disarms the pan in place', async () => {
+        const wrapper = mountSlider({ disable: true })
+        const trackContainer = getTrackContainer(wrapper)
+        const thumbEl = wrapper.get('.q-slider__thumb').element
+
+        await trackContainer.trigger('mousedown', { button: 0 })
+
+        expect(trackContainer.element.__qtouchpan.event).toBeUndefined()
+
+        await wrapper.setProps({ disable: false })
+
+        expect(getTrackContainer(wrapper).element).toBe(trackContainer.element)
+        expect(wrapper.get('.q-slider__thumb').element).toBe(thumbEl)
+
+        await trackContainer.trigger('mousedown', { button: 0 })
+
+        expect(trackContainer.element.__qtouchpan.event).toBeDefined()
+
+        wrapper.unmount()
       })
     })
 
@@ -694,7 +751,9 @@ describe('[QSlider API]', () => {
 
         expect(wrapper.classes()).not.toContain('disabled')
         expect(wrapper.classes()).not.toContain('q-slider--editable')
-        expect(wrapper.attributes('aria-readonly')).toBe('true')
+        expect(getTrackContainer(wrapper).attributes('aria-readonly')).toBe(
+          'true'
+        )
         expect(getTrackContainer(wrapper).attributes('tabindex')).toBe('-1')
         // unlike "disable", the value still gets submitted
         expect(wrapper.find('input[type="hidden"]').exists()).toBe(true)
@@ -731,7 +790,9 @@ describe('[QSlider API]', () => {
         const propVal = 10
         const wrapper = mountSlider({ modelValue: propVal })
 
-        expect(wrapper.attributes('aria-valuenow')).toBe(String(propVal))
+        expect(getTrackContainer(wrapper).attributes('aria-valuenow')).toBe(
+          String(propVal)
+        )
         expect(wrapper.classes()).not.toContain('q-slider--no-value')
         expect(getThumb(wrapper).$style('left')).toBe(`${propVal}%`)
         expect(getSelection(wrapper).$style('width')).toBe(`${propVal}%`)
@@ -892,6 +953,42 @@ describe('[QSlider API]', () => {
 
         expect(wrapper.emitted('change')).toStrictEqual([[1]])
       })
+
+      test('stays silent when the interaction did not move the value', async () => {
+        const wrapper = mountSlider({ modelValue: 100 })
+        const trackContainer = getTrackContainer(wrapper)
+
+        // End with the thumb already at the maximum
+        await trackContainer.trigger('focus')
+        await trackContainer.trigger('keydown', { keyCode: 35 })
+        await trackContainer.trigger('keyup', { keyCode: 35 })
+
+        // a click on the value the slider already has
+        await clickAt(wrapper, { clientX: 100 })
+
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+        expect(wrapper.emitted('change')).toBeUndefined()
+      })
+
+      test('stays silent when a drag returns to where it started', async () => {
+        const wrapper = mountSlider()
+        giveSliderSize(wrapper)
+
+        const handler = getPanHandler(wrapper)
+
+        handler({ isFirst: true, evt: { clientX: 50, clientY: 0 } })
+        handler({ evt: { clientX: 70, clientY: 0 } })
+        handler({
+          isFinal: true,
+          touch: true,
+          evt: { clientX: 50, clientY: 0 }
+        })
+        await nextTick()
+
+        expect(wrapper.emitted('change')).toBeUndefined()
+        // the intermediate movement still updated the model
+        expect(wrapper.emitted('update:modelValue')).toStrictEqual([[70]])
+      })
     })
 
     describe('[(event)pan]', () => {
@@ -939,6 +1036,257 @@ describe('[QSlider API]', () => {
         expect(value).$any([expect.any(Number), null])
         expect(value).toBe(1)
       })
+    })
+  })
+
+  describe('[Generic]', () => {
+    test('a tap converges through its compatibility mouse events', async () => {
+      const wrapper = mountSlider({ modelValue: 10 })
+      giveSliderSize(wrapper)
+      const trackContainer = getTrackContainer(wrapper)
+
+      // the full sequence a touch tap fires: compatibility mousedown and
+      // mouseup, then click, all at the same spot; the model must land
+      // once and change must not double-emit
+      await trackContainer.trigger('mousedown', { clientX: 30 })
+      document.dispatchEvent(new MouseEvent('mouseup'))
+      await nextTick()
+      await trackContainer.trigger('click', { clientX: 30 })
+
+      // the controlled prop never updates in this harness, yet the whole
+      // sequence must hand the tapped value over exactly once: the
+      // release and the compatibility click bring no new information
+      expect(wrapper.emitted('update:modelValue')).toStrictEqual([[30]])
+      expect(wrapper.emitted('change')).toStrictEqual([[30]])
+
+      // a bare click (assistive tech, or a tap whose compatibility
+      // mousedown was skipped) still sets the value on its own
+      await trackContainer.trigger('click', { clientX: 70 })
+
+      expect(wrapper.emitted('update:modelValue')).toStrictEqual([[30], [70]])
+      expect(wrapper.emitted('change')).toStrictEqual([[30], [70]])
+    })
+
+    test('a model move by the parent re-arms the emission', async () => {
+      const wrapper = mountSlider({ modelValue: 10 })
+      giveSliderSize(wrapper)
+      const trackContainer = getTrackContainer(wrapper)
+
+      await trackContainer.trigger('click', { clientX: 30 })
+      expect(wrapper.emitted('update:modelValue')).toStrictEqual([[30]])
+
+      // the parent rejected the value (the prop stayed put), so tapping
+      // the same spot again tells it nothing new
+      await trackContainer.trigger('click', { clientX: 30 })
+      expect(wrapper.emitted('update:modelValue')).toStrictEqual([[30]])
+
+      // once the parent moves the model anywhere, the same spot emits again
+      await wrapper.setProps({ modelValue: 50 })
+      await trackContainer.trigger('click', { clientX: 30 })
+      expect(wrapper.emitted('update:modelValue')).toStrictEqual([[30], [30]])
+    })
+
+    test('a fractional step keeps the emitted value float-exact', async () => {
+      const wrapper = mountSlider({
+        min: 0,
+        max: 1,
+        step: 0.1,
+        modelValue: 0.6
+      })
+
+      // 33% of the track: the raw math lands a float artifact away
+      // from 0.3, which must still be emitted as exactly 0.3
+      await pressAt(wrapper, { clientX: 33 })
+
+      expect(wrapper.emitted('update:modelValue')[0]).toStrictEqual([0.3])
+    })
+
+    test('dragging cannot leave the inner range', async () => {
+      const wrapper = mountSlider({ innerMin: 20, innerMax: 80 })
+
+      await clickAt(wrapper, { clientX: 95 })
+      expect(wrapper.emitted('update:modelValue')[0]).toStrictEqual([80])
+
+      await clickAt(wrapper, { clientX: 5 })
+      expect(wrapper.emitted('update:modelValue').at(-1)).toStrictEqual([20])
+    })
+
+    test('step 0 allows infinite precision', async () => {
+      const wrapper = mountSlider({ min: 0, max: 1, step: 0, modelValue: 0.5 })
+
+      // no step grid: the raw track position is the value
+      await clickAt(wrapper, { clientX: 13 })
+      expect(wrapper.emitted('update:modelValue')[0]).toStrictEqual([0.13])
+
+      // the keyboard falls back to a step of 1
+      const trackContainer = getTrackContainer(wrapper)
+      await trackContainer.trigger('focus')
+      await trackContainer.trigger('keydown', { keyCode: 39 })
+      expect(wrapper.emitted('update:modelValue').at(-1)).toStrictEqual([1])
+    })
+
+    test('an inverted inner range makes the component non-editable', async () => {
+      const wrapper = mountSlider({ innerMin: 60, innerMax: 40 })
+      const trackContainer = getTrackContainer(wrapper)
+
+      expect(wrapper.classes()).not.toContain('q-slider--editable')
+      expect(trackContainer.attributes('tabindex')).toBe('-1')
+
+      await trackContainer.trigger('mousedown', { button: 0 })
+
+      expect(trackContainer.element.__qtouchpan.event).toBeUndefined()
+    })
+
+    test('a zero-length track renders safely', () => {
+      const wrapper = mountSlider({ min: 30, max: 30, modelValue: 30 })
+
+      expect(getThumb(wrapper).$style('left')).toBe('0%')
+      expect(wrapper.classes()).not.toContain('q-slider--editable')
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('a null model still exposes the required aria-valuenow', () => {
+      // the slider role requires aria-valuenow; the thumb is parked at the
+      // minimum in this state, so that is what gets reported
+      const wrapper = mountSlider({ modelValue: null, min: 5, max: 20 })
+
+      expect(wrapper.classes()).toContain('q-slider--no-value')
+      expect(getTrackContainer(wrapper).attributes('aria-valuenow')).toBe('5')
+      // ...and aria-valuetext says what that number actually means
+      expect(getTrackContainer(wrapper).attributes('aria-valuetext')).toBe(
+        langEn.label.noValue
+      )
+    })
+
+    test('a label-value wins over the no-value text', async () => {
+      const wrapper = mountSlider({ modelValue: null, labelValue: 'Pick one' })
+
+      expect(getTrackContainer(wrapper).attributes('aria-valuetext')).toBe(
+        'Pick one'
+      )
+
+      // and a real value drops the no-value text entirely
+      await wrapper.setProps({ modelValue: 30, labelValue: void 0 })
+      expect(
+        getTrackContainer(wrapper).attributes('aria-valuetext')
+      ).toBeUndefined()
+    })
+
+    test('the focusable track container carries the slider semantics', () => {
+      // default mount: modelValue 50, limits 0-100
+      const wrapper = mountSlider()
+      const attrs = getTrackContainer(wrapper).attributes()
+
+      expect(attrs.role).toBe('slider')
+      expect(attrs.tabindex).toBe('0')
+      expect(attrs['aria-orientation']).toBe('horizontal')
+      expect(attrs['aria-valuemin']).toBe('0')
+      expect(attrs['aria-valuemax']).toBe('100')
+      expect(attrs['aria-valuenow']).toBe('50')
+
+      // the root is a plain wrapper
+      expect(wrapper.attributes('role')).toBeUndefined()
+      expect(wrapper.attributes('aria-valuenow')).toBeUndefined()
+    })
+
+    test('fall-through attributes reach the slider element, class stays on the root', () => {
+      const wrapper = mount(QSlider, {
+        props: { modelValue: 50 },
+        attrs: {
+          'aria-label': 'Volume',
+          class: 'my-slider'
+        }
+      })
+
+      expect(getTrackContainer(wrapper).attributes('aria-label')).toBe('Volume')
+      expect(wrapper.classes()).toContain('my-slider')
+      expect(getTrackContainer(wrapper).classes()).not.toContain('my-slider')
+    })
+
+    test('label-value feeds aria-valuetext', () => {
+      const wrapper = mountSlider({ labelValue: '50%' })
+
+      expect(getTrackContainer(wrapper).attributes('aria-valuetext')).toBe(
+        '50%'
+      )
+    })
+
+    test.each([
+      ['Home', 36, 0],
+      ['End', 35, 100]
+    ])('%s jumps to the limit', async (_, keyCode, expected) => {
+      const wrapper = mountSlider()
+
+      await getTrackContainer(wrapper).trigger('keydown', { keyCode })
+
+      expect(wrapper.emitted('update:modelValue')).toStrictEqual([[expected]])
+    })
+
+    test('PageUp/PageDown move by ten steps and clamp to the limits', async () => {
+      const wrapper = mountSlider({ innerMax: 65 })
+      const trackContainer = getTrackContainer(wrapper)
+
+      await trackContainer.trigger('focus')
+      await trackContainer.trigger('keydown', { keyCode: 33 })
+      expect(wrapper.emitted('update:modelValue')[0]).toStrictEqual([60])
+
+      // a further PageUp stops at the inner maximum
+      await trackContainer.trigger('keydown', { keyCode: 33 })
+      expect(wrapper.emitted('update:modelValue').at(-1)).toStrictEqual([65])
+
+      await trackContainer.trigger('keydown', { keyCode: 34 })
+      expect(wrapper.emitted('update:modelValue').at(-1)).toStrictEqual([55])
+    })
+
+    test('arrow keys follow the visual direction when reversed', async () => {
+      const wrapper = mountSlider({ reverse: true })
+      const trackContainer = getTrackContainer(wrapper)
+
+      // ArrowRight moves the thumb right, which now means a lower value
+      await trackContainer.trigger('focus')
+      await trackContainer.trigger('keydown', { keyCode: 39 })
+
+      expect(wrapper.emitted('update:modelValue')[0]).toStrictEqual([49])
+    })
+
+    test('arrow keys follow the visual direction when vertical', async () => {
+      const wrapper = mountSlider({ vertical: true })
+      const trackContainer = getTrackContainer(wrapper)
+
+      // ArrowDown moves the thumb down the track: a higher value
+      await trackContainer.trigger('focus')
+      await trackContainer.trigger('keydown', { keyCode: 40 })
+      expect(wrapper.emitted('update:modelValue')[0]).toStrictEqual([51])
+
+      // ...and ArrowUp a lower one
+      await trackContainer.trigger('keydown', { keyCode: 38 })
+      await trackContainer.trigger('keydown', { keyCode: 38 })
+      expect(wrapper.emitted('update:modelValue').at(-1)).toStrictEqual([49])
+    })
+
+    test('Home/End are never direction-reversed and respect the inner limits', async () => {
+      const wrapper = mountSlider({ reverse: true, innerMin: 10, innerMax: 80 })
+      const trackContainer = getTrackContainer(wrapper)
+
+      await trackContainer.trigger('focus')
+      await trackContainer.trigger('keydown', { keyCode: 36 })
+      expect(wrapper.emitted('update:modelValue')[0]).toStrictEqual([10])
+
+      await trackContainer.trigger('keydown', { keyCode: 35 })
+      expect(wrapper.emitted('update:modelValue').at(-1)).toStrictEqual([80])
+    })
+
+    test('keys outside the slider map are ignored', async () => {
+      const wrapper = mountSlider()
+      const trackContainer = getTrackContainer(wrapper)
+
+      await trackContainer.trigger('focus')
+      await trackContainer.trigger('keydown', { keyCode: 65 })
+      await trackContainer.trigger('keyup', { keyCode: 65 })
+
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+      expect(wrapper.emitted('change')).toBeUndefined()
     })
   })
 })

@@ -1,7 +1,7 @@
 ---
 title: Date Utils
 desc: A set of Quasar methods for manipulating JS Date objects without the high additional cost of dedicated libraries.
-keys: formatDate,buildDate,isValid,addToDate,subtractFromDate,adjustDate,getMinDate,getMaxDate,isBetweenDates,getBetweenDates,isSameDate,getDateDiff,getWeekOfYear,getDayOfYear,getDayOfWeek,daysInMonth,startOfDate,endOfDate,inferDateFormat,clone,extractDate
+keys: formatDate,buildDate,isValid,addToDate,subtractFromDate,adjustDate,getMinDate,getMaxDate,isBetweenDates,getBetweenDates,isSameDate,getDateDiff,getWeekOfYear,getISOWeekYear,getDayOfYear,getDayOfWeek,daysInMonth,startOfDate,endOfDate,inferDateFormat,clone,extractDate
 ---
 
 Quasar provides a set of useful functions to manipulate JS Date easily in most use cases, without the high additional cost of integrating dedicated libraries like Momentjs.
@@ -12,9 +12,8 @@ Returned values are all JS Dates.
 
 Get familiar with JS native Date class, which is very powerful, and remember that you don't need solutions like Momentjs which add hundreds of minified KB to your bundle.
 
-::: tip
-Quasar date utils includes tree shaking, except for the UMD version.
-:::
+> [!TIP]
+> Quasar date utils includes tree shaking, except for the UMD version.
 
 You will notice all examples import `date` Object from Quasar. However, if you need only one method from it, then you can use destructuring to help Tree Shaking embed only that method and not all of `date`.
 
@@ -29,9 +28,8 @@ const { addToDate } = date
 const newDate = addToDate(new Date(), { days: 7, months: 1 })
 ```
 
-::: tip
-For usage with the UMD build see [here](/start/umd#quasar-global-object).
-:::
+> [!TIP]
+> For usage with the UMD build see [here](/start/umd#quasar-global-object).
 
 ## Format for display
 
@@ -73,6 +71,7 @@ Available format tokens:
 | Day of Week       | <ul><li>**d**: 0 1 ... 5 6</li><li>**do**: 0th 1st ... 5th 6th</li><li>**dd**: Su Mo ... Fr Sa</li><li>**ddd**: Sun Mon ... Fri Sat</li><li>**dddd**: Sunday Monday ... Friday Saturday</li></ul>          |
 | Day of Week (ISO) | <ul><li>**E**: 1 2 ... 6 7</li></ul>                                                                                                                                                                       |
 | Week of Year      | <ul><li>**w**: 1 2 ... 52 53</li><li>**wo**: 1st 2nd ... 52nd 53rd</li><li>**ww**: 01 02 ... 52 53</li></ul>                                                                                               |
+| ISO Week Year     | <ul><li>**GG**: 70 71 ... 29 30</li><li>**GGGG**: 1970 1971 ... 2029 2030</li></ul>                                                                                                                        |
 | Hour              | <ul><li>**H**: 0 1 ... 22 23</li><li>**HH**: 00 01 ... 22 23</li><li>**h**: 0 ... 11 12</li><li>**hh**: 01 02 ... 11 12</li></ul>                                                                          |
 | Minute            | <ul><li>**m**: 0 1 ... 58 59</li><li>**mm**: 00 01 ... 58 59</li></ul>                                                                                                                                     |
 | Second            | <ul><li>**s**: 0 1 ... 58 59</li><li>**ss**: 00 01 ... 58 59</li></ul>                                                                                                                                     |
@@ -134,13 +133,12 @@ if (date.isValid(dateString)) {
 }
 ```
 
-::: warning
-`isValid` only validates the date format, not the logic validity of the date.
-
-The underlying implementation is based on native `Date.parse(...)` API and its shortcomings will pass through our API.
-
-It will not check if the date is valid for the month (e.g. 31st of February), or if the date is valid for the year (e.g. 29th of February in a non-leap year), and will return a different value in those cases for Firefox with respect to Chromium-based browsers (Chrome, Edge, etc).
-:::
+> [!WARNING]
+> `isValid` only validates the date format, not the logic validity of the date.
+>
+> The underlying implementation is based on native `Date.parse(...)` API and its shortcomings will pass through our API.
+>
+> It will not check if the date is valid for the month (e.g. 31st of February), or if the date is valid for the year (e.g. 29th of February in a non-leap year), and will return a different value in those cases for Firefox with respect to Chromium-based browsers (Chrome, Edge, etc).
 
 ### Add/Subtract
 
@@ -344,6 +342,18 @@ const newDate = new Date(2017, 0, 4)
 const week = date.getWeekOfYear(newDate) // `week` is 1
 ```
 
+To get the [ISO week year](https://en.wikipedia.org/wiki/ISO_week_date) (the year that the ISO week belongs to, which can differ from the calendar year for dates around January 1st) for a given date object use:
+
+```js
+import { date } from 'quasar'
+
+const newDate = new Date(2022, 0, 1) // in the last ISO week of 2021
+const year = date.getISOWeekYear(newDate) // `year` is 2021
+const week = date.getWeekOfYear(newDate) // `week` is 52
+```
+
+Pair the `GGGG` format token with `ww` (never with `YYYY`) when formatting ISO week dates, e.g. `formatDate(newDate, 'GGGG-[W]ww')` outputs `2021-W52`.
+
 To get the day number in year for a given date object use:
 
 ```js
@@ -453,6 +463,45 @@ The input may contain additional text after the part described by the mask. When
 const parsed = date.extractDate('2024-02-30', 'YYYY-MM-DD')
 console.log(Number.isNaN(parsed.getTime())) // true
 ```
+
+### Extracting ISO week dates <q-badge label="v2.30+" />
+
+A mask that carries a week number (`w`, `wo` or `ww`) is resolved as an [ISO week date](https://en.wikipedia.org/wiki/ISO_week_date), so `formatDate()` output round-trips back into the same day:
+
+```js
+import { date } from 'quasar'
+
+date.extractDate('2020-W40-7', 'GGGG-[W]ww-E')
+// Sunday, October 4th 2020
+```
+
+The year comes from `GG`/`GGGG` when the mask has one, otherwise from `YY`/`YYYY`. Prefer the ISO week year tokens: for the days around January 1st the calendar year and the ISO week year differ, and pairing `YYYY` with `ww` then resolves to a day in the wrong week.
+
+The weekday comes from whichever of `E`, `d`, `do`, `dd`, `ddd` or `dddd` the mask carries. Masks without a weekday resolve to the Monday that starts the week, since ISO weeks start on Monday:
+
+```js
+date.extractDate('2020-40', 'YYYY-ww')
+// Monday, September 28th 2020
+```
+
+Weeks are always interpreted per ISO 8601 (weeks start on Monday, week 1 is the one holding January 4th), matching what `formatDate()` writes and what `getWeekOfYear()` returns. The language pack in use does not shift them, and neither does the `first-day-of-week` property of QDate, which only affects how a calendar is displayed.
+
+An impossible week is an `Invalid Date`, including week 53 of a year that only has 52 of them:
+
+```js
+const parsed = date.extractDate('2021-W53', 'GGGG-[W]ww')
+console.log(Number.isNaN(parsed.getTime())) // true
+```
+
+When a mask carries both a week number and a full calendar date, the calendar date wins:
+
+```js
+date.extractDate('2021-W52 2022-01-01', 'GGGG-[W]ww YYYY-MM-DD')
+// January 1st 2022
+```
+
+> [!WARNING]
+> The `dd` token shortens a day name to its first two characters, which is not unique in every language (Chinese shortens all seven days to the same two characters). Where the current language pack is ambiguous that way, `dd` is matched but ignored, and the date resolves to the Monday of the week. Use `ddd`, `dddd` or `E` for a weekday that parses everywhere.
 
 With optional custom locale:
 

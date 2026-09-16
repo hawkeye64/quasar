@@ -30,7 +30,6 @@ export default defineConfig((<% if (scope.preset.i18n) { %>ctx<% } else { %>/* c
       // 'eva-icons',
       // 'themify',
       // 'line-awesome',
-      // 'roboto-font-latin-ext', // this or either 'roboto-font', NEVER both!
 
       'roboto-font', // optional, you are not bound to it
       'material-icons', // optional, you are not bound to it
@@ -64,6 +63,10 @@ export default defineConfig((<% if (scope.preset.i18n) { %>ctx<% } else { %>/* c
 
       // extendViteConf (viteConf) {},
       // viteVuePluginOptions: {},
+
+      // to write components with JSX/TSX:
+      // https://v2.quasar.dev/quasar-cli-vite/handling-vite#jsx-tsx
+      // vueJsx: true,
 
 <% if (scope.preset.i18n || scope.linter === 'eslint') { %>
       vitePlugins: [

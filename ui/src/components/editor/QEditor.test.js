@@ -2,6 +2,10 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { nextTick } from 'vue'
 
+import langEn from '../../../lang/en-US.js'
+
+import Platform from '../../plugins/platform/Platform.js'
+import QTooltip from '../tooltip/QTooltip.js'
 import QEditor from './QEditor.js'
 
 /**
@@ -22,6 +26,7 @@ afterEach(() => {
   }
 
   document.getSelection().removeAllRanges()
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -53,6 +58,10 @@ function getToolbarButtons(wrapper) {
   return wrapper.findAll('.q-editor__toolbar .q-btn')
 }
 
+function getDropdown(wrapper) {
+  return wrapper.findComponent({ name: 'QBtnDropdown' })
+}
+
 // the toolbar refresh is timer based
 function flushToolbar() {
   return new Promise(resolve => {
@@ -78,6 +87,18 @@ function selectContent(wrapper) {
   const selection = document.getSelection()
   selection.removeAllRanges()
   selection.addRange(range)
+}
+
+// the CTRL shortcuts are wired on the content element
+function pressCtrlKey(wrapper, keyCode) {
+  getContent(wrapper).element.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      keyCode,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true
+    })
+  )
 }
 
 // dropdowns are declared as an object token holding the options
@@ -138,7 +159,9 @@ describe('[QEditor API]', () => {
 
     describe('[(prop)readonly]', () => {
       test('type Boolean has effect', async () => {
-        const wrapper = mountEditor()
+        const wrapper = mountEditor({
+          toolbar: [['bold', 'fullscreen', 'print', 'viewsource']]
+        })
         await flushToolbar()
 
         expect(getContent(wrapper).attributes('contenteditable')).toBe('true')
@@ -147,7 +170,16 @@ describe('[QEditor API]', () => {
 
         expect(getContent(wrapper).attributes('contenteditable')).toBe('false')
         // unlike "disable", it does not dim the whole editor
-        expect(wrapper.classes()).not.toContain('disabled')
+        expect(wrapper.classes()).not.toContain('q-editor--disabled')
+
+        // the commands that would alter the content are out, the ones
+        // that only read it stay available
+        const [bold, ...readOnlySafe] = getToolbarButtons(wrapper)
+
+        expect(bold.attributes('aria-disabled')).toBe('true')
+        readOnlySafe.forEach(button => {
+          expect(button.attributes('aria-disabled')).toBeUndefined()
+        })
       })
     })
 
@@ -226,9 +258,21 @@ describe('[QEditor API]', () => {
 
         await wrapper.setProps({ disable: true })
 
-        expect(wrapper.classes()).toContain('disabled')
-        expect(wrapper.attributes('aria-disabled')).toBe('true')
+        // the dimming sits on the inner elements, so that the root can
+        // stay opaque and cover the page behind it when in fullscreen
+        expect(wrapper.classes()).toContain('q-editor--disabled')
+        expect(wrapper.classes()).not.toContain('disabled')
+        expect(
+          wrapper.get('.q-editor__toolbars-container').classes()
+        ).toContain('disabled')
+
+        expect(getContent(wrapper).classes()).toContain('disabled')
+        expect(getContent(wrapper).attributes('aria-disabled')).toBe('true')
         expect(getContent(wrapper).attributes('contenteditable')).toBe('false')
+
+        getToolbarButtons(wrapper).forEach(button => {
+          expect(button.attributes('aria-disabled')).toBe('true')
+        })
       })
     })
 
@@ -353,6 +397,25 @@ describe('[QEditor API]', () => {
         await flushToolbar()
 
         expect(wrapper.find('.q-editor__toolbar').exists()).toBe(false)
+      })
+
+      test('ignores holes in a group (#16940)', async () => {
+        // a stray comma in the definition creates an array hole,
+        // e.g. :toolbar="[ [ 'bold', , 'italic' ] ]"
+        const sparseGroup = ['bold', 'italic']
+        sparseGroup.length = 3
+
+        const wrapper = mountEditor({ toolbar: [sparseGroup, ['viewsource']] })
+        await flushToolbar()
+
+        expect(getToolbarButtons(wrapper)).toHaveLength(3)
+
+        // entering source view scans the groups with find(), which,
+        // unlike the render path, visits holes
+        await getToolbarButtons(wrapper)[2].trigger('click')
+        await flushToolbar()
+
+        expect(getToolbarButtons(wrapper)).toHaveLength(1)
       })
 
       test('only accepts non-empty groups', () => {
@@ -513,6 +576,105 @@ describe('[QEditor API]', () => {
       })
     })
 
+    describe('[(prop)dropdown-hover]', () => {
+      test('type Boolean has effect', async () => {
+        const wrapper = mountEditor(
+          { toolbar: [[fontDropdown]] },
+          { attachTo: document.body }
+        )
+        await flushToolbar()
+
+        await getDropdown(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await flushDropdown()
+
+        expect(document.querySelector('.q-menu')).toBeNull()
+
+        await wrapper.setProps({ dropdownHover: true })
+        await flushToolbar()
+
+        await getDropdown(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await flushDropdown()
+
+        expect(document.querySelector('.q-menu')).not.toBeNull()
+
+        await getDropdown(wrapper).trigger('pointerleave', {
+          pointerType: 'mouse'
+        })
+        await flushDropdown()
+
+        expect(document.querySelector('.q-menu')).toBeNull()
+      })
+    })
+
+    describe('[(prop)dropdown-hover-delay]', () => {
+      test('type Number has effect', async () => {
+        const propVal = 500
+        const wrapper = mountEditor(
+          {
+            toolbar: [[fontDropdown]],
+            dropdownHover: true,
+            dropdownHoverDelay: propVal
+          },
+          { attachTo: document.body }
+        )
+        await flushToolbar()
+
+        vi.useFakeTimers()
+
+        await getDropdown(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await vi.advanceTimersByTimeAsync(propVal - 1)
+
+        expect(document.querySelector('.q-menu')).toBeNull()
+
+        await vi.advanceTimersByTimeAsync(1)
+        await flushPromises()
+
+        expect(document.querySelector('.q-menu')).not.toBeNull()
+      })
+    })
+
+    describe('[(prop)dropdown-hover-hide-delay]', () => {
+      test('type Number has effect', async () => {
+        const propVal = 500
+        const wrapper = mountEditor(
+          {
+            toolbar: [[fontDropdown]],
+            dropdownHover: true,
+            dropdownHoverHideDelay: propVal
+          },
+          { attachTo: document.body }
+        )
+        await flushToolbar()
+
+        await getDropdown(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await flushDropdown()
+
+        expect(document.querySelector('.q-menu')).not.toBeNull()
+
+        vi.useFakeTimers()
+
+        await getDropdown(wrapper).trigger('pointerleave', {
+          pointerType: 'mouse'
+        })
+        await vi.advanceTimersByTimeAsync(propVal - 1)
+
+        expect(document.querySelector('.q-menu')).not.toBeNull()
+
+        await vi.advanceTimersByTimeAsync(1)
+        await flushPromises()
+
+        expect(document.querySelector('.q-menu')).toBeNull()
+      })
+    })
+
     describe('[(prop)paragraph-tag]', () => {
       function testParagraphTag(propVal) {
         mountEditor({ paragraphTag: propVal })
@@ -592,11 +754,25 @@ describe('[QEditor API]', () => {
         const propVal = 'Write something...'
         const wrapper = mountEditor()
 
-        expect(getContent(wrapper).attributes('placeholder')).toBeUndefined()
+        expect(
+          getContent(wrapper).attributes('aria-placeholder')
+        ).toBeUndefined()
 
         await wrapper.setProps({ placeholder: propVal })
 
-        expect(getContent(wrapper).attributes('placeholder')).toBe(propVal)
+        expect(getContent(wrapper).attributes('aria-placeholder')).toBe(propVal)
+      })
+
+      test('shows over the empty content', () => {
+        const propVal = 'Write something...'
+        const wrapper = mountEditor({ modelValue: '', placeholder: propVal })
+
+        const style = window.getComputedStyle(
+          getContent(wrapper).element,
+          ':before'
+        )
+
+        expect(style.content).toBe(`"${propVal}"`)
       })
     })
   })
@@ -890,6 +1066,295 @@ describe('[QEditor API]', () => {
         expect(wrapper.vm.caret.el).toBe(getContent(wrapper).element)
         expect(wrapper.vm.caret.can('link')).toBeTypeOf('boolean')
       })
+    })
+  })
+
+  describe('[Generic]', () => {
+    test.each([
+      ['an only-icons dropdown', 'only-icons', '.q-menu .q-btn'],
+      ['a list dropdown', void 0, '.q-menu .q-item']
+    ])(
+      'keeps the link editor open when the command comes from %s',
+      async (_, list, optionSelector) => {
+        const wrapper = mountEditor(
+          {
+            toolbar: [
+              [
+                {
+                  label: 'Link',
+                  fixedLabel: true,
+                  fixedIcon: true,
+                  list,
+                  options: ['link']
+                }
+              ]
+            ]
+          },
+          { attachTo: document.body }
+        )
+        await flushToolbar()
+
+        getContent(wrapper).element.focus()
+        selectContent(wrapper)
+        // the click is what a real selection ends with, and it refreshes
+        // the toolbar so the link command reports itself as available
+        await getContent(wrapper).trigger('click')
+        await flushToolbar()
+
+        const dropdown = wrapper.findComponent({ name: 'QBtnDropdown' })
+        dropdown.vm.show()
+        await flushPromises()
+        await flushDropdown()
+
+        document
+          .querySelector(optionSelector)
+          .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+        // the menu lives in a portal, so the focus it hands back on close
+        // used to read as "focus left the editor" and closed the editor
+        // again one tick after it had opened
+        await flushDropdown()
+        await flushToolbar()
+
+        expect(wrapper.find('.q-editor__link-input').exists()).toBe(true)
+      }
+    )
+
+    test('toolbar tooltips render on mobile platforms too', async () => {
+      // hybrids (iPad with a mouse) parse as mobile but can hover,
+      // and QTooltip handles each pointer type on its own now
+      const original = {
+        mobile: Platform.is.mobile,
+        desktop: Platform.is.desktop
+      }
+      Object.assign(Platform.is, { mobile: true, desktop: false })
+
+      try {
+        const wrapper = mountEditor({
+          toolbar: [['save']],
+          definitions: {
+            save: { tip: 'Save your work', icon: 'save', handler: () => {} }
+          }
+        })
+        await flushToolbar()
+
+        expect(wrapper.findComponent(QTooltip).exists()).toBe(true)
+      } finally {
+        Object.assign(Platform.is, original)
+      }
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('toolbar toggles expose their state, not just a color', async () => {
+      const wrapper = mountEditor({ toolbar: [['bold']] })
+      await flushToolbar()
+
+      // "bold" is a toggle command: its pressed state must be programmatic
+      expect(getToolbarButtons(wrapper)[0].attributes('aria-pressed')).toBe(
+        'false'
+      )
+    })
+
+    test('plain toolbar commands are not marked as toggles', async () => {
+      const wrapper = mountEditor({ toolbar: [['undo']] })
+      await flushToolbar()
+
+      expect(
+        getToolbarButtons(wrapper)[0].attributes('aria-pressed')
+      ).toBeUndefined()
+    })
+
+    test('content region is a multiline textbox', () => {
+      const wrapper = mountEditor()
+      const content = getContent(wrapper)
+
+      expect(content.attributes('role')).toBe('textbox')
+      expect(content.attributes('aria-multiline')).toBe('true')
+      expect(content.attributes('aria-readonly')).toBeUndefined()
+    })
+
+    test('readonly content region is announced as such', () => {
+      const wrapper = mountEditor({ readonly: true })
+
+      expect(getContent(wrapper).attributes('aria-readonly')).toBe('true')
+    })
+
+    test('fall-through attributes land on the textbox, class/style on the root', () => {
+      const wrapper = mountEditor(
+        {},
+        {
+          attrs: {
+            'aria-label': 'Post body',
+            class: 'my-editor',
+            style: 'margin: 7px'
+          }
+        }
+      )
+      const content = getContent(wrapper)
+
+      expect(content.attributes('aria-label')).toBe('Post body')
+      expect(wrapper.attributes('aria-label')).toBeUndefined()
+      expect(wrapper.classes()).toContain('my-editor')
+      expect(wrapper.attributes('style')).toContain('margin: 7px')
+    })
+
+    test('icon-only toolbar buttons use their tooltip as aria-label', async () => {
+      const wrapper = mountEditor({
+        toolbar: [['bold', 'italic', 'underline']]
+      })
+      await flushToolbar()
+
+      expect(
+        getToolbarButtons(wrapper).map(btn => btn.attributes('aria-label'))
+      ).toEqual([
+        langEn.editor.bold,
+        langEn.editor.italic,
+        langEn.editor.underline
+      ])
+    })
+
+    test('toolbar buttons with a visible label do not get an aria-label', async () => {
+      const wrapper = mountEditor({
+        toolbar: [['save']],
+        definitions: {
+          save: { tip: 'Save your work', label: 'Save', handler: () => {} }
+        }
+      })
+      await flushToolbar()
+
+      const btn = getToolbarButtons(wrapper)[0]
+      expect(btn.text()).toContain('Save')
+      expect(btn.attributes('aria-label')).toBeUndefined()
+    })
+
+    test('toolbar is a labelled single Tab stop (roving tabindex)', async () => {
+      const wrapper = mountEditor({
+        toolbar: [
+          ['bold', 'italic'],
+          ['undo', 'redo']
+        ]
+      })
+      await flushToolbar()
+
+      const toolbar = getToolbar(wrapper)
+      expect(toolbar.attributes('role')).toBe('toolbar')
+      expect(toolbar.attributes('aria-label')).toBe(langEn.editor.toolbar)
+
+      expect(
+        getToolbarButtons(wrapper).map(btn => btn.attributes('tabindex'))
+      ).toEqual(['0', '-1', '-1', '-1'])
+    })
+
+    test('arrow keys move focus between toolbar controls', async () => {
+      const wrapper = mountEditor(
+        { toolbar: [['bold', 'italic'], [fontDropdown]] },
+        { attachTo: document.body }
+      )
+      await flushToolbar()
+
+      const [boldEl, italicEl, dropdownEl] = getToolbarButtons(wrapper).map(
+        btn => btn.element
+      )
+
+      function pressKey(keyCode, shiftKey = false) {
+        document.activeElement.dispatchEvent(
+          new KeyboardEvent('keydown', { keyCode, shiftKey, bubbles: true })
+        )
+      }
+
+      boldEl.focus()
+
+      pressKey(39) // ArrowRight
+      expect(document.activeElement).toBe(italicEl)
+
+      pressKey(39) // ArrowRight
+      expect(document.activeElement).toBe(dropdownEl)
+
+      // wraps around past the last control
+      pressKey(39) // ArrowRight
+      expect(document.activeElement).toBe(boldEl)
+
+      pressKey(37) // ArrowLeft
+      expect(document.activeElement).toBe(dropdownEl)
+
+      pressKey(36) // Home
+      expect(document.activeElement).toBe(boldEl)
+
+      pressKey(35) // End
+      expect(document.activeElement).toBe(dropdownEl)
+    })
+
+    test('the last focused control keeps the Tab stop', async () => {
+      const wrapper = mountEditor(
+        { toolbar: [['bold', 'italic', 'underline']] },
+        { attachTo: document.body }
+      )
+      await flushToolbar()
+
+      getToolbarButtons(wrapper)[1].element.focus()
+      await flushToolbar()
+      await nextTick()
+
+      expect(
+        getToolbarButtons(wrapper).map(btn => btn.attributes('tabindex'))
+      ).toEqual(['-1', '0', '-1'])
+    })
+
+    test('icon-only dropdowns are named after their active option', async () => {
+      const wrapper = mountEditor(
+        {
+          modelValue: '<div style="text-align: center">Hello</div>',
+          toolbar: [
+            [
+              {
+                icon: 'format_align_left',
+                fixedLabel: true,
+                fixedIcon: true,
+                list: 'only-icons',
+                options: ['left', 'center', 'right', 'justify']
+              }
+            ]
+          ]
+        },
+        { attachTo: document.body }
+      )
+
+      selectContent(wrapper)
+      wrapper.vm.refreshToolbar()
+      await flushToolbar()
+      await nextTick()
+
+      expect(
+        wrapper
+          .get('.q-editor__toolbar .q-btn-dropdown')
+          .attributes('aria-label')
+      ).toBe(langEn.editor.center)
+    })
+
+    test('CTRL shortcuts run the command of the matching toolbar button', async () => {
+      const wrapper = mountEditor({ toolbar: [['bold']] })
+      await flushPromises()
+
+      pressCtrlKey(wrapper, 66) // CTRL + B
+
+      expect(execCommand).toHaveBeenCalledWith('bold', false, void 0)
+    })
+
+    test('a cancelled keydown keeps the CTRL shortcut from running', async () => {
+      const wrapper = mountEditor({
+        toolbar: [['bold']],
+        onKeydown: e => {
+          e.preventDefault()
+        }
+      })
+      await flushPromises()
+
+      pressCtrlKey(wrapper, 66) // CTRL + B
+
+      expect(wrapper.emitted('keydown')).toHaveLength(1)
+      // the editor's own setup calls are the only ones left
+      expect(execCommand).not.toHaveBeenCalledWith('bold', false, void 0)
     })
   })
 })

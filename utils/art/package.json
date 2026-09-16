@@ -12,7 +12,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/quasarframework/quasar"
+    "url": "https://github.com/quasarframework/quasar",
+    "directory": "utils/art"
   },
   "funding": {
     "type": "github",
@@ -34,6 +35,6 @@
   },
   "devDependencies": {
     "gradient-string": "^3.0.0",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.0"
   }
 }

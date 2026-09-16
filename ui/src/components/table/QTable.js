@@ -1,4 +1,11 @@
-import { computed, getCurrentInstance, h, ref, watch } from 'vue'
+import {
+  Fragment,
+  computed,
+  getCurrentInstance,
+  h,
+  shallowRef,
+  watch
+} from 'vue'
 
 import QTh from './QTh.js'
 
@@ -12,6 +19,7 @@ import QBtn from '../btn/QBtn.js'
 
 import getTableMiddle from './get-table-middle.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -160,9 +168,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const vm = getCurrentInstance()
-    const {
-      proxy: { $q }
-    } = vm
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
     const { inFullscreen, toggleFullscreen } = useFullscreen()
@@ -173,14 +179,14 @@ export default /*#__PURE__*/ createComponent({
         : row => row[props.rowKey]
     )
 
-    const rootRef = ref(null)
-    const virtScrollRef = ref(null)
+    const rootRef = shallowRef(null)
+    const virtScrollRef = shallowRef(null)
     const hasVirtScroll = computed(() => !props.grid && props.virtualScroll)
 
     const cardDefaultClass = computed(
       () =>
         ' q-table__card' +
-        (isDark.value ? ' q-table__card--dark q-dark' : '') +
+        (isDark() ? ' q-table__card--dark q-dark' : '') +
         (props.square ? ' q-table--square' : '') +
         (props.flat ? ' q-table--flat' : '') +
         (props.bordered ? ' q-table--bordered' : '')
@@ -190,7 +196,7 @@ export default /*#__PURE__*/ createComponent({
       () =>
         `q-table__container q-table--${props.separator}-separator column no-wrap` +
         (props.grid ? ' q-table--grid' : cardDefaultClass.value) +
-        (isDark.value ? ' q-table--dark' : '') +
+        (isDark() ? ' q-table--dark' : '') +
         (props.dense ? ' q-table--dense' : '') +
         (props.wrapCells ? '' : ' q-table--no-wrap') +
         (inFullscreen.value ? ' fullscreen scroll' : '')
@@ -215,7 +221,6 @@ export default /*#__PURE__*/ createComponent({
     )
 
     const {
-      innerPagination,
       computedPagination,
       isServerSide,
 
@@ -320,7 +325,6 @@ export default /*#__PURE__*/ createComponent({
       lastPage
     } = useTablePagination(
       vm,
-      innerPagination,
       computedPagination,
       isServerSide,
       setPagination,
@@ -355,6 +359,7 @@ export default /*#__PURE__*/ createComponent({
       if (hasVirtScroll.value) {
         const topRow = slots['top-row']
         const bottomRow = slots['bottom-row']
+        const footer = slots.footer
 
         const virtSlots = {
           default: slotProps =>
@@ -369,9 +374,19 @@ export default /*#__PURE__*/ createComponent({
           virtSlots.before = header
         }
 
-        if (bottomRow !== void 0) {
-          virtSlots.after = () =>
-            h('tbody', bottomRow({ cols: computedCols.value }))
+        if (bottomRow !== void 0 || footer !== void 0) {
+          virtSlots.after = () => {
+            const acc = []
+
+            if (bottomRow !== void 0) {
+              acc.push(h('tbody', bottomRow({ cols: computedCols.value })))
+            }
+            if (footer !== void 0) {
+              acc.push(h('tfoot', footer({ cols: computedCols.value })))
+            }
+
+            return acc
+          }
         }
 
         return h(
@@ -397,9 +412,16 @@ export default /*#__PURE__*/ createComponent({
         child.unshift(header())
       }
 
+      if (slots.footer !== void 0) {
+        child.push(h('tfoot', slots.footer({ cols: computedCols.value })))
+      }
+
       return getTableMiddle(
         {
           class: ['q-table__middle scroll', props.tableClass],
+          // horizontally scrollable region: keyboard users need a way in
+          // (WCAG 2.1.1)
+          tabindex: 0,
           style: props.tableStyle
         },
         child
@@ -435,7 +457,7 @@ export default /*#__PURE__*/ createComponent({
         emit('virtualScroll', {
           index: toIndex,
           from: 0,
-          to: innerPagination.value.rowsPerPage - 1,
+          to: computedRows.value.length - 1,
           direction
         })
       }
@@ -450,9 +472,11 @@ export default /*#__PURE__*/ createComponent({
         h(QLinearProgress, {
           class: 'q-table__linear-progress',
           color: props.color,
-          dark: isDark.value,
+          dark: isDark(),
           indeterminate: true,
-          trackColor: 'transparent'
+          trackColor: 'transparent',
+          // internal progressbar: the consumer has no way to name it
+          'aria-label': $q.lang.table.loading
         })
       ]
     }
@@ -488,11 +512,19 @@ export default /*#__PURE__*/ createComponent({
           const bodyCellCol = slots[`body-cell-${col.name}`],
             slot = bodyCellCol !== void 0 ? bodyCellCol : bodyCell
 
+          // key by column so that cell vnodes produced by different
+          // slot templates never get patched against each other
+          // (their patchFlags are only valid within their own template)
           return slot !== void 0
-            ? slot(getBodyCellScope({ key, row, pageIndex, col }))
+            ? h(
+                Fragment,
+                { key: col.name },
+                slot(getBodyCellScope({ key, row, pageIndex, col }))
+              )
             : h(
                 'td',
                 {
+                  key: col.name,
                   class: col.__tdClass(row),
                   style: col.__tdStyle(row)
                 },
@@ -509,8 +541,9 @@ export default /*#__PURE__*/ createComponent({
                 h(QCheckbox, {
                   modelValue: selected,
                   color: props.color,
-                  dark: isDark.value,
+                  dark: isDark(),
                   dense: props.dense,
+                  'aria-label': $q.lang.table.selectRow,
                   'onUpdate:modelValue': (adding, evt) => {
                     updateSelection([key], [row], adding, evt)
                   }
@@ -566,12 +599,26 @@ export default /*#__PURE__*/ createComponent({
         getTBodyTR(row, body, pageIndex)
       )
 
+      // keyed so that when the row list shrinks/grows, the body rows
+      // never get patched against these slots' rows (see the body cells)
       return h(
         'tbody',
         [
-          topRow?.({ cols: computedCols.value }),
+          topRow !== void 0
+            ? h(
+                Fragment,
+                { key: 'top-row' },
+                topRow({ cols: computedCols.value })
+              )
+            : null,
           ...child,
-          bottomRow?.({ cols: computedCols.value })
+          bottomRow !== void 0
+            ? h(
+                Fragment,
+                { key: 'bottom-row' },
+                bottomRow({ cols: computedCols.value })
+              )
+            : null
         ].flat()
       )
     }
@@ -604,7 +651,7 @@ export default /*#__PURE__*/ createComponent({
         sort,
         rowIndex: firstRowIndex.value + data.pageIndex,
         color: props.color,
-        dark: isDark.value,
+        dark: isDark(),
         dense: props.dense
       })
 
@@ -661,7 +708,15 @@ export default /*#__PURE__*/ createComponent({
       let child
 
       if (hasSelection) {
-        child = [topSelection(marginalsScope.value)].flat()
+        // keyed so that toggling the selection cannot patch this slot's
+        // content against the top-left/title controls (see the body cells)
+        child = [
+          h(
+            Fragment,
+            { key: 'top-selection' },
+            topSelection(marginalsScope.value)
+          )
+        ]
       } else {
         child = []
 
@@ -737,8 +792,9 @@ export default /*#__PURE__*/ createComponent({
           slot = headerCellCol !== void 0 ? headerCellCol : headerCell,
           slotProps = getHeaderScope({ col })
 
+        // keyed for the same reason as the body cells
         return slot !== void 0
-          ? slot(slotProps)
+          ? h(Fragment, { key: col.name }, slot(slotProps))
           : h(
               QTh,
               {
@@ -760,13 +816,24 @@ export default /*#__PURE__*/ createComponent({
                 h(QCheckbox, {
                   color: props.color,
                   modelValue: headerSelectedValue.value,
-                  dark: isDark.value,
+                  dark: isDark(),
                   dense: props.dense,
+                  'aria-label': $q.lang.table.selectAllRows,
                   'onUpdate:modelValue': onMultipleSelectionSet
                 })
               ]
 
-        child.unshift(h('th', { class: 'q-table--col-auto-width' }, content))
+        child.unshift(
+          h(
+            'th',
+            {
+              class: 'q-table--col-auto-width',
+              // the cell holds only a checkbox, so it has no text of its own
+              'aria-label': $q.lang.table.selectAllRows
+            },
+            content
+          )
+        )
       }
 
       return [
@@ -787,7 +854,7 @@ export default /*#__PURE__*/ createComponent({
         sort,
         colsMap: computedColsMap.value,
         color: props.color,
-        dark: isDark.value,
+        dark: isDark(),
         dense: props.dense
       })
 
@@ -836,14 +903,20 @@ export default /*#__PURE__*/ createComponent({
             : props.noDataLabel || $q.lang.table.noData
 
         const noData = slots['no-data']
+        // keyed so that a filter/rows change cannot patch this slot's
+        // content against the bottom slot's (see the body cells)
         const children =
           noData !== void 0
             ? [
-                noData({
-                  message,
-                  icon: $q.iconSet.table.warning,
-                  filter: props.filter
-                })
+                h(
+                  Fragment,
+                  { key: 'no-data' },
+                  noData({
+                    message,
+                    icon: $q.iconSet.table.warning,
+                    filter: props.filter
+                  })
+                )
               ]
             : [
                 h(QIcon, {
@@ -863,7 +936,9 @@ export default /*#__PURE__*/ createComponent({
       const bottom = slots.bottom
 
       if (bottom !== void 0) {
-        return h('div', { class: bottomClass }, [bottom(marginalsScope.value)])
+        return h('div', { class: bottomClass }, [
+          h(Fragment, { key: 'bottom' }, bottom(marginalsScope.value))
+        ])
       }
 
       const child =
@@ -913,19 +988,21 @@ export default /*#__PURE__*/ createComponent({
       child.push(h('div', { class: 'q-table__separator col' }))
 
       if (hasOpts) {
+        const recordsPerPageLabel =
+          props.rowsPerPageLabel || $q.lang.table.recordsPerPage
+
         child.push(
           h('div', { class: 'q-table__control' }, [
-            h('span', { class: 'q-table__bottom-item' }, [
-              props.rowsPerPageLabel || $q.lang.table.recordsPerPage
-            ]),
+            h('span', { class: 'q-table__bottom-item' }, [recordsPerPageLabel]),
             h(QSelect, {
               class: 'q-table__select inline q-table__bottom-item',
               color: props.color,
               modelValue: rowsPerPage,
+              'aria-label': recordsPerPageLabel,
               options: computedRowsPerPageOptions.value,
               displayValue:
                 rowsPerPage === 0 ? $q.lang.table.allRows : rowsPerPage,
-              dark: isDark.value,
+              dark: isDark(),
               borderless: true,
               dense: true,
               optionsDense: true,
@@ -1055,8 +1132,9 @@ export default /*#__PURE__*/ createComponent({
                         h(QCheckbox, {
                           modelValue: scope.selected,
                           color: props.color,
-                          dark: isDark.value,
+                          dark: isDark(),
                           dense: props.dense,
+                          'aria-label': $q.lang.table.selectRow,
                           'onUpdate:modelValue': (adding, evt) => {
                             updateSelection(
                               [scope.key],
@@ -1070,7 +1148,7 @@ export default /*#__PURE__*/ createComponent({
 
                 child.unshift(
                   h('div', { class: 'q-table__grid-item-row' }, content),
-                  h(QSeparator, { dark: isDark.value })
+                  h(QSeparator, { dark: isDark() })
                 )
               }
 
@@ -1136,7 +1214,7 @@ export default /*#__PURE__*/ createComponent({
           class: ['q-table__grid-content row', props.cardContainerClass],
           style: props.cardContainerStyle
         },
-        computedRows.value.map((row, pageIndex) =>
+        computedRows.value.flatMap((row, pageIndex) =>
           item(
             getBodyScope({
               key: getRowKey.value(row),

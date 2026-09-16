@@ -320,6 +320,8 @@ export default [
     // add your custom rules here
     rules: {
       'prefer-promise-reject-errors': 'off',
+      // slots use the "#" shorthand everywhere, as in the Quasar docs
+      'vue/v-slot-style': ['warn', 'shorthand'],
 
       // allow debugger during development only
       'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off'
@@ -464,6 +466,8 @@ export default defineConfigWithVueTs(
     // add your custom rules here
     rules: {
       'prefer-promise-reject-errors': 'off',
+      // slots use the "#" shorthand everywhere, as in the Quasar docs
+      'vue/v-slot-style': ['warn', 'shorthand'],
 
       // allow debugger during development only
       'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off'
@@ -485,9 +489,8 @@ export default defineConfigWithVueTs(
 
 ### Performance and ignoring files
 
-::: warning
-Please be sure to ignore unused files to increase performance. If you lint unused files/folders the UX will degrade significantly.
-:::
+> [!WARNING]
+> Please be sure to ignore unused files to increase performance. If you lint unused files/folders the UX will degrade significantly.
 
 You can ignore files by editing your `/eslint.config.js` file:
 

@@ -1,0 +1,352 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
+import { expect, onTestFinished, test, vi } from 'vitest'
+
+import { loadProject } from './project.js'
+import { createServer } from './server.js'
+import { createProject } from './test/fixture.js'
+import { version } from './version.js'
+
+const noUpdates = () => Promise.resolve([])
+
+/**
+ * @param {{ fixture?: object, checkUpdates?: Function }} [opts]
+ * @returns {Promise<Client>}
+ */
+async function connect({ fixture, projectDir, checkUpdates = noUpdates } = {}) {
+  const project = loadProject(projectDir ?? createProject(fixture))
+  const server = await createServer({ project, checkUpdates })
+  const client = new Client({ name: 'test', version: '0.0.0' })
+  const [clientTransport, serverTransport] =
+    InMemoryTransport.createLinkedPair()
+  await Promise.all([
+    server.connect(serverTransport),
+    client.connect(clientTransport)
+  ])
+  onTestFinished(async () => {
+    await client.close()
+    await server.close()
+  })
+  return client
+}
+
+async function call(client, name, args = {}) {
+  const result = await client.callTool({ name, arguments: args })
+  return {
+    text: result.content.map(part => part.text).join(''),
+    isError: result.isError === true
+  }
+}
+
+test('announces itself with the installed versions and page counts', async () => {
+  const client = await connect()
+  expect(client.getServerVersion()).toEqual({ name: 'quasar', version })
+  const instructions = client.getInstructions()
+  expect(instructions).toContain('quasar 2.33.0: 3 documentation pages')
+  expect(instructions).toContain(
+    '@quasar/app-vite 3.9.0: 1 documentation pages'
+  )
+  expect(instructions).toContain('API descriptors')
+  expect(instructions).not.toContain('Updates available')
+})
+
+test('tells the model what is missing and what is out of date', async () => {
+  const client = await connect({
+    fixture: { appVite: false, quasarDocs: false },
+    checkUpdates: () =>
+      Promise.resolve([
+        { name: '@quasar/mcp', version, latest: void 0 },
+        { name: 'quasar', version: '2.33.0', latest: '2.34.0' }
+      ])
+  })
+  const instructions = client.getInstructions()
+  expect(instructions).toContain('@quasar/app-vite: not installed')
+  expect(instructions).toContain(
+    'quasar 2.33.0: installed, but this release bundles no documentation'
+  )
+  expect(instructions).toContain(
+    'quasar 2.34.0 is available (installed: 2.33.0)'
+  )
+})
+
+test('exposes the six tools', async () => {
+  const client = await connect()
+  const { tools } = await client.listTools()
+  expect(tools.map(tool => tool.name).sort()).toEqual([
+    'check_updates',
+    'get_api',
+    'get_page',
+    'list_api',
+    'list_pages',
+    'search_docs'
+  ])
+})
+
+test('list_pages groups by package and filters by it, descriptions on request', async () => {
+  const client = await connect()
+  const all = await call(client, 'list_pages')
+  expect(all.text).toContain('# quasar 2.33.0')
+  expect(all.text).toContain('- vue-components/button: Button\n')
+  expect(all.text).not.toContain('The QBtn component.')
+  expect(all.text).toContain('# @quasar/app-vite 3.9.0')
+
+  const described = await call(client, 'list_pages', { descriptions: true })
+  expect(described.text).toContain(
+    '- vue-components/button: Button (The QBtn component.)'
+  )
+
+  const cli = await call(client, 'list_pages', { package: '@quasar/app-vite' })
+  expect(cli.text).not.toContain('# quasar 2.33.0')
+  expect(cli.text).toContain('- quasar-cli-vite/boot-files: Boot files')
+})
+
+test('search_docs returns routes with their matching sections', async () => {
+  const client = await connect()
+  const { text } = await call(client, 'search_docs', { query: 'boot' })
+  expect(text).toContain('- quasar-cli-vite/boot-files: Boot files')
+  expect(text).not.toContain('>')
+
+  const sections = await call(client, 'search_docs', { query: 'loading' })
+  expect(sections.text).toContain(
+    '- vue-components/button: Button\n  The QBtn component.\n  sections: Loading state'
+  )
+
+  const miss = await call(client, 'search_docs', { query: 'unicorn' })
+  expect(miss.text).toContain('No page matches')
+})
+
+test('get_page serves a page, a section, and explains a miss', async () => {
+  const client = await connect()
+  const page = await call(client, 'get_page', {
+    route: 'https://quasar.dev/vue-components/button'
+  })
+  expect(page.isError).toBe(false)
+  expect(page.text).toContain('title: Button')
+  expect(page.text).toContain('## Loading state')
+
+  const section = await call(client, 'get_page', {
+    route: 'vue-components/button',
+    section: 'Usage'
+  })
+  expect(section.text.startsWith('## Usage')).toBe(true)
+  expect(section.text).not.toContain('## Loading state')
+
+  const badSection = await call(client, 'get_page', {
+    route: 'vue-components/button',
+    section: 'Nope'
+  })
+  expect(badSection.isError).toBe(true)
+  expect(badSection.text).toContain('QBtn API | Usage | Standard')
+
+  const miss = await call(client, 'get_page', { route: 'components/button' })
+  expect(miss.isError).toBe(true)
+  expect(miss.text).toContain('Similar routes: vue-components/button')
+})
+
+test('get_page names the offline gap when a package lacks docs', async () => {
+  const client = await connect({ fixture: { quasarDocs: false } })
+  const miss = await call(client, 'get_page', {
+    route: 'vue-components/button'
+  })
+  expect(miss.isError).toBe(true)
+  expect(miss.text).toContain(
+    'Not available offline: quasar 2.33.0 bundles no documentation (bundled since 2.33.0), upgrade it.'
+  )
+})
+
+test('get_page names the package a miss may belong to when it is not installed', async () => {
+  const client = await connect({ fixture: { appVite: false } })
+  const miss = await call(client, 'get_page', {
+    route: 'https://quasar.dev/quasar-cli-vite/boot-files'
+  })
+  expect(miss.isError).toBe(true)
+  expect(miss.text).toBe(
+    'No page at "quasar-cli-vite/boot-files". Use search_docs or list_pages to find the route. Not available offline: @quasar/app-vite is not installed in this project.'
+  )
+  const served = await call(client, 'get_page', {
+    route: 'https://quasar.dev/vue-components/button#usage'
+  })
+  expect(served.isError).toBe(false)
+  expect(served.text).toContain('title: Button')
+})
+
+test('get_api serves the descriptor as the site inlines it, one part of it, or a suggestion', async () => {
+  const client = await connect()
+  const whole = await call(client, 'get_api', { name: 'btn' })
+  expect(whole.isError).toBe(false)
+  expect(whole.text.startsWith('## QBtn API\n\n### Props\n')).toBe(true)
+  expect(whole.text).toContain('### Scoped Slots')
+
+  const part = await call(client, 'get_api', { name: 'QBtn', part: 'events' })
+  expect(part.text).toBe(
+    '### Events\n\n- `@click`\n  Emitted when the component is clicked\n  Params:\n    - `evt` (Event, optional)\n'
+  )
+
+  const json = await call(client, 'get_api', {
+    name: 'QBtn',
+    part: 'events',
+    format: 'json'
+  })
+  expect(JSON.parse(json.text)).toEqual({
+    name: 'QBtn',
+    events: {
+      click: { desc: 'Emitted when the component is clicked', params: {} }
+    }
+  })
+  const wholeJson = await call(client, 'get_api', {
+    name: 'QBtn',
+    format: 'json'
+  })
+  expect(Object.keys(JSON.parse(wholeJson.text).props)).toEqual([
+    'label',
+    'loading'
+  ])
+
+  const noPart = await call(client, 'get_api', {
+    name: 'QBtn',
+    part: 'methods'
+  })
+  expect(noPart.isError).toBe(true)
+  expect(noPart.text).toContain('It has: props, slots, events.')
+
+  const miss = await call(client, 'get_api', { name: 'QNotif' })
+  expect(miss.isError).toBe(true)
+  expect(miss.text).toContain('Similar names: Notify')
+
+  const list = await call(client, 'list_api')
+  expect(list.text).toBe('Notify\nQBtn')
+})
+
+test('check_updates refreshes from the registry and reports', async () => {
+  const checkUpdates = vi.fn((project, opts) =>
+    Promise.resolve(
+      opts?.refresh === true
+        ? [
+            { name: '@quasar/mcp', version, latest: '9.0.0' },
+            { name: 'quasar', version: '2.33.0', latest: void 0 }
+          ]
+        : []
+    )
+  )
+  const client = await connect({ checkUpdates })
+  const { text } = await call(client, 'check_updates')
+  expect(checkUpdates).toHaveBeenLastCalledWith(expect.anything(), {
+    refresh: true
+  })
+  expect(text).toContain(
+    `@quasar/mcp 9.0.0 is available (installed: ${version})`
+  )
+  expect(text).not.toContain('quasar 2.33.0 is available')
+})
+
+test('get_api falls back to the JSON when the installed release has no rendered form', async () => {
+  const client = await connect({ fixture: { apiMarkdown: false } })
+  const whole = await call(client, 'get_api', { name: 'QBtn' })
+  expect(whole.isError).toBe(false)
+  expect(JSON.parse(whole.text).name).toBe('QBtn')
+
+  // a part the descriptor has but the renderer left out (empty) also
+  // gets the JSON
+  const withMd = await connect()
+  const part = await call(withMd, 'get_api', {
+    name: 'Notify',
+    part: 'methods'
+  })
+  expect(part.text.startsWith('### Methods')).toBe(true)
+})
+
+test('get_page outline lists the title and headings only', async () => {
+  const client = await connect()
+  const outline = await call(client, 'get_page', {
+    route: 'vue-components/button',
+    outline: true
+  })
+  expect(outline.text).toBe(
+    '# Button\n## QBtn API\n## Usage\n### Standard\n### Custom colors\n## Loading state'
+  )
+})
+
+test('get_api serves one member, in every part that has it, or a suggestion', async () => {
+  const client = await connect()
+  const label = await call(client, 'get_api', { name: 'QBtn', member: 'Label' })
+  expect(label.text).toBe(
+    '### Props\n\n- `label` (string | number, optional)\n  The text that will be shown on the button\n'
+  )
+  const both = await call(client, 'get_api', {
+    name: 'QBtn',
+    member: 'loading'
+  })
+  expect(both.text).toBe(
+    '### Props\n\n- `loading` (boolean, optional)\n  Put button into loading state\n\n### Scoped Slots\n\n- `#loading`\n  Override the default QSpinner\n'
+  )
+  const one = await call(client, 'get_api', {
+    name: 'QBtn',
+    member: 'loading',
+    part: 'slots',
+    format: 'json'
+  })
+  expect(JSON.parse(one.text)).toEqual({
+    name: 'QBtn',
+    slots: { loading: { desc: 'Override the default QSpinner' } }
+  })
+
+  const miss = await call(client, 'get_api', { name: 'QBtn', member: 'lab' })
+  expect(miss.isError).toBe(true)
+  expect(miss.text).toBe(
+    'QBtn has no member named "lab". Similar: props.label.'
+  )
+  const wrongPart = await call(client, 'get_api', {
+    name: 'Notify',
+    member: 'x',
+    part: 'quasarConfOptions'
+  })
+  expect(wrongPart.isError).toBe(true)
+  expect(wrongPart.text).toContain('has no named members')
+})
+
+test('a slice of another format is named with the server to run, and its API comes as JSON', async () => {
+  const client = await connect({ fixture: { docsFormat: 2 } })
+  const expected =
+    "quasar 2.33.0 bundles its documentation in format 2, this server reads format 1; run `npx -y --fetch-retries=0 @quasar/mcp@2` instead (the server's major version tracks the format)"
+  expect(client.getInstructions()).toContain(`- ${expected}.`)
+
+  const miss = await call(client, 'get_page', {
+    route: 'vue-components/button'
+  })
+  expect(miss.isError).toBe(true)
+  expect(miss.text).toContain(`Not available offline: ${expected}.`)
+
+  // the rendered API files are part of the slice, so they are not parsed either
+  const api = await call(client, 'get_api', { name: 'QBtn', part: 'props' })
+  expect(api.isError).toBe(false)
+  expect(Object.keys(JSON.parse(api.text).props)).toEqual(['label', 'loading'])
+})
+
+test('a workspace root names the app served and the ones it is not', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'quasar-mcp-workspace-'))
+  onTestFinished(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+  writeFileSync(join(root, 'pnpm-workspace.yaml'), '')
+  createProject({ dir: join(root, 'apps/admin') })
+  createProject({ dir: join(root, 'apps/web') })
+  for (const name of ['a', 'b', 'c', 'd', 'e', 'f']) {
+    createProject({ dir: join(root, 'libs', name), appVite: false })
+  }
+  const client = await connect({ projectDir: root })
+  const instructions = client.getInstructions()
+  expect(instructions).toContain(
+    `served from the packages installed in apps/admin, the Quasar app found below ${root}.`
+  )
+  expect(instructions).toContain(
+    'Other Quasar apps in this workspace, not served: apps/web, libs/a, libs/b, libs/c, libs/d and 2 more. To serve one of them, start the server with --project <dir>.'
+  )
+  const page = await call(client, 'get_page', {
+    route: 'vue-components/button'
+  })
+  expect(page.isError).toBe(false)
+})

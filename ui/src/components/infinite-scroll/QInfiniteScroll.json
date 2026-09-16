@@ -6,16 +6,14 @@
   "props": {
     "offset": {
       "type": "Number",
-      "desc": "Offset (pixels) to bottom of Infinite Scroll container from which the component should start loading more content in advance",
+      "desc": "Distance (pixels) from the end of the content (the top of it in reverse mode) to the visible area of the scroll target at which loading more content starts, in advance",
       "default": "500",
       "category": "behavior"
     },
 
     "debounce": {
-      "type": ["String", "Number"],
-      "desc": "Debounce amount (in milliseconds)",
-      "default": "100",
-      "category": "behavior"
+      "extends": "debounce",
+      "default": "100"
     },
 
     "initial-index": {
@@ -75,7 +73,7 @@
 
   "methods": {
     "poll": {
-      "desc": "Checks scroll position and loads more content if necessary",
+      "desc": "Checks whether the end of the content is within offset of the visible area and loads more content if necessary",
       "params": null,
       "returns": null
     },
@@ -117,9 +115,7 @@
     },
 
     "updateScrollTarget": {
-      "desc": "Updates the scroll target; Useful when the parent elements change so that the scrolling target also changes",
-      "params": null,
-      "returns": null
+      "extends": "updateScrollTarget"
     }
   }
 }

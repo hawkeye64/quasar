@@ -1,15 +1,16 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <q-banner rounded :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-2'">
-      <template v-slot:avatar>
+      <template #avatar>
         <img
+          alt="Mountains"
           src="https://cdn.quasar.dev/img/mountains.jpg"
           style="width: 100px; height: 64px"
         />
       </template>
 
       Could not retrieve travel data.
-      <template v-slot:action>
+      <template #action>
         <q-btn flat label="Retry" />
       </template>
     </q-banner>

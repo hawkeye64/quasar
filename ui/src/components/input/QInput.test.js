@@ -1,7 +1,35 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+import { h } from 'vue'
 
+import QPopupProxy from '../popup-proxy/QPopupProxy.js'
 import QInput from './QInput.js'
+
+// the test browser is a Chromium, so autogrow sizes the textarea through
+// CSS field-sizing by default; flipping this flag before mounting forces
+// the JS measuring fallback of non-supporting browsers instead
+const autogrowOverride = vi.hoisted(() => ({ forceJsFallback: false }))
+
+vi.mock('./use-autogrow.js', async importOriginal => {
+  const mod = await importOriginal()
+  return {
+    ...mod,
+    useAutogrow: (...args) =>
+      autogrowOverride.forceJsFallback
+        ? mod.createAdjustHeightFn(...args)
+        : mod.useAutogrow?.(...args)
+  }
+})
+
+afterEach(() => {
+  autogrowOverride.forceJsFallback = false
+})
+
+function nextFrame() {
+  return new Promise(resolve => {
+    requestAnimationFrame(resolve)
+  })
+}
 
 function mountInput(props = {}, options = {}) {
   return mount(QInput, {
@@ -40,6 +68,143 @@ describe('[QInput API]', () => {
 
         const wrapper = mountInput({ modelValue: '12345', mask: '###-##' })
         expect(wrapper.get('input').element.value).toBe('123-45')
+      })
+
+      test('supports the multiple-masks computed pattern (#7920)', async () => {
+        // the "Multiple masks" docs pattern, see
+        // docs/src/examples/QInput/MaskMultiple.vue
+        const SHORT = '(##) ####-#####'
+        const LONG = '(##) #####-####'
+        const maskFor = model => (model.length > 10 ? LONG : SHORT)
+
+        const wrapper = mountInput({
+          modelValue: '',
+          mask: SHORT,
+          unmaskedValue: true
+        })
+        const input = wrapper.get('input').element
+
+        // after each edit, the parent applies v-model and its computed mask
+        async function parentSettles() {
+          const emitted = wrapper.emitted('update:modelValue')
+          const model = emitted === void 0 ? '' : emitted.at(-1)[0]
+          await wrapper.setProps({ modelValue: model, mask: maskFor(model) })
+          await flushPromises()
+        }
+
+        async function typeDigit(digit) {
+          input.focus()
+          input.setRangeText(
+            digit,
+            input.selectionStart,
+            input.selectionEnd,
+            'end'
+          )
+          input.dispatchEvent(
+            new InputEvent('input', {
+              bubbles: true,
+              inputType: 'insertText',
+              data: digit
+            })
+          )
+          await parentSettles()
+        }
+
+        for (const digit of '1123456789') {
+          await typeDigit(digit)
+        }
+        expect(input.value).toBe('(11) 2345-6789')
+
+        // the 9-digit number's extra digit crosses the threshold: the
+        // computed mask switches and the value re-lays out around it
+        await typeDigit('0')
+        expect(input.value).toBe('(11) 23456-7890')
+        expect(input.selectionStart).toBe(input.value.length)
+
+        // backspace crosses back down
+        input.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'Backspace',
+            keyCode: 8,
+            bubbles: true,
+            cancelable: true
+          })
+        )
+        let start = input.selectionStart
+        const end = input.selectionEnd
+        if (start === end) {
+          start = end - 1
+        }
+        input.setRangeText('', start, end, 'end')
+        input.dispatchEvent(
+          new InputEvent('input', {
+            bubbles: true,
+            inputType: 'deleteContentBackward'
+          })
+        )
+        await parentSettles()
+
+        expect(input.value).toBe('(11) 2345-6789')
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([
+          '1123456789'
+        ])
+      })
+
+      test('a rapid backspace burst empties the model too (#15895)', async () => {
+        const wrapper = mountInput({
+          modelValue: '',
+          mask: '##.##.#### ##:##:##'
+        })
+        const input = wrapper.get('input').element
+
+        // fill the mask completely
+        for (let i = 0; i < 14; i++) {
+          input.value += '1'
+          input.dispatchEvent(
+            new InputEvent('input', {
+              bubbles: true,
+              inputType: 'insertText',
+              data: '1'
+            })
+          )
+        }
+        expect(input.value).toBe('11.11.1111 11:11:11')
+
+        // the parent's re-render settles between the typing and the erasing
+        await wrapper.setProps({
+          modelValue: wrapper.emitted('update:modelValue').at(-1)[0]
+        })
+
+        // a held-down BACKSPACE fires faster than the parent re-renders, so
+        // props.modelValue stays stale throughout the burst
+        input.setSelectionRange(input.value.length, input.value.length)
+        for (let i = 0; i < 25 && input.value !== ''; i++) {
+          input.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              key: 'Backspace',
+              keyCode: 8,
+              bubbles: true,
+              cancelable: true
+            })
+          )
+
+          let start = input.selectionStart
+          const end = input.selectionEnd
+          if (start === end) {
+            if (end === 0) break
+            start = end - 1
+          }
+          input.setRangeText('', start, end, 'end')
+          input.dispatchEvent(
+            new InputEvent('input', {
+              bubbles: true,
+              inputType: 'deleteContentBackward'
+            })
+          )
+        }
+
+        expect(input.value).toBe('')
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([''])
       })
     })
 
@@ -276,6 +441,57 @@ describe('[QInput API]', () => {
         await flushPromises()
 
         expect(wrapper.classes()).toContain('q-field--error')
+      })
+
+      test('value true validates a readonly field on blur too', async () => {
+        // only "disable" exempts a field from validation; a readonly one
+        // gets focused like any other, so tabbing through it reports its
+        // invalid value the same way QForm's submit would
+        const wrapper = mountInput({
+          modelValue: 'abcd',
+          readonly: true,
+          lazyRules: true,
+          rules: [maxThreeChars]
+        })
+        const input = wrapper.get('input')
+
+        input.element.focus()
+        input.element.blur()
+        await flushTimers()
+        await flushTimers()
+        await flushPromises()
+
+        expect(wrapper.classes()).toContain('q-field--error')
+      })
+
+      test('value true clears a displayed error while typing (#17456)', async () => {
+        const wrapper = mountInput({
+          modelValue: 'abcd',
+          lazyRules: true,
+          rules: [maxThreeChars]
+        })
+
+        const control = wrapper.get('.q-field__control')
+        await control.trigger('focusin')
+        await control.trigger('focusout')
+        await flushTimers()
+        await flushPromises()
+
+        expect(wrapper.classes()).toContain('q-field--error')
+
+        // fixing the value clears the error without another blur...
+        await wrapper.setProps({ modelValue: 'ab' })
+        await flushTimers()
+        await flushPromises()
+
+        expect(wrapper.classes()).not.toContain('q-field--error')
+
+        // ...and the field is lazy again until the next blur
+        await wrapper.setProps({ modelValue: 'abcd' })
+        await flushTimers()
+        await flushPromises()
+
+        expect(wrapper.classes()).not.toContain('q-field--error')
       })
 
       test('value false has effect', async () => {
@@ -629,6 +845,28 @@ describe('[QInput API]', () => {
         expect(wrapper.classes()).toContain('q-field--readonly')
         expect(wrapper.get('input').element.readOnly).toBe(true)
       })
+
+      test('keeps the field focused when readonly is dropped in the same tick as focus() (#16056)', async () => {
+        // the issue's handler shape: `readonly = false; input.focus()` in
+        // one go, so the focus event lands while the prop is still true
+        const wrapper = mountInput({
+          readonly: true,
+          label: 'Name',
+          modelValue: ''
+        })
+
+        const pending = wrapper.setProps({ readonly: false })
+        wrapper.vm.focus()
+        await pending
+        await flushTimers()
+        await flushPromises()
+
+        expect(document.activeElement).toBe(wrapper.get('input').element)
+        expect(wrapper.classes()).not.toContain('q-field--readonly')
+        expect(wrapper.classes()).toContain('q-field--focused')
+        expect(wrapper.classes()).toContain('q-field--float')
+        expect(wrapper.emitted('focus')).toHaveLength(1)
+      })
     })
 
     describe('[(prop)autofocus]', () => {
@@ -802,6 +1040,194 @@ describe('[QInput API]', () => {
           vi.useRealTimers()
         }
       })
+
+      test('drops a stale masked emission when the value returns (#17568)', async () => {
+        vi.useFakeTimers()
+
+        try {
+          const wrapper = mountInput({
+            modelValue: '',
+            mask: '##########',
+            debounce: 75
+          })
+          const input = wrapper.get('input').element
+
+          input.value = '111111'
+          input.dispatchEvent(
+            new InputEvent('input', { bubbles: true, inputType: 'insertText' })
+          )
+          vi.advanceTimersByTime(75)
+          expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([
+            '111111'
+          ])
+          await wrapper.setProps({ modelValue: '111111' })
+
+          // everything gets cut...
+          input.value = ''
+          input.dispatchEvent(
+            new InputEvent('input', {
+              bubbles: true,
+              inputType: 'deleteContentBackward'
+            })
+          )
+          // ...and the same text pasted back before the debounce fires
+          vi.advanceTimersByTime(30)
+          input.value = '111111'
+          input.dispatchEvent(
+            new InputEvent('input', {
+              bubbles: true,
+              inputType: 'insertFromPaste'
+            })
+          )
+
+          vi.advanceTimersByTime(200)
+          await flushPromises()
+
+          // the pending "" emission was stale and must not have fired,
+          // and the re-render must keep showing the restored value
+          expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([
+            '111111'
+          ])
+          expect(input.value).toBe('111111')
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+
+      test('keeps the trailing space typed with v-model.trim (#17663)', async () => {
+        vi.useFakeTimers()
+
+        try {
+          const wrapper = mountInput(
+            {
+              modelValue: '',
+              modelModifiers: { trim: true },
+              debounce: 500,
+              // the parent's v-model side
+              'onUpdate:modelValue': val => {
+                wrapper.setProps({ modelValue: val })
+              }
+            },
+            { attachTo: document.body }
+          )
+          const input = wrapper.get('input').element
+          input.focus()
+
+          input.value = 'asdf '
+          input.dispatchEvent(
+            new InputEvent('input', { bubbles: true, inputType: 'insertText' })
+          )
+
+          // wait past the debounce: the emission fires
+          // (Vue applies the trim modifier inside emit itself)
+          vi.advanceTimersByTime(600)
+          await flushPromises()
+
+          expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['asdf'])
+          // the focused control must still show the trailing space
+          expect(input.value).toBe('asdf ')
+
+          input.value = 'asdf asdf'
+          input.dispatchEvent(
+            new InputEvent('input', { bubbles: true, inputType: 'insertText' })
+          )
+          vi.advanceTimersByTime(600)
+          await flushPromises()
+
+          expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([
+            'asdf asdf'
+          ])
+          expect(input.value).toBe('asdf asdf')
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+
+      test('keeps the masked display while an unmasked-value emission is debounced', async () => {
+        vi.useFakeTimers()
+
+        try {
+          const wrapper = mountInput({
+            modelValue: '',
+            mask: '###-###',
+            unmaskedValue: true,
+            debounce: 100
+          })
+          const input = wrapper.get('input')
+
+          input.element.value = '111111'
+          await input.trigger('input', { inputType: 'insertText' })
+
+          // the innerValue-driven re-render already ran here; the field
+          // must keep showing the masked text, not the raw emit value
+          expect(input.element.value).toBe('111-111')
+
+          vi.advanceTimersByTime(100)
+          expect(wrapper.emitted('update:modelValue')).toEqual([['111111']])
+
+          await wrapper.vm.$nextTick()
+          expect(input.element.value).toBe('111-111')
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+
+      test('keeps the masked display after an IME composition while the emission is debounced', async () => {
+        vi.useFakeTimers()
+
+        try {
+          const wrapper = mountInput({
+            modelValue: '',
+            mask: '####/##/##',
+            debounce: 100
+          })
+          const input = wrapper.get('input')
+
+          await input.trigger('compositionstart')
+          input.element.value = '2023'
+          await input.trigger('input', {
+            data: '3',
+            inputType: 'insertCompositionText'
+          })
+          await input.trigger('compositionend', { data: '3' })
+
+          // the composition snapshot left in temp must not shadow the
+          // masked value on the re-render
+          expect(input.element.value).toBe('2023/')
+
+          vi.advanceTimersByTime(100)
+          expect(wrapper.emitted('update:modelValue')).toEqual([['2023/']])
+
+          await wrapper.vm.$nextTick()
+          expect(input.element.value).toBe('2023/')
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+
+      test('defers past the debounce window when v-model.lazy is set', async () => {
+        vi.useFakeTimers()
+
+        try {
+          const wrapper = mountInput({
+            modelValue: '',
+            modelModifiers: { lazy: true },
+            debounce: 100
+          })
+          const input = wrapper.get('input')
+
+          input.element.value = 'a'
+          await input.trigger('input')
+
+          vi.advanceTimersByTime(500)
+          expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+          await input.trigger('change')
+          expect(wrapper.emitted('update:modelValue')).toEqual([['a']])
+        } finally {
+          vi.useRealTimers()
+        }
+      })
     })
 
     describe('[(prop)maxlength]', () => {
@@ -828,6 +1254,140 @@ describe('[QInput API]', () => {
         expect(wrapper.get('textarea').attributes('rows')).toBe('1')
         expect(wrapper.classes()).toContain('q-textarea')
         expect(wrapper.classes()).toContain('q-textarea--autogrow')
+      })
+
+      test('lets the browser size the textarea where field-sizing is supported', async () => {
+        const wrapper = mountInput({
+          modelValue: 'line1',
+          autogrow: true
+        })
+        const inp = wrapper.get('textarea').element
+
+        await nextFrame()
+
+        expect(getComputedStyle(inp).fieldSizing).toBe('content')
+        // nothing imperative: no inline sizing, no overflow juggling
+        expect(inp.style.height).toBe('')
+        expect(inp.style.overflowY).toBe('')
+
+        const oneLine = inp.offsetHeight
+
+        await wrapper.setProps({ modelValue: 'line1\nline2\nline3' })
+        await nextFrame()
+
+        expect(inp.style.height).toBe('')
+        expect(inp.offsetHeight).toBeGreaterThan(oneLine)
+      })
+
+      test('the JS fallback grows the textarea with its content', async () => {
+        autogrowOverride.forceJsFallback = true
+
+        const wrapper = mountInput({
+          modelValue: 'line1',
+          autogrow: true
+        })
+        const inp = wrapper.get('textarea').element
+
+        await nextFrame()
+
+        const oneLine = inp.offsetHeight
+        expect(inp.style.height).toBe(`${oneLine}px`)
+
+        await wrapper.setProps({ modelValue: 'line1\nline2\nline3' })
+        await nextFrame()
+        await nextFrame()
+
+        expect(inp.offsetHeight).toBeGreaterThan(oneLine)
+        expect(inp.style.height).toBe(`${inp.offsetHeight}px`)
+      })
+
+      test('both sizing paths agree on the textarea height', async () => {
+        const modelValue = 'line1\nline2\nline3'
+        const native = mountInput({ modelValue, autogrow: true })
+
+        autogrowOverride.forceJsFallback = true
+        const fallback = mountInput({ modelValue, autogrow: true })
+
+        await nextFrame()
+        await nextFrame()
+
+        expect(fallback.get('textarea').element.offsetHeight).toBe(
+          native.get('textarea').element.offsetHeight
+        )
+      })
+
+      test('toggling it off leaves the browser-sized textarea untouched', async () => {
+        const wrapper = mountInput(
+          {
+            modelValue: 'line1\nline2\nline3',
+            type: 'textarea',
+            autogrow: true
+          },
+          { attrs: { rows: 3 } }
+        )
+        const inp = wrapper.get('textarea').element
+
+        await nextFrame()
+        await wrapper.setProps({ autogrow: false })
+
+        expect(inp.getAttribute('rows')).toBe('3')
+        expect(inp.style.height).toBe('')
+        expect(inp.style.overflowY).toBe('')
+      })
+
+      test('toggling it off restores the textarea inline styles', async () => {
+        autogrowOverride.forceJsFallback = true
+
+        const wrapper = mountInput({
+          modelValue: 'line1\nline2\nline3',
+          autogrow: true
+        })
+        const inp = wrapper.get('textarea').element
+
+        await nextFrame()
+
+        expect(inp.style.overflowY).toBe('hidden')
+
+        await wrapper.setProps({ autogrow: false })
+
+        expect(inp.style.overflowY).toBe('')
+        expect(inp.style.height).toBe('')
+      })
+
+      test('the native path passes a user animationend listener straight to the textarea', async () => {
+        const onAnimationend = vi.fn()
+        const wrapper = mountInput(
+          { autogrow: true },
+          { attrs: { onAnimationend } }
+        )
+
+        await wrapper.get('textarea').trigger('animationend')
+
+        expect(onAnimationend).toHaveBeenCalledTimes(1)
+        expect(wrapper.emitted()).not.toHaveProperty('animationend')
+      })
+
+      test('the JS fallback re-emits animationend and remeasures after it', async () => {
+        autogrowOverride.forceJsFallback = true
+
+        const onAnimationend = vi.fn()
+        const wrapper = mountInput(
+          { autogrow: true },
+          { attrs: { onAnimationend } }
+        )
+        const inp = wrapper.get('textarea').element
+
+        await nextFrame()
+        const measured = inp.style.height
+        expect(measured).toMatch(/px$/)
+
+        inp.style.height = '1px'
+        await wrapper.get('textarea').trigger('animationend')
+        await nextFrame()
+
+        expect(onAnimationend).toHaveBeenCalledTimes(1)
+        expect(wrapper.emitted().animationend).toHaveLength(1)
+        expect(inp.style.height).toBe(measured)
       })
     })
 
@@ -1280,6 +1840,224 @@ describe('[QInput API]', () => {
       expect(onUpdateModelValue).toHaveBeenLastCalledWith('2023/')
       expect(input.element.value).toBe('2023/')
     })
+
+    // v-model.lazy: Vue hands the modifier over through `modelModifiers`
+    // and leaves the deferral to the component (#18023)
+
+    test('holds the model emission until the change event with v-model.lazy (#18023)', async () => {
+      const wrapper = mountInput({
+        modelValue: '',
+        modelModifiers: { lazy: true }
+      })
+      const input = wrapper.get('input')
+
+      for (const value of ['a', 'ab', 'abc']) {
+        input.element.value = value
+        await input.trigger('input')
+      }
+
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+      // the pending text must survive a re-render
+      await wrapper.setProps({ label: 'still typing' })
+      expect(input.element.value).toBe('abc')
+
+      await input.trigger('change')
+      expect(wrapper.emitted('update:modelValue')).toEqual([['abc']])
+    })
+
+    test('flushes the pending v-model.lazy value on blur', async () => {
+      const wrapper = mountInput({
+        modelValue: '',
+        modelModifiers: { lazy: true }
+      })
+      const input = wrapper.get('input')
+
+      input.element.value = 'abc'
+      await input.trigger('input')
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+      await input.trigger('blur')
+      expect(wrapper.emitted('update:modelValue')).toEqual([['abc']])
+    })
+
+    test('drops the pending v-model.lazy value when the model changes externally', async () => {
+      const wrapper = mountInput({
+        modelValue: '',
+        modelModifiers: { lazy: true }
+      })
+      const input = wrapper.get('input')
+
+      input.element.value = 'abc'
+      await input.trigger('input')
+
+      await wrapper.setProps({ modelValue: 'xyz' })
+      expect(input.element.value).toBe('xyz')
+
+      await input.trigger('change')
+      await input.trigger('blur')
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
+    test('emits the masked value on change with v-model.lazy', async () => {
+      const wrapper = mountInput({
+        modelValue: '',
+        mask: '###-###',
+        modelModifiers: { lazy: true }
+      })
+      const input = wrapper.get('input')
+
+      input.element.value = '111111'
+      await input.trigger('input', { inputType: 'insertText' })
+
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+      expect(input.element.value).toBe('111-111')
+
+      await input.trigger('change')
+      expect(wrapper.emitted('update:modelValue')).toEqual([['111-111']])
+    })
+
+    test('keeps the masked display while a v-model.lazy unmasked value is pending', async () => {
+      const wrapper = mountInput({
+        modelValue: '',
+        mask: '###-###',
+        unmaskedValue: true,
+        modelModifiers: { lazy: true }
+      })
+      const input = wrapper.get('input')
+
+      input.element.value = '111111'
+      await input.trigger('input', { inputType: 'insertText' })
+
+      // the innerValue-driven re-render already ran here; the field
+      // must keep showing the masked text, not the raw emit value
+      expect(input.element.value).toBe('111-111')
+
+      await input.trigger('change')
+      expect(wrapper.emitted('update:modelValue')).toEqual([['111111']])
+    })
+
+    test('keeps the masked display after an IME composition with v-model.lazy', async () => {
+      const wrapper = mountInput({
+        modelValue: '',
+        mask: '####/##/##',
+        modelModifiers: { lazy: true }
+      })
+      const input = wrapper.get('input')
+
+      await input.trigger('compositionstart')
+      input.element.value = '2023'
+      await input.trigger('input', {
+        data: '3',
+        inputType: 'insertCompositionText'
+      })
+      await input.trigger('compositionend', { data: '3' })
+
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+      expect(input.element.value).toBe('2023/')
+
+      await input.trigger('change')
+      expect(wrapper.emitted('update:modelValue')).toEqual([['2023/']])
+    })
+
+    // a menu/dialog opened from inside the control (the QDate-in-a-QInput
+    // docs pattern) takes focus away from the native input; the field must
+    // stay focused (no blur, no lazy validation) for as long as the popup
+    // is open, as it did in v1 (#9779)
+    describe('popup opened from inside the control', () => {
+      function mountWithPopup(props) {
+        return mountInput(
+          { modelValue: '', ...props },
+          {
+            slots: {
+              append: () =>
+                h(QPopupProxy, { transitionDuration: 0 }, () =>
+                  h('div', { 'data-test': 'popup-content' }, 'Pick a date')
+                )
+            }
+          }
+        )
+      }
+
+      function getPopupContent() {
+        return document.querySelector('[data-test="popup-content"]')
+      }
+
+      async function showPopup(wrapper) {
+        wrapper.findComponent(QPopupProxy).vm.show()
+
+        // the menu grabs focus once its show transition is done
+        await vi.waitFor(() => {
+          expect(getPopupContent()).not.toBeNull()
+          expect(
+            getPopupContent().parentElement.contains(document.activeElement)
+          ).toBe(true)
+        })
+        await flushTimers()
+      }
+
+      async function hidePopup(wrapper, evt) {
+        wrapper.findComponent(QPopupProxy).vm.hide(evt)
+
+        await vi.waitFor(() => {
+          expect(getPopupContent()).toBeNull()
+        })
+        await flushTimers()
+      }
+
+      test('keeps the field focused while open and hands focus back on close', async () => {
+        const wrapper = mountWithPopup({
+          lazyRules: true,
+          rules: [val => val.length !== 0 || 'Required']
+        })
+        const input = wrapper.get('input').element
+
+        input.focus()
+        await flushPromises()
+        expect(wrapper.classes()).toContain('q-field--focused')
+
+        await showPopup(wrapper)
+
+        expect(input).not.toBe(document.activeElement)
+        expect(wrapper.classes()).toContain('q-field--focused')
+        expect(wrapper.classes()).not.toContain('q-field--error')
+        expect(wrapper.emitted('blur')).toBeUndefined()
+
+        await hidePopup(wrapper)
+
+        expect(document.activeElement).toBe(input)
+        expect(wrapper.classes()).toContain('q-field--focused')
+        expect(wrapper.classes()).not.toContain('q-field--error')
+        expect(wrapper.emitted('blur')).toBeUndefined()
+
+        // leaving the field for real still blurs it and runs the lazy rule
+        input.blur()
+        await flushTimers()
+
+        expect(wrapper.emitted('blur')).toHaveLength(1)
+        expect(wrapper.classes()).not.toContain('q-field--focused')
+        await vi.waitFor(() => {
+          expect(wrapper.classes()).toContain('q-field--error')
+        })
+      })
+
+      test('blurs the field when the popup closes without handing focus back', async () => {
+        const wrapper = mountWithPopup()
+
+        wrapper.get('input').element.focus()
+        await flushPromises()
+        await showPopup(wrapper)
+
+        expect(wrapper.emitted('blur')).toBeUndefined()
+
+        // a click-outside close leaves focus wherever the click put it
+        await hidePopup(wrapper, { type: 'click', qClickOutside: true })
+
+        expect(wrapper.element.contains(document.activeElement)).toBe(false)
+        expect(wrapper.emitted('blur')).toHaveLength(1)
+        expect(wrapper.classes()).not.toContain('q-field--focused')
+      })
+    })
   })
 
   describe('[Accessibility]', () => {
@@ -1291,6 +2069,30 @@ describe('[QInput API]', () => {
       const noError = mountInput()
 
       expect(noError.get('input').attributes('aria-invalid')).toBeUndefined()
+    })
+
+    test('drops the error message references when no message renders', () => {
+      // hide-bottom-space with no counter and no message content skips
+      // the messages element entirely, so the ARIA references must not
+      // point to a missing id
+      const wrapper = mountInput({ error: true, hideBottomSpace: true })
+      const input = wrapper.get('input')
+
+      expect(wrapper.find('.q-field__messages').exists()).toBe(false)
+      expect(input.attributes('aria-invalid')).toBe('true')
+      expect(input.attributes('aria-errormessage')).toBeUndefined()
+      expect(input.attributes('aria-describedby')).toBeUndefined()
+
+      const withMessage = mountInput({
+        error: true,
+        hideBottomSpace: true,
+        errorMessage: 'Required'
+      })
+      const messageId = withMessage.get('.q-field__messages').attributes('id')
+
+      expect(withMessage.get('input').attributes('aria-errormessage')).toBe(
+        messageId
+      )
     })
 
     test('links the native control to the error message', () => {
@@ -1324,6 +2126,39 @@ describe('[QInput API]', () => {
       expect(input.attributes('aria-describedby')).toBe(
         `external-help ${messageId}`
       )
+    })
+
+    test('reflects focus on a readonly input', async () => {
+      // a readonly control stays in the tab order, so the field has to
+      // show where the keyboard focus is; the hint hidden by hide-hint
+      // and the focus/blur events follow, as for any focused field
+      const hint = 'Cannot be changed'
+      const wrapper = mountInput({
+        readonly: true,
+        label: 'Name',
+        modelValue: '',
+        hint,
+        hideHint: true
+      })
+      const input = wrapper.get('input')
+
+      expect(input.attributes('tabindex')).toBe('0')
+      expect(wrapper.text()).not.toContain(hint)
+
+      input.element.focus()
+      await flushPromises()
+
+      expect(wrapper.classes()).toContain('q-field--focused')
+      expect(wrapper.classes()).toContain('q-field--float')
+      expect(wrapper.text()).toContain(hint)
+      expect(wrapper.emitted('focus')).toHaveLength(1)
+
+      input.element.blur()
+      await flushTimers()
+      await flushPromises()
+
+      expect(wrapper.classes()).not.toContain('q-field--focused')
+      expect(wrapper.emitted('blur')).toHaveLength(1)
     })
   })
 })

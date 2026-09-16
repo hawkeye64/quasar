@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 
 import QKnob from './QKnob.js'
 
@@ -93,11 +94,11 @@ describe('[QKnob API]', () => {
         const wrapper = mountKnob()
         const svg = wrapper.get('svg')
 
-        expect(svg.$style('transform')).not.toContain('scale3d')
+        expect(svg.$style('transform')).not.toContain('scaleX')
 
         await wrapper.setProps({ reverse: true })
 
-        expect(svg.$style('transform')).toContain('scale3d(-1, 1, 1)')
+        expect(svg.$style('transform')).toContain('scaleX(-1)')
       })
     })
 
@@ -229,6 +230,52 @@ describe('[QKnob API]', () => {
         expect(target.attributes('aria-disabled')).toBe('true')
         expect(target.attributes('tabindex')).toBeUndefined()
       })
+
+      test('blocks the pan gesture', async () => {
+        const wrapper = mountKnob({ disable: true })
+        const target = wrapper.get('.q-knob')
+
+        await target.trigger('mousedown', { button: 0 })
+
+        expect(target.element.__qtouchpan.event).toBeUndefined()
+
+        await wrapper.setProps({ disable: false })
+        await target.trigger('mousedown', { button: 0 })
+
+        expect(target.element.__qtouchpan.event).toBeDefined()
+
+        wrapper.unmount()
+      })
+
+      test('toggling it keeps the default slot content mounted', async () => {
+        const unmountedFn = vi.fn()
+        const Probe = defineComponent({
+          name: 'KnobProbe',
+          unmounted: unmountedFn,
+          render: () => h('span', 'Knob content')
+        })
+
+        const wrapper = mountKnob(
+          { showValue: true },
+          { slots: { default: () => h(Probe) } }
+        )
+        const probeEl = wrapper.get('span').element
+
+        await wrapper.setProps({ disable: true })
+
+        expect(unmountedFn).not.toHaveBeenCalled()
+        expect(wrapper.get('span').element).toBe(probeEl)
+
+        await wrapper.setProps({ readonly: true, disable: false })
+
+        expect(unmountedFn).not.toHaveBeenCalled()
+        expect(wrapper.get('span').element).toBe(probeEl)
+
+        await wrapper.setProps({ readonly: false })
+
+        expect(unmountedFn).not.toHaveBeenCalled()
+        expect(wrapper.get('span').element).toBe(probeEl)
+      })
     })
 
     describe('[(prop)readonly]', () => {
@@ -275,14 +322,11 @@ describe('[QKnob API]', () => {
     describe('[(event)change]', () => {
       test('is emitting', async () => {
         const wrapper = mountKnob()
-        const initialCount = wrapper.emitted('change').length
 
         await wrapper.trigger('keydown', { keyCode: 39 })
         await wrapper.trigger('keyup', { keyCode: 39 })
 
-        const changes = wrapper.emitted('change')
-        expect(changes).toHaveLength(initialCount + 1)
-        expect(changes.at(-1)).toStrictEqual([11])
+        expect(wrapper.emitted('change')).toStrictEqual([[11]])
       })
     })
 
@@ -302,6 +346,72 @@ describe('[QKnob API]', () => {
         const [value] = eventList.dragValue[0]
         expect(value).toBeTypeOf('number')
       })
+    })
+  })
+
+  describe('[Generic]', () => {
+    test('a tap converges through its compatibility mouse events', async () => {
+      const wrapper = mountKnob()
+
+      // the full sequence a touch tap fires; the controlled prop never
+      // updates in this harness, yet the value must be handed over once
+      const pos = { clientX: 10, clientY: 0 }
+      await wrapper.trigger('mousedown', pos)
+      await wrapper.trigger('click', pos)
+
+      const updates = wrapper.emitted('update:modelValue')
+      expect(updates).toHaveLength(1)
+      expect(wrapper.emitted('change')).toStrictEqual([updates[0]])
+    })
+
+    test('change belongs to user adjustments alone', async () => {
+      // neither mounting...
+      const wrapper = mountKnob()
+      expect(wrapper.emitted('change')).toBeUndefined()
+
+      // ...nor a parent model write...
+      await wrapper.setProps({ modelValue: 50 })
+      expect(wrapper.emitted('change')).toBeUndefined()
+
+      // ...nor clamping an out-of-range model emits change; the clamped
+      // correction still flows back through update:modelValue
+      await wrapper.setProps({ modelValue: 500 })
+      expect(wrapper.emitted('update:modelValue')).toStrictEqual([[100]])
+      expect(wrapper.emitted('change')).toBeUndefined()
+
+      // an adjustment ending where it started stays silent too
+      await wrapper.setProps({ modelValue: 50 })
+      await wrapper.trigger('keydown', { keyCode: 39 })
+      await wrapper.trigger('keydown', { keyCode: 37 })
+      await wrapper.trigger('keyup', { keyCode: 37 })
+      expect(wrapper.emitted('change')).toBeUndefined()
+
+      // a real net adjustment still commits
+      await wrapper.trigger('keydown', { keyCode: 39 })
+      await wrapper.trigger('keyup', { keyCode: 39 })
+      expect(wrapper.emitted('change')).toStrictEqual([[51]])
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('a fall-through name lands on the slider element itself', () => {
+      // QKnob has no built-in name, so the only way to say what the value
+      // means is an attribute — and it has to reach the element carrying
+      // the slider role, not a wrapper around it
+      const wrapper = mountKnob({}, { attrs: { 'aria-label': 'Brush size' } })
+      const slider = wrapper.get('[role="slider"]')
+
+      expect(slider.attributes('aria-label')).toBe('Brush size')
+      expect(slider.attributes('aria-valuenow')).toBe('10')
+    })
+
+    test('the knob is a slider, not the progressbar it renders through', () => {
+      // QCircularProgress would otherwise claim role="progressbar"; a knob
+      // is an input, so its own role has to win
+      const wrapper = mountKnob()
+
+      expect(wrapper.attributes('role')).toBe('slider')
+      expect(wrapper.find('[role="progressbar"]').exists()).toBe(false)
     })
   })
 })

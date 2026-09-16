@@ -20,13 +20,11 @@ Notice that your scaffolded project folder contains a `/quasar.config` file. So 
 - Extend the under the hood tools, like the generated Vite config
 - ...and many many more that you'll discover along the way
 
-::: tip
-You'll notice that changing any of these settings does not require you to manually reload the dev server. Quasar detects and reloads the necessary processes. You won't lose your development flow, because you can just sit back while Quasar CLI quickly reloads the changed code, even keeping the current state. This saves tons of your time!
-:::
+> [!TIP]
+> You'll notice that changing any of these settings does not require you to manually reload the dev server. Quasar detects and reloads the necessary processes. You won't lose your development flow, because you can just sit back while Quasar CLI quickly reloads the changed code, even keeping the current state. This saves tons of your time!
 
-::: warning
-The `/quasar.config` file is run by the Quasar CLI build system, so this code runs under Node.js directly, not in the context of your app. This means you can require modules like `node:fs`, `node:path`, Vite plugins, and so on.
-:::
+> [!WARNING]
+> The `/quasar.config` file is run by the Quasar CLI build system, so this code runs under Node.js directly, not in the context of your app. This means you can require modules like `node:fs`, `node:path`, Vite plugins, and so on.
 
 ## Structure
 
@@ -244,6 +242,10 @@ extras?: (QuasarIconSets | QuasarFonts)[];
 framework?: {
   /**
    * @see - QuasarConfOptions tab in API cards throughout the docs
+   *
+   * A spinner (config > loading > spinner, config > notify > spinner)
+   * is referred to by its name here (e.g. 'QSpinnerGears'), as the
+   * config file cannot import components
    */
   config?: SerializableConfiguration<QuasarUIConfiguration>;
   /**
@@ -434,6 +436,8 @@ devServer: {
   vueDevtools: true
 }
 ```
+
+If you expose your dev server through a tunneling service, you will also need the `allowedHosts` property. See [Opening your dev server to the public](/quasar-cli-vite/opening-dev-server-to-public).
 
 ### build
 
@@ -653,6 +657,31 @@ interface QuasarStaticBuildConfiguration {
   filenameBasedRouting?: boolean | VueRouterVitePluginOptions
 
   /**
+   * Should you want to write your components with JSX/TSX (.jsx/.tsx files
+   * or <script lang="jsx|tsx"> in .vue files).
+   *
+   * Vite compiles them itself, so all this does is pointing it at Vue's JSX
+   * runtime (instead of the React one that it assumes by default) and adding
+   * the matching "jsx"/"jsxImportSource" to the generated
+   * .quasar/tsconfig.json (TypeScript projects).
+   *
+   * Set to `true`, or to an options object to override the defaults below,
+   * or to "preserve" when a Vite plugin (like @vitejs/plugin-vue-jsx, which
+   * adds the Vue specific JSX sugar: v-model, v-show, v-slots) should
+   * transform the JSX instead.
+   *
+   * Default options supplied to Vite (Oxc) when `true`:
+   * @example
+   * {
+   *   runtime: 'automatic',
+   *   importSource: 'vue'
+   * }
+   *
+   * @default false
+   */
+  vueJsx?: boolean | NonNullable<OxcOptions['jsx']>
+
+  /**
    * Options to supply to @vitejs/plugin-vue
    *
    * @see https://v2.quasar.dev/quasar-cli-vite/handling-vite#vite-vue-plugin-options
@@ -853,9 +882,13 @@ interface QuasarStaticBuildConfiguration {
    *
    * Gets applied to production builds only.
    *
-   * Useful especially for (but not restricted to) PWA. If set to false then updating the
-   * PWA will force to re-download all assets again, regardless if they were changed or
-   * not (due to how Rolldown works through Vite).
+   * For a PWA it keeps updates small (only the changed files get re-downloaded), but
+   * the page applying an update must evict the scripts it preloaded before it reloads:
+   * Safari reuses them (<link rel="modulepreload">) from its in-memory cache across
+   * that reload without asking the service worker, and with stable filenames the new
+   * entry file would then run with old chunks ("SyntaxError: Importing binding name
+   * '...' is not found"). A fetch() of each precached script through the new worker
+   * evicts them; see the PWA docs, "Filename hashes quirk".
    *
    * @default true
    */

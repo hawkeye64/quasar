@@ -15,6 +15,11 @@ export default {
     search: 'Traži',
     filter: 'Filter',
     refresh: 'Osveži',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Opseg',
+    noValue: 'Bez vrednosti',
+    resize: 'Promeni veličinu',
     expand: label => (label ? `Proširi "${label}"` : 'Proširiti'),
     collapse: label => (label ? `Skupi "${label}"` : 'Skupiti')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Prethodna godina',
     nextYear: 'Sledeća godina',
     today: 'Danas',
-    prevRangeYears: range => `Претходни ${range} године`,
-    nextRangeYears: range => `Следеће ${range} године`
+    prevRangeYears: range => `Prethodnih ${range} godina`,
+    nextRangeYears: range => `Sledećih ${range} godina`,
+    hour: 'Sat',
+    minute: 'Minut',
+    second: 'Sekunda',
+    now: 'Trenutno vreme'
   },
   table: {
     noData: 'Nema podataka',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Redova po stranici:',
     allRows: 'Sve',
     pagination: (start, end, total) => start + '-' + end + ' od ' + total,
-    columns: 'Kolone'
+    columns: 'Kolone',
+    selectAllRows: 'Izaberi sve redove',
+    selectRow: 'Izaberi red'
   },
   pagination: {
+    label: 'Paginacija',
     first: 'Prva stranica',
     prev: 'Prethodna stranica',
     next: 'Sledeća stranica',
     last: 'Poslednja stranica'
   },
+  carousel: {
+    prevSlide: 'Prethodni slajd',
+    nextSlide: 'Sledeći slajd'
+  },
+  colorPicker: {
+    spectrum: 'Spektar',
+    tune: 'Podešavanje',
+    palette: 'Paleta',
+    value: 'Vrednost boje',
+    hue: 'Nijansa',
+    alpha: 'Neprozirnost',
+    saturation: 'Zasićenost',
+    brightness: 'Osvetljenost'
+  },
+  uploader: {
+    addFiles: 'Izaberi datoteke',
+    upload: 'Otpremi datoteke',
+    abort: 'Prekini otpremanje',
+    removeQueued: 'Ukloni datoteke na čekanju',
+    removeUploaded: 'Ukloni otpremljene datoteke',
+    removeFile: 'Ukloni datoteku'
+  },
   editor: {
+    toolbar: 'Traka sa alatkama uređivača',
     url: 'URL',
     bold: 'Podebljano',
     italic: 'Nakošeno',

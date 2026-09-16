@@ -20,6 +20,7 @@ $toggle-transition: .22s cubic-bezier(.4,0,.2,1)
     height: .5em
     transition: left $toggle-transition
     user-select: none
+    -webkit-user-select: none /* Safari, older Chrome */
     z-index: 0
 
     &:after
@@ -46,6 +47,7 @@ $toggle-transition: .22s cubic-bezier(.4,0,.2,1)
     min-width: 1.4em
     height: 1em
     padding: .325em .3em
+    print-color-adjust: exact
     -webkit-print-color-adjust: exact
 
     &--indet
@@ -113,9 +115,7 @@ $toggle-transition: .22s cubic-bezier(.4,0,.2,1)
       padding-left: 0
       padding-right: .5em
 
-body.desktop
-
-  .q-toggle:not(.disabled)
+  &:not(.disabled)
     .q-toggle__thumb:before
       content: ''
       position: absolute
@@ -126,16 +126,24 @@ body.desktop
       border-radius: 50%
       background: currentColor
       opacity: .12
-      transform: scale3d(0, 0, 1)
+      transform: scale(0)
       transition: transform $option-focus-transition
 
-    &:focus,
-    &:hover
+    &:focus-visible
       .q-toggle__thumb:before
-        transform: scale3d(2, 2, 1)
+        transform: scale(2)
 
-  .q-toggle--dense:not(.disabled)
-    &:focus,
-    &:hover
+    @media (any-hover: hover)
+      &:hover
+        .q-toggle__thumb:before
+          transform: scale(2)
+
+  &--dense:not(.disabled)
+    &:focus-visible
       .q-toggle__thumb:before
-        transform: scale3d(1.5, 1.5, 1)
+        transform: scale(1.5)
+
+    @media (any-hover: hover)
+      &:hover
+        .q-toggle__thumb:before
+          transform: scale(1.5)

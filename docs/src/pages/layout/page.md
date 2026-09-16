@@ -55,15 +55,16 @@ Usually, the QPageContainer is part of the Layout template (where it contains a 
 
 ### Example
 
-::: tip
-Since QPageContainer and QPage need a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QPageContainer and QPage.
-:::
+> [!TIP]
+> Since QPageContainer and QPage need a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QPageContainer and QPage.
 
 <DocExample title="Basic" file="Basic" />
 
 ### Style-fn
 
 A QPage needs a QLayout because QLayout controls all the offsets of a page, keeping account of the space that header/footer/drawer use, according to its `view` property configuration. By default, your QPage component will have a `min-height` CSS property set on it to ensure that the content fills the screen at all times, even when the content is just a few lines.
+
+QPage also establishes its own block formatting context (`display: flow-root`), so the vertical margins of its children (for example a `q-mt-md` on the first card) stay inside the page instead of collapsing through it. Otherwise the page would get pushed below its `min-height` and the window would show a scrollbar even when the content fits the screen.
 
 If you wish to tweak, or even remove this property, you can do so by using the `style-fn` property:
 
@@ -83,3 +84,7 @@ If you wish to tweak, or even remove this property, you can do so by using the `
   }
 </script>
 ```
+
+## Accessibility <q-badge label="v2.25+" />
+
+QPage renders a real `<main>` element, so the main landmark of your [QLayout](/layout/layout#accessibility) comes for free — exactly one per page, as long as you use a single QPage. Do not add a `<main>` of your own around or inside it, which would leave the page with duplicate main landmarks. QPageContainer is a plain container with no semantics of its own.

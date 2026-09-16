@@ -4,8 +4,15 @@ import { describe, expect, test, vi } from 'vitest'
 
 import { getRouter } from 'testing/runtime/router.js'
 
+import QBtn from '../btn/QBtn.js'
 import QFabAction from './QFabAction.js'
 import { fabKey } from '../../utils/private.symbols/symbols.js'
+
+// the props QFabAction consumes itself: QBtn does not declare them, so
+// forwarding them would render each one as a stray DOM attribute
+const actionOnlyPropNames = Object.keys(QFabAction.props)
+  .filter(name => QBtn.props[name] === void 0)
+  .map(name => name.toLowerCase())
 
 function mountAction(props = {}, slots = {}, global = {}) {
   const fab = {
@@ -32,6 +39,12 @@ function getButton(wrapper) {
 
 function getLabel(wrapper) {
   return wrapper.get('.q-fab__label')
+}
+
+function expectStacked(wrapper, stacked) {
+  const content = wrapper.get('.q-btn__content')
+
+  expect(content.classes()).toContain(stacked ? 'column' : 'row')
 }
 
 function expectButtonType(wrapper, type) {
@@ -153,35 +166,52 @@ describe('[QFabAction API]', () => {
 
     describe('[(prop)label-position]', () => {
       test('value "top" has effect', () => {
-        expect(
-          getLabel(
-            mountAction({ label: 'Create', labelPosition: 'top' })
-          ).classes()
-        ).toContain('q-fab__label--internal-top')
+        const wrapper = mountAction({ label: 'Create', labelPosition: 'top' })
+
+        expect(getLabel(wrapper).classes()).toContain(
+          'q-fab__label--internal-top'
+        )
+        expectStacked(wrapper, true)
       })
 
       test('value "right" has effect', () => {
-        expect(
-          getLabel(
-            mountAction({ label: 'Create', labelPosition: 'right' })
-          ).classes()
-        ).toContain('q-fab__label--internal-right')
+        const wrapper = mountAction({ label: 'Create', labelPosition: 'right' })
+
+        expect(getLabel(wrapper).classes()).toContain(
+          'q-fab__label--internal-right'
+        )
+        expectStacked(wrapper, false)
       })
 
       test('value "bottom" has effect', () => {
-        expect(
-          getLabel(
-            mountAction({ label: 'Create', labelPosition: 'bottom' })
-          ).classes()
-        ).toContain('q-fab__label--internal-bottom')
+        const wrapper = mountAction({
+          label: 'Create',
+          labelPosition: 'bottom'
+        })
+
+        expect(getLabel(wrapper).classes()).toContain(
+          'q-fab__label--internal-bottom'
+        )
+        expectStacked(wrapper, true)
       })
 
       test('value "left" has effect', () => {
-        expect(
-          getLabel(
-            mountAction({ label: 'Create', labelPosition: 'left' })
-          ).classes()
-        ).toContain('q-fab__label--internal-left')
+        const wrapper = mountAction({ label: 'Create', labelPosition: 'left' })
+
+        expect(getLabel(wrapper).classes()).toContain(
+          'q-fab__label--internal-left'
+        )
+        expectStacked(wrapper, false)
+      })
+
+      test('does not stack an external label', () => {
+        const wrapper = mountAction({
+          label: 'Create',
+          labelPosition: 'top',
+          externalLabel: true
+        })
+
+        expectStacked(wrapper, false)
       })
     })
 
@@ -443,6 +473,43 @@ describe('[QFabAction API]', () => {
         expect(wrapper.vm.click(evt)).toBeUndefined()
         expect(wrapper.emitted('click')).toStrictEqual([[evt]])
       })
+    })
+  })
+
+  describe('[Generic]', () => {
+    test('keeps its own props out of the button markup', () => {
+      const wrapper = mountAction({
+        label: 'Create',
+        labelPosition: 'top',
+        externalLabel: true,
+        anchor: 'start'
+      })
+
+      const rendered = Object.keys(getButton(wrapper).attributes())
+
+      expect(actionOnlyPropNames.length).toBeGreaterThan(0)
+      for (const name of actionOnlyPropNames) {
+        expect(rendered).not.toContain(name)
+      }
+    })
+
+    test('falls back to a standalone state outside of a QFab', async () => {
+      const wrapper = mount(QFabAction, {
+        props: {
+          externalLabel: true,
+          hideLabel: null,
+          label: 'Create'
+        }
+      })
+
+      expect(getButton(wrapper).attributes('aria-disabled')).toBeUndefined()
+      expect(getLabel(wrapper).classes()).not.toContain(
+        'q-fab__label--external-hidden'
+      )
+
+      await getButton(wrapper).trigger('click')
+
+      expect(wrapper.emitted('click')).toHaveLength(1)
     })
   })
 })

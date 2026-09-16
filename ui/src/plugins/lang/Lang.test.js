@@ -2,6 +2,7 @@ import { h } from 'vue'
 import { describe, expect, test } from 'vitest'
 import { mount } from '@vue/test-utils'
 
+import langEn from '../../../lang/en-US.js'
 import Lang from './Lang.js'
 
 const mountPlugin = () => mount({ render: () => h('div') })
@@ -40,6 +41,11 @@ describe('[Lang API]', () => {
             search: expect.any(String),
             filter: expect.any(String),
             refresh: expect.any(String),
+            minimum: expect.any(String),
+            maximum: expect.any(String),
+            range: expect.any(String),
+            noValue: expect.any(String),
+            resize: expect.any(String),
             expand: expect.any(Function),
             collapse: expect.any(Function)
           },
@@ -57,7 +63,11 @@ describe('[Lang API]', () => {
             nextYear: expect.any(String),
             today: expect.any(String),
             prevRangeYears: expect.any(Function),
-            nextRangeYears: expect.any(Function)
+            nextRangeYears: expect.any(Function),
+            hour: expect.any(String),
+            minute: expect.any(String),
+            second: expect.any(String),
+            now: expect.any(String)
           },
           table: {
             noData: expect.any(String),
@@ -67,15 +77,41 @@ describe('[Lang API]', () => {
             recordsPerPage: expect.any(String),
             allRows: expect.any(String),
             pagination: expect.any(Function),
-            columns: expect.any(String)
+            columns: expect.any(String),
+            selectAllRows: expect.any(String),
+            selectRow: expect.any(String)
           },
           pagination: {
+            label: expect.any(String),
             first: expect.any(String),
             last: expect.any(String),
             next: expect.any(String),
             prev: expect.any(String)
           },
+          carousel: {
+            prevSlide: expect.any(String),
+            nextSlide: expect.any(String)
+          },
+          colorPicker: {
+            spectrum: expect.any(String),
+            tune: expect.any(String),
+            palette: expect.any(String),
+            value: expect.any(String),
+            hue: expect.any(String),
+            alpha: expect.any(String),
+            saturation: expect.any(String),
+            brightness: expect.any(String)
+          },
+          uploader: {
+            addFiles: expect.any(String),
+            upload: expect.any(String),
+            abort: expect.any(String),
+            removeQueued: expect.any(String),
+            removeUploaded: expect.any(String),
+            removeFile: expect.any(String)
+          },
           editor: {
+            toolbar: expect.any(String),
             url: expect.any(String),
             bold: expect.any(String),
             italic: expect.any(String),
@@ -145,6 +181,16 @@ describe('[Lang API]', () => {
 
   describe('[Methods]', () => {
     describe('[(method)set]', () => {
+      test('drops optional root keys the new pack does not define', () => {
+        const wrapper = mountPlugin()
+
+        Lang.set({ ...langEn, formatNumber: value => value })
+        expect(wrapper.vm.$q.lang.formatNumber).toBeTypeOf('function')
+
+        Lang.set(langEn)
+        expect(wrapper.vm.$q.lang.formatNumber).toBeUndefined()
+      })
+
       test('should be callable', () => {
         const wrapper = mountPlugin()
 
@@ -218,7 +264,11 @@ describe('[Lang API]', () => {
               nextYear: expect.any(String),
               today: expect.any(String),
               prevRangeYears: expect.any(Function),
-              nextRangeYears: expect.any(Function)
+              nextRangeYears: expect.any(Function),
+              hour: expect.any(String),
+              minute: expect.any(String),
+              second: expect.any(String),
+              now: expect.any(String)
             },
             table: {
               noData: 'No data available',
@@ -229,15 +279,41 @@ describe('[Lang API]', () => {
               allRows: 'All',
               pagination: (start, end, total) =>
                 start + '–' + end + ' of ' + total,
-              columns: 'Columns'
+              columns: 'Columns',
+              selectAllRows: 'Select all rows',
+              selectRow: 'Select row'
             },
             pagination: {
+              label: expect.any(String),
               first: expect.any(String),
               last: expect.any(String),
               next: expect.any(String),
               prev: expect.any(String)
             },
+            carousel: {
+              prevSlide: 'Previous slide',
+              nextSlide: 'Next slide'
+            },
+            colorPicker: {
+              spectrum: 'Spectrum',
+              tune: 'Tune',
+              palette: 'Palette',
+              value: 'Color value',
+              hue: 'Hue',
+              alpha: 'Opacity',
+              saturation: 'Saturation',
+              brightness: 'Brightness'
+            },
+            uploader: {
+              addFiles: 'Pick files',
+              upload: 'Upload files',
+              abort: 'Abort upload',
+              removeQueued: 'Remove queued files',
+              removeUploaded: 'Remove uploaded files',
+              removeFile: 'Remove file'
+            },
             editor: {
+              toolbar: 'Editor toolbar',
               url: 'URL',
               bold: 'Bold',
               italic: 'Italic',
@@ -320,6 +396,88 @@ describe('[Lang API]', () => {
           expect.any(String),
           void 0
         ])
+      })
+    })
+
+    describe('[(method)getClosestIsoName]', () => {
+      test('should be callable', () => {
+        const wrapper = mountPlugin()
+
+        expect(Lang.getClosestIsoName('es-MX', ['de', 'en-US', 'es'])).toBe(
+          'es'
+        )
+        expect(
+          wrapper.vm.$q.lang.getClosestIsoName('es-MX', ['de', 'en-US', 'es'])
+        ).toBe('es')
+      })
+
+      test('returns the exact entry regardless of casing and separator', () => {
+        expect(Lang.getClosestIsoName('en_us', ['de', 'en-US'])).toBe('en-US')
+        expect(Lang.getClosestIsoName('SR-CYRL', ['sr', 'sr-Cyrl'])).toBe(
+          'sr-Cyrl'
+        )
+        expect(Lang.getClosestIsoName('de-de', ['de', 'de_DE'])).toBe('de_DE')
+      })
+
+      test('falls back to progressively less specific tags', () => {
+        expect(Lang.getClosestIsoName('de-AT', ['de', 'de-CH', 'de-DE'])).toBe(
+          'de'
+        )
+        expect(
+          Lang.getClosestIsoName('sr-Cyrl-RS', ['sr', 'sr-Cyrl', 'sr-Latn'])
+        ).toBe('sr-Cyrl')
+        expect(Lang.getClosestIsoName('sr-Cyrl-RS', ['sr', 'sr-Latn'])).toBe(
+          'sr'
+        )
+      })
+
+      test('prefers the script over the region and can drop the script', () => {
+        expect(Lang.getClosestIsoName('sr-Latn-RS', ['sr-RS', 'sr-Latn'])).toBe(
+          'sr-Latn'
+        )
+        expect(Lang.getClosestIsoName('zh-Hant-TW', ['zh-CN', 'zh-TW'])).toBe(
+          'zh-TW'
+        )
+      })
+
+      test('infers the likely script and region when no tag is a prefix', () => {
+        expect(Lang.getClosestIsoName('zh', ['zh-CN', 'zh-TW'])).toBe('zh-CN')
+        expect(Lang.getClosestIsoName('zh-Hant', ['zh-CN', 'zh-TW'])).toBe(
+          'zh-TW'
+        )
+        expect(Lang.getClosestIsoName('zh-SG', ['zh-TW', 'zh-CN'])).toBe(
+          'zh-CN'
+        )
+        expect(Lang.getClosestIsoName('pt', ['pt-PT', 'pt-BR'])).toBe('pt-BR')
+        expect(Lang.getClosestIsoName('de-AT', ['de-CH', 'de-DE'])).toBe(
+          'de-DE'
+        )
+        expect(Lang.getClosestIsoName('es-MX', ['es-AR', 'es-ES'])).toBe(
+          'es-ES'
+        )
+      })
+
+      test('prefers the least specific pack on a tie', () => {
+        expect(Lang.getClosestIsoName('en-AU', ['en-GB', 'en'])).toBe('en')
+        expect(Lang.getClosestIsoName('fr-BE', ['fr-CA', 'fr-CH'])).toBe(
+          'fr-CA'
+        )
+      })
+
+      test('returns undefined when no entry shares the language', () => {
+        expect(Lang.getClosestIsoName('ja', ['de', 'en-US'])).toBeUndefined()
+        expect(Lang.getClosestIsoName('ja', [])).toBeUndefined()
+        expect(Lang.getClosestIsoName(void 0, ['ja'])).toBeUndefined()
+      })
+
+      test('ignores entries that are not well-formed tags', () => {
+        expect(Lang.getClosestIsoName('sr-Cyrl', ['sr-CYR', 'sr-Cyrl'])).toBe(
+          'sr-Cyrl'
+        )
+        expect(Lang.getClosestIsoName('sr', ['what ever', 'sr-Latn'])).toBe(
+          'sr-Latn'
+        )
+        expect(Lang.getClosestIsoName('my', ['mm', 'my'])).toBe('my')
       })
     })
   })

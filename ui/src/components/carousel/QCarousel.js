@@ -1,14 +1,15 @@
 import {
   computed,
-  getCurrentInstance,
   h,
   onBeforeUnmount,
   onMounted,
-  watch
+  watch,
+  withDirectives
 } from 'vue'
 
 import QBtn from '../btn/QBtn.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -23,7 +24,7 @@ import useFullscreen, {
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { isNumber } from '../../utils/is/is.js'
-import { hDir, hMergeSlot } from '../../utils/private.render/render.js'
+import { hMergeSlot } from '../../utils/private.render/render.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
 
 const navigationPositionOptions = ['top', 'right', 'bottom', 'left']
@@ -79,9 +80,7 @@ export default /*#__PURE__*/ createComponent({
   emits: [...useFullscreenEmits, ...usePanelEmits],
 
   setup(props, { slots }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
 
@@ -120,7 +119,7 @@ export default /*#__PURE__*/ createComponent({
       () =>
         `q-carousel q-panel-parent q-carousel--with${props.padding ? '' : 'out'}-padding` +
         (inFullscreen.value ? ' fullscreen' : '') +
-        (isDark.value ? ' q-carousel--dark q-dark' : '') +
+        (isDark() ? ' q-carousel--dark q-dark' : '') +
         (props.arrows ? ` q-carousel--arrows-${direction.value}` : '') +
         (props.navigation
           ? ` q-carousel--navigation-${navigationPosition.value}`
@@ -360,6 +359,8 @@ export default /*#__PURE__*/ createComponent({
               [
                 h(QBtn, {
                   icon: arrowIcons.value[0],
+                  // third-party language packs may lack the carousel section
+                  'aria-label': $q.lang.carousel?.prevSlide,
                   ...controlProps.value,
                   onClick: previousPanel
                 })
@@ -381,6 +382,7 @@ export default /*#__PURE__*/ createComponent({
               [
                 h(QBtn, {
                   icon: arrowIcons.value[1],
+                  'aria-label': $q.lang.carousel?.nextSlide,
                   ...controlProps.value,
                   onClick: nextPanel
                 })
@@ -404,13 +406,13 @@ export default /*#__PURE__*/ createComponent({
           style: style.value
         },
         [
-          hDir(
-            'div',
-            { class: 'q-carousel__slides-container' },
-            getPanelContent(),
-            'sl-cont',
-            props.swipeable,
-            () => panelDirectives.value
+          withDirectives(
+            h(
+              'div',
+              { class: 'q-carousel__slides-container' },
+              getPanelContent()
+            ),
+            panelDirectives.value
           ),
           ...getContent()
         ]

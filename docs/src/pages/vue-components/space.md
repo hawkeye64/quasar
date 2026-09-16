@@ -1,5 +1,5 @@
 ---
-title: QSpace
+title: Space
 desc: The QSpace Vue component fills all the available space inside of a flexbox DOM element.
 keys: QSpace
 examples: QSpace
@@ -14,3 +14,7 @@ As a sidenote, all Quasar components use flexbox. So what this means, for exampl
 These are only two examples so you can get a glimpse on how to use it.
 
 <DocExample title="Basic" file="Basic" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QSpace is a pure flexbox filler, invisible to assistive technology — there is nothing to add.

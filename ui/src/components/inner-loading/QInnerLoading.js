@@ -1,8 +1,9 @@
-import { Transition, computed, getCurrentInstance, h } from 'vue'
+import { Transition, computed, h } from 'vue'
 
 import QSpinner from '../spinner/QSpinner.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -31,15 +32,15 @@ export default /*#__PURE__*/ createComponent({
   },
 
   setup(props, { slots }) {
-    const vm = getCurrentInstance()
-    const isDark = useDark(props, vm.proxy.$q)
+    const $q = useQuasar()
+    const isDark = useDark(props, $q)
 
     const { transitionProps, transitionStyle } = useTransition(props)
 
     const classes = computed(
       () =>
         'q-inner-loading q--avoid-card-border absolute-full column flex-center' +
-        (isDark.value ? ' q-inner-loading--dark' : '')
+        (isDark() ? ' q-inner-loading--dark' : '')
     )
 
     const labelClass = computed(
@@ -76,12 +77,12 @@ export default /*#__PURE__*/ createComponent({
       return props.showing
         ? h(
             'div',
-            { class: classes.value, style: transitionStyle.value },
+            { class: classes.value, style: transitionStyle() },
             slots.default !== void 0 ? slots.default() : getInner()
           )
         : null
     }
 
-    return () => h(Transition, transitionProps.value, getContent)
+    return () => h(Transition, transitionProps(), getContent)
   }
 })

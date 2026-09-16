@@ -17,16 +17,13 @@ Try it out with a non-fixed footer for example. When user reaches bottom of scre
 
 ## Usage
 
-::: tip
-Since QPageSticky needs a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QPageSticky.
-:::
+> [!TIP]
+> Since QPageSticky needs a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QPageSticky.
 
-::: warning
-
-- In order for QPageSticky to work, it must be placed within a QLayout component.
-- QPageSticky must be the last child element within its parent, so it can display on top of other content
-
-:::
+> [!WARNING]
+>
+> - In order for QPageSticky to work, it must be placed within a QLayout component.
+> - QPageSticky must be the last child element within its parent, so it can display on top of other content
 
 ### Basic
 
@@ -41,3 +38,7 @@ In the example below, click on the menu buttons to show/hide Drawers, scroll the
 By using expanded QPageSticky you can, for example, have a page-specific QToolbar as below.
 
 <DocExample title="Expanded" file="Expanded" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QPageSticky is a positioning-only wrapper with no accessibility surface of its own — the accessibility of whatever you place inside it is entirely up to that content.

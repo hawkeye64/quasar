@@ -1,4 +1,6 @@
+import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 
 import {
   animHorizontalScrollTo,
@@ -16,31 +18,12 @@ import {
 } from './scroll.js'
 
 const nodes = []
-const restoreFns = []
 
 afterEach(() => {
   nodes.splice(0).forEach(node => node.remove())
-  restoreFns.splice(0).forEach(fn => fn())
   vi.restoreAllMocks()
   window.scrollTo(0, 0)
 })
-
-/**
- * Overrides a property with a fixed value, then registers the undo so the
- * next test starts from a clean slate. Only used for the legacy window
- * fallback chains: the browser keeps pageX/YOffset, scrollX/Y and the body
- * scroll offsets in sync, so each fallback branch has to be forced by hand.
- */
-function mockProperty(target, key, value) {
-  const descriptor = Object.getOwnPropertyDescriptor(target, key)
-
-  Object.defineProperty(target, key, { configurable: true, get: () => value })
-
-  restoreFns.push(() => {
-    if (descriptor === void 0) delete target[key]
-    else Object.defineProperty(target, key, descriptor)
-  })
-}
 
 /**
  * Creates an attached fixed-size container, optionally holding real
@@ -137,7 +120,7 @@ describe('[scroll API]', () => {
   describe('[Variables]', () => {
     describe('[(variable)scrollTargetProp]', () => {
       test('is defined correctly', () => {
-        expect(scrollTargetProp).toStrictEqual([Element, String])
+        expect(scrollTargetProp).toStrictEqual([Element, String, Object])
 
         // it must be usable as a Vue prop type
         expect({ target: { type: scrollTargetProp } }).$props()
@@ -155,6 +138,36 @@ describe('[scroll API]', () => {
         expect(getScrollTarget(document.body, '#explicit-scroll-target')).toBe(
           el
         )
+      })
+
+      test('resolves a component instance to its root element', () => {
+        const { el } = createScrollElement()
+        const wrapper = mount(
+          defineComponent({ render: () => h('div', { class: 'scroll' }) }),
+          { attachTo: el }
+        )
+
+        expect(getScrollTarget(document.body, wrapper.vm)).toBe(wrapper.element)
+
+        wrapper.unmount()
+      })
+
+      test('falls back to auto detection for a component without a root element', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const { el: ancestor } = createScrollElement({ className: 'scroll' })
+        const child = document.createElement('div')
+        ancestor.append(child)
+        const wrapper = mount(
+          defineComponent({ render: () => [h('span'), h('span')] }),
+          { attachTo: child }
+        )
+
+        expect(getScrollTarget(child, wrapper.vm)).toBe(ancestor)
+        expect(warn).toHaveBeenCalledExactlyOnceWith(
+          expect.stringContaining('scroll-target')
+        )
+
+        wrapper.unmount()
       })
 
       test.each([
@@ -231,30 +244,14 @@ describe('[scroll API]', () => {
         expect(getVerticalScrollPosition(el)).toBe(42)
       })
 
-      test.each([
-        [
-          'pageYOffset',
-          { pageYOffset: 120, scrollY: 90, bodyScrollTop: 60 },
-          120
-        ],
-        ['scrollY', { pageYOffset: 0, scrollY: 90, bodyScrollTop: 60 }, 90],
-        [
-          'the body scrollTop',
-          { pageYOffset: 0, scrollY: 0, bodyScrollTop: 60 },
-          60
-        ],
-        ['zero', { pageYOffset: 0, scrollY: 0, bodyScrollTop: 0 }, 0]
-      ])(
-        'falls back to %s for window',
-        (_, { bodyScrollTop, ...windowProps }, expected) => {
-          Object.entries(windowProps).forEach(([key, value]) => {
-            mockProperty(window, key, value)
-          })
-          mockProperty(document.body, 'scrollTop', bodyScrollTop)
+      test('returns the window scroll position for window', () => {
+        makeDocumentScrollable()
 
-          expect(getVerticalScrollPosition(window)).toBe(expected)
-        }
-      )
+        expect(getVerticalScrollPosition(window)).toBe(0)
+
+        window.scrollTo(0, 120)
+        expect(getVerticalScrollPosition(window)).toBe(120)
+      })
     })
 
     describe('[(function)getHorizontalScrollPosition]', () => {
@@ -265,30 +262,14 @@ describe('[scroll API]', () => {
         expect(getHorizontalScrollPosition(el)).toBe(24)
       })
 
-      test.each([
-        [
-          'pageXOffset',
-          { pageXOffset: 110, scrollX: 70, bodyScrollLeft: 35 },
-          110
-        ],
-        ['scrollX', { pageXOffset: 0, scrollX: 70, bodyScrollLeft: 35 }, 70],
-        [
-          'the body scrollLeft',
-          { pageXOffset: 0, scrollX: 0, bodyScrollLeft: 35 },
-          35
-        ],
-        ['zero', { pageXOffset: 0, scrollX: 0, bodyScrollLeft: 0 }, 0]
-      ])(
-        'falls back to %s for window',
-        (_, { bodyScrollLeft, ...windowProps }, expected) => {
-          Object.entries(windowProps).forEach(([key, value]) => {
-            mockProperty(window, key, value)
-          })
-          mockProperty(document.body, 'scrollLeft', bodyScrollLeft)
+      test('returns the window scroll position for window', () => {
+        makeDocumentScrollable()
 
-          expect(getHorizontalScrollPosition(window)).toBe(expected)
-        }
-      )
+        expect(getHorizontalScrollPosition(window)).toBe(0)
+
+        window.scrollTo(110, 0)
+        expect(getHorizontalScrollPosition(window)).toBe(110)
+      })
     })
 
     describe('[(function)animVerticalScrollTo]', () => {

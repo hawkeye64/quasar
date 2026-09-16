@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, test, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 
@@ -24,7 +24,7 @@ function createCounter(name) {
   })
 }
 
-function mountStepper(props, steps, slots) {
+function mountStepper(props, steps, slots, mountOptions) {
   props ||= {}
   slots ||= {}
 
@@ -47,9 +47,12 @@ function mountStepper(props, steps, slots) {
           )
         ),
       ...slots
-    }
+    },
+    ...mountOptions
   })
 }
+
+const realTransitions = { global: { stubs: { transition: false } } }
 
 async function expectStepCached(filterProps) {
   const wrapper = mountStepper({ keepAlive: true, ...filterProps })
@@ -130,8 +133,45 @@ describe('[QStepper API]', () => {
     })
 
     describe('[(prop)keep-alive-max]', () => {
-      test('type Number has effect', async () => {
-        const wrapper = mountStepper({ keepAlive: true, keepAliveMax: 1 })
+      test.each([
+        ['horizontal', {}],
+        ['vertical', { vertical: true }]
+      ])('type Number has effect (%s mode)', async (_, props) => {
+        const wrapper = mountStepper({
+          keepAlive: true,
+          keepAliveMax: 1,
+          ...props
+        })
+
+        await wrapper.get('button').trigger('click')
+        await wrapper.setProps({ modelValue: 'step-b' })
+        await wrapper.setProps({ modelValue: 'step-a' })
+
+        expect(wrapper.get('button').text()).toBe('0')
+      })
+
+      test('counts across the steps', async () => {
+        const wrapper = mountStepper({ keepAlive: true, keepAliveMax: 2 })
+
+        await wrapper.get('button').trigger('click')
+        await wrapper.setProps({ modelValue: 'step-b' })
+        await wrapper.setProps({ modelValue: 'step-a' })
+
+        expect(wrapper.get('button').text()).toBe('1')
+
+        await wrapper.setProps({ modelValue: 'step-b' })
+        await wrapper.setProps({ modelValue: 'step-c' })
+        await wrapper.setProps({ modelValue: 'step-a' })
+
+        expect(wrapper.get('button').text()).toBe('0')
+      })
+
+      test('combines with keep-alive-include', async () => {
+        const wrapper = mountStepper({
+          keepAlive: true,
+          keepAliveMax: 2,
+          keepAliveInclude: 'step-b'
+        })
 
         await wrapper.get('button').trigger('click')
         await wrapper.setProps({ modelValue: 'step-b' })
@@ -156,6 +196,60 @@ describe('[QStepper API]', () => {
         const wrapper = mountStepper()
 
         expect(wrapper.find('transition-stub').exists()).toBe(false)
+      })
+
+      test('slides the leaving step content out in the same direction', async () => {
+        const wrapper = mountStepper(
+          { animated: true },
+          void 0,
+          void 0,
+          realTransitions
+        )
+
+        await wrapper.setProps({ modelValue: 'step-b' })
+        // the leave starts one flush after the model change
+        await flushPromises()
+
+        const [leaving, entering] = wrapper.findAll('.q-stepper__step-content')
+
+        expect(leaving.get('button').attributes('data-step')).toBe('StepA')
+        expect(leaving.classes()).toContain(
+          'q-transition--slide-left-leave-active'
+        )
+        expect(entering.get('button').attributes('data-step')).toBe('StepB')
+        expect(entering.classes()).toContain(
+          'q-transition--slide-left-enter-active'
+        )
+      })
+
+      test('pins the leaving step content to the panel origin', async () => {
+        const wrapper = mountStepper(
+          { animated: true, modelValue: 'step-b' },
+          void 0,
+          void 0,
+          realTransitions
+        )
+
+        // stepping back: the leaving step's root follows the entering
+        // one in DOM order, so the absolutely positioned leaving content
+        // would otherwise land below it
+        await wrapper.setProps({ modelValue: 'step-a' })
+        await flushPromises()
+
+        const [entering, leaving] = wrapper.findAll('.q-stepper__step-content')
+
+        expect(entering.get('button').attributes('data-step')).toBe('StepA')
+        expect(leaving.get('button').attributes('data-step')).toBe('StepB')
+        expect(leaving.classes()).toContain(
+          'q-transition--slide-right-leave-active'
+        )
+        expect(leaving.classes()).toContain('q-stepper__step-content--leaving')
+
+        const enteringRect = entering.element.getBoundingClientRect()
+        const leavingRect = leaving.element.getBoundingClientRect()
+
+        expect(leavingRect.top).toBe(enteringRect.top)
+        expect(leavingRect.width).toBe(enteringRect.width)
       })
     })
 
@@ -190,6 +284,32 @@ describe('[QStepper API]', () => {
 
         expect(wrapper.emitted('update:modelValue')).toStrictEqual([['step-b']])
       })
+
+      test('toggling it keeps the panel content mounted', async () => {
+        const wrapper = mountStepper({ swipeable: false })
+        const container = wrapper.get('.q-stepper__content')
+        const panel = wrapper.get('[data-step="StepA"]')
+
+        await panel.trigger('click')
+        await container.trigger('mousedown', { button: 0 })
+
+        expect(panel.text()).toBe('1')
+        expect(container.element.__qtouchswipe.event).toBeUndefined()
+
+        await wrapper.setProps({ swipeable: true })
+
+        expect(wrapper.get('[data-step="StepA"]').element).toBe(panel.element)
+        expect(panel.text()).toBe('1')
+
+        await container.trigger('mousedown', { button: 0 })
+
+        expect(container.element.__qtouchswipe.event).toBeDefined()
+
+        await wrapper.setProps({ swipeable: false })
+
+        expect(wrapper.get('[data-step="StepA"]').element).toBe(panel.element)
+        expect(panel.text()).toBe('1')
+      })
     })
 
     describe('[(prop)vertical]', () => {
@@ -203,12 +323,85 @@ describe('[QStepper API]', () => {
         expect(getHeaders(wrapper)).toHaveLength(3)
       })
 
+      test.each([
+        ['horizontal', {}],
+        ['vertical', { vertical: true }]
+      ])(
+        'marks the steps, headers and content with the orientation (%s)',
+        (orientation, props) => {
+          const wrapper = mountStepper(props)
+
+          expect(wrapper.get('.q-stepper__step').classes()).toContain(
+            `q-stepper__step--${orientation}`
+          )
+          expect(wrapper.get('.q-stepper__tab').classes()).toContain(
+            `q-stepper__tab--${orientation}`
+          )
+          expect(wrapper.get('.q-stepper__step-inner').classes()).toContain(
+            `q-stepper__step-inner--${orientation}`
+          )
+        }
+      )
+
       test('renders only the active step content', () => {
         const wrapper = mountStepper({ vertical: true })
 
         const bodies = wrapper.findAll('.q-stepper__step-inner')
         expect(bodies).toHaveLength(1)
         expect(bodies[0].get('button').attributes('data-step')).toBe('StepA')
+      })
+
+      test.each([
+        ['horizontal to vertical', false, {}],
+        ['vertical to horizontal', true, {}],
+        ['horizontal to vertical, keep-alive', false, { keepAlive: true }],
+        ['vertical to horizontal, keep-alive', true, { keepAlive: true }],
+        ['horizontal to vertical, animated', false, { animated: true }],
+        ['vertical to horizontal, animated', true, { animated: true }]
+      ])(
+        'toggling it keeps the step content mounted (%s)',
+        async (_, vertical, props) => {
+          const wrapper = mountStepper(
+            { vertical, ...props },
+            void 0,
+            void 0,
+            realTransitions
+          )
+          const panel = wrapper.get('[data-step="StepA"]')
+
+          await panel.trigger('click')
+
+          expect(panel.text()).toBe('1')
+
+          await wrapper.setProps({ vertical: !vertical })
+
+          expect(wrapper.get('[data-step="StepA"]').element).toBe(panel.element)
+          expect(panel.text()).toBe('1')
+
+          await wrapper.setProps({ vertical })
+
+          expect(wrapper.get('[data-step="StepA"]').element).toBe(panel.element)
+          expect(panel.text()).toBe('1')
+        }
+      )
+
+      test('toggling it keeps the swipe directive attached but idle', async () => {
+        const wrapper = mountStepper({ swipeable: true })
+        const content = wrapper.get('.q-stepper__content').element
+
+        expect(content.__qtouchswipe.handler).toBeTypeOf('function')
+
+        await wrapper.setProps({ vertical: true })
+
+        expect(wrapper.get('.q-stepper__content').element).toBe(content)
+        expect(content.__qtouchswipe.handler).toBeUndefined()
+
+        await wrapper.setProps({ vertical: false })
+
+        expect(content.__qtouchswipe.handler).toBeTypeOf('function')
+        content.__qtouchswipe.handler({ direction: 'left' })
+
+        expect(wrapper.emitted('update:modelValue')).toStrictEqual([['step-b']])
       })
     })
 
@@ -258,6 +451,26 @@ describe('[QStepper API]', () => {
         expect(wrapper.get('.q-panel').attributes('style')).toContain(
           '--q-transition-duration: 450ms'
         )
+      })
+
+      test('drives the vertical slide', async () => {
+        const wrapper = mountStepper(
+          { vertical: true, animated: true, transitionDuration: '450' },
+          void 0,
+          void 0,
+          realTransitions
+        )
+
+        await wrapper.setProps({ modelValue: 'step-b' })
+
+        const contents = wrapper.findAll('.q-stepper__step-content')
+
+        expect(contents).toHaveLength(2)
+        contents.forEach(content => {
+          // the test browser is a Chromium, so the slide is a Web Animation
+          const [animation] = content.element.getAnimations()
+          expect(animation.effect.getTiming().duration).toBe(450)
+        })
       })
     })
 
@@ -640,6 +853,98 @@ describe('[QStepper API]', () => {
     })
   })
 
+  describe('[Generic]', () => {
+    function createNestedStepper(props) {
+      return defineComponent({
+        name: 'NestedStepper',
+        render: () =>
+          h(QStepper, { modelValue: 'inner-b', ...props }, () =>
+            ['inner-a', 'inner-b', 'inner-c'].map(name =>
+              h(QStep, { name, title: name.toUpperCase() }, () =>
+                h('div', name)
+              )
+            )
+          )
+      })
+    }
+
+    function mountWithNestedStepper(outerProps, innerProps) {
+      return mount(QStepper, {
+        attachTo: document.body,
+        props: { modelValue: 'step-a', ...outerProps },
+        slots: {
+          default: () => [
+            h(QStep, { name: 'step-a', title: 'STEP-A' }, () =>
+              h(createNestedStepper(innerProps))
+            ),
+            h(QStep, { name: 'step-b', title: 'STEP-B' }, () =>
+              h(createCounter('StepB'))
+            )
+          ]
+        }
+      })
+    }
+
+    // the connector lines are pseudo-elements, so their geometry is the only
+    // observable proof of which orientation a header ended up with
+    function getLayout(stepper) {
+      const pick = (el, pseudo) => {
+        const style = getComputedStyle(el, pseudo)
+        return [
+          'display',
+          'content',
+          'width',
+          'height',
+          'marginTop',
+          'marginRight',
+          'marginBottom',
+          'marginLeft'
+        ].map(prop => style[prop])
+      }
+
+      // the middle header has a connector on both sides in either orientation
+      const tab = stepper.findAll('.q-stepper__tab')[1].element
+      const dot = tab.querySelector('.q-stepper__dot')
+      const label = tab.querySelector('.q-stepper__label')
+
+      const tabStyle = getComputedStyle(tab)
+
+      return {
+        tab: [tabStyle.padding, tabStyle.overflow],
+        dotBefore: pick(dot, '::before'),
+        dotAfter: pick(dot, '::after'),
+        labelAfter: pick(label, '::after'),
+        step: getComputedStyle(stepper.get('.q-stepper__step').element)
+          .overflow,
+        stepInner: getComputedStyle(
+          stepper.get('.q-stepper__step-inner').element
+        ).padding
+      }
+    }
+
+    test.each([
+      ['vertical', 'horizontal', { vertical: true }, {}],
+      ['horizontal', 'vertical', {}, { vertical: true }]
+    ])(
+      'a %s stepper nested in a %s one keeps its own layout (#16516)',
+      (_, __, innerProps, outerProps) => {
+        const standalone = mount(createNestedStepper(innerProps), {
+          attachTo: document.body
+        })
+        const expected = getLayout(standalone)
+        standalone.unmount()
+
+        const wrapper = mountWithNestedStepper(outerProps, innerProps)
+
+        expect(getLayout(wrapper.get('.q-stepper .q-stepper'))).toStrictEqual(
+          expected
+        )
+
+        wrapper.unmount()
+      }
+    )
+  })
+
   describe('[Accessibility]', () => {
     test.each([
       ['horizontal', {}],
@@ -657,6 +962,23 @@ describe('[QStepper API]', () => {
 
       expect(step.attributes('role')).toBe('group')
       expect(step.attributes('aria-label')).toBe('STEP-A')
+    })
+
+    test('an inactive horizontal step is an empty root with no landmark', () => {
+      const wrapper = mountStepper()
+      const [, inactive] = wrapper.findAll('.q-stepper__step')
+
+      expect(inactive.element.children).toHaveLength(0)
+      expect(inactive.attributes('role')).toBeUndefined()
+      expect(inactive.attributes('aria-label')).toBeUndefined()
+    })
+
+    test('an inactive vertical step keeps its group (it holds the header)', () => {
+      const wrapper = mountStepper({ vertical: true })
+      const [, inactive] = wrapper.findAll('.q-stepper__step')
+
+      expect(inactive.attributes('role')).toBe('group')
+      expect(inactive.attributes('aria-label')).toBe('STEP-B')
     })
 
     test.each([

@@ -205,6 +205,10 @@ describe('[module.nodePackager.js]', () => {
     test('pnpm builds its specific params', () => {
       const pnpm = createPackager(['pnpm-lock.yaml'])
 
+      // pnpm >= 11 fails the command over unapproved build scripts anywhere
+      // in the tree, so every pnpm command opts out of that
+      expect(pnpm.extraEnv).toEqual({ PNPM_CONFIG_STRICT_DEP_BUILDS: 'false' })
+
       expect(pnpm.getInstallParams('development')).toEqual(['install'])
       expect(pnpm.getInstallParams('production')).toEqual(['install', '--prod'])
 
@@ -256,11 +260,16 @@ describe('[module.nodePackager.js]', () => {
 
       await pm.install()
 
+      // the exact per-manager params and env are asserted by the specs
+      // above
       expect(state.spawnCalls).toEqual([
         {
           name: 'pnpm',
-          params: ['install'],
-          opts: { cwd: pm.appDir, env: { NODE_ENV: 'development' } }
+          params: pm.getInstallParams('development'),
+          opts: {
+            cwd: pm.appDir,
+            env: { NODE_ENV: 'development', ...pm.extraEnv }
+          }
         }
       ])
     })
@@ -274,13 +283,19 @@ describe('[module.nodePackager.js]', () => {
       expect(state.spawnCalls).toEqual([
         {
           name: 'pnpm',
-          params: ['install', '--prod'],
-          opts: { cwd: pm.appDir, env: { NODE_ENV: 'production' } }
+          params: pm.getInstallParams('production'),
+          opts: {
+            cwd: pm.appDir,
+            env: { NODE_ENV: 'production', ...pm.extraEnv }
+          }
         },
         {
           name: 'pnpm',
           params: ['ci'],
-          opts: { cwd: '/custom', env: { NODE_ENV: 'production' } }
+          opts: {
+            cwd: '/custom',
+            env: { NODE_ENV: 'production', ...pm.extraEnv }
+          }
         }
       ])
     })

@@ -15,6 +15,11 @@ export default {
     search: 'Kërko',
     filter: 'Filtro',
     refresh: 'Rifresko',
+    minimum: 'Minimumi',
+    maximum: 'Maksimumi',
+    range: 'Intervali',
+    noValue: 'Pa vlerë',
+    resize: 'Ndrysho përmasat',
     expand: label => (label ? `Zgjero "${label}"` : 'Zgjero'),
     collapse: label => (label ? `Tkur "${label}"` : 'Tkur')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Viti i kaluar',
     nextYear: 'Viti i ardhshëm',
     today: 'Sot',
-    prevRangeYears: range => `Vitet e mëparshme ${range}`,
-    nextRangeYears: range => `Vitet e ardhshme ${range}`
+    prevRangeYears: range => `${range} vitet e mëparshme`,
+    nextRangeYears: range => `${range} vitet e ardhshme`,
+    hour: 'Ora',
+    minute: 'Minuta',
+    second: 'Sekonda',
+    now: 'Koha aktuale'
   },
   table: {
     noData: 'Nuk ka të dhëna',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Regjistrime për faqe:',
     allRows: 'Të gjitha',
     pagination: (start, end, total) => `${start}-${end} nga ${total}`,
-    columns: 'Kolonat'
+    columns: 'Kolonat',
+    selectAllRows: 'Zgjidh të gjitha rreshtat',
+    selectRow: 'Zgjidh rreshtin'
   },
   pagination: {
+    label: 'Faqosje',
     first: 'Faqja e parë',
     prev: 'Faqja e mëparshme',
     next: 'Faqja tjetër',
     last: 'Faqja e fundit'
   },
+  carousel: {
+    prevSlide: 'Diapozitivi i mëparshëm',
+    nextSlide: 'Diapozitivi tjetër'
+  },
+  colorPicker: {
+    spectrum: 'Spektri',
+    tune: 'Rregullim',
+    palette: 'Paleta',
+    value: 'Vlera e ngjyrës',
+    hue: 'Nuanca',
+    alpha: 'Patejdukshmëria',
+    saturation: 'Ngopja',
+    brightness: 'Ndriçimi'
+  },
+  uploader: {
+    addFiles: 'Zgjidh skedarët',
+    upload: 'Ngarko skedarët',
+    abort: 'Anulo ngarkimin',
+    removeQueued: 'Hiq skedarët në pritje',
+    removeUploaded: 'Hiq skedarët e ngarkuar',
+    removeFile: 'Hiq skedarin'
+  },
   editor: {
+    toolbar: 'Shiriti i veglave të redaktuesit',
     url: 'URL',
     bold: 'Trash',
     italic: 'Pjerrët',

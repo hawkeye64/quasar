@@ -31,7 +31,7 @@ If the default slot contains an image, you have to style it with class `no-point
 
 <DocExample title="Custom min/max" file="MinMax" />
 
-### Inner min/max <q-badge label="v2.5.4+" />
+### Inner min/max
 
 Sometimes you need to restrict the model value to an interval inside of the track's length. For this purpose, use `inner-min` and `inner-max` props. First prop needs to be higher or equal to `min` prop while the latter needs to be lower or equal to the `max` prop.
 
@@ -54,3 +54,7 @@ Sometimes you need to restrict the model value to an interval inside of the trac
 When dealing with a native form which has an `action` and a `method` (eg. when using Quasar with ASP.NET controllers), you need to specify the `name` property on QKnob, otherwise formData will not contain it (if it should):
 
 <DocExample title="Native form" file="NativeForm" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QKnob follows the [WAI-ARIA slider pattern](https://www.w3.org/WAI/ARIA/apg/patterns/slider/): the focusable element itself carries `role="slider"` with `aria-valuemin`/`aria-valuemax`/`aria-valuenow`, plus `aria-disabled` or `aria-readonly` when it is not editable. The <kbd>Arrow</kbd> keys step the value and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> jump by 10 steps. There is no accessible name by default, so pass an `aria-label` attribute (it lands on the slider element) to tell screen reader users what the knob controls.

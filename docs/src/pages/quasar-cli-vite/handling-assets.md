@@ -21,16 +21,31 @@ URLs prefixed with `~` are treated as a module request, similar to `import 'some
 
 ## Static Assets - /public
 
-Root-relative URLs (e.g. `/logo.png` -- where '/' is your publicPath) or `logo.png` are not processed at all. This should be placed in `public/`. These won't be processed at all. The content of the public folder is simply copied over to the distributable folder as-is.
+Files that must keep their exact name and path (a favicon, `robots.txt`, images whose URLs come from data) belong in `public/`. The content of the public folder is simply copied over to the distributable folder as-is, without any processing.
 
-::: tip Assets vs Statics
-Files in the "assets" folder are only included in your build if they have a literal reference in one of your Vue files.
-Every file and folder from the "public" folder are copied into your production build as-is, no matter what.
-:::
+Reference them with a root-relative URL, e.g. `<img src="/logo.png">`. Such URLs are not processed at all: the browser resolves them from the domain root, so they match the public folder only while [build > publicPath](/quasar-cli-vite/quasar-config-file#build) is `/` (the default). When the app is deployed under a sub-path, prefix them with `import.meta.env.BASE_URL`, which Vite sets to your publicPath:
 
-::: danger
-When not building a SPA/PWA/SSR/SSG, then `/public/icons/*` and `/public/favicon.ico` will NOT be embedded into your app because they would not serve any purpose. For example, Electron or Cordova apps do not require those files.
-:::
+```html
+<template>
+  <img :src="base + 'logo.png'" />
+</template>
+
+<script setup>
+  const base = import.meta.env.BASE_URL
+</script>
+```
+
+> [!WARNING]
+> A bare relative URL such as `logo.png` (no leading slash) is not processed either. The browser resolves it against the current page URL, so it breaks as soon as a route has more than one segment (`/users/42` would request `/users/logo.png`). Always use a leading `/` or the `import.meta.env.BASE_URL` prefix for public assets.
+
+> [!TIP]
+> **Assets vs Statics**
+>
+> Files in the "assets" folder are only included in your build if they have a literal reference in one of your Vue files.
+> Every file and folder from the "public" folder are copied into your production build as-is, no matter what.
+
+> [!CAUTION]
+> When not building a SPA/PWA/SSR/SSG, then `/public/icons/*` and `/public/favicon.ico` will NOT be embedded into your app because they would not serve any purpose. For example, Electron or Cordova apps do not require those files.
 
 ## More info with Vite
 

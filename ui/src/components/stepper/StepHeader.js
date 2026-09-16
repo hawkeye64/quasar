@@ -1,7 +1,9 @@
-import { computed, getCurrentInstance, h, ref, withDirectives } from 'vue'
+import { computed, h, shallowRef, withDirectives } from 'vue'
 
 import QIcon from '../icon/QIcon.js'
 import Ripple from '../../directives/ripple/Ripple.js'
+
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
@@ -20,10 +22,8 @@ export default /*#__PURE__*/ createComponent({
   },
 
   setup(props, { attrs }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
-    const blurRef = ref(null)
+    const $q = useQuasar()
+    const blurRef = shallowRef(null)
 
     const isActive = computed(
       () => props.stepper.modelValue === props.step.name
@@ -44,49 +44,61 @@ export default /*#__PURE__*/ createComponent({
       return !isDisable.value && (opt === true || opt === '')
     })
 
-    const headerNav = computed(() => {
+    // the stepper offers header navigation and this step does not opt out of
+    // it; a disabled step is part of that set too - it takes the button role
+    // and announces itself as unavailable rather than dropping to inert text
+    const isNavTarget = computed(() => {
       const opt = props.step.headerNav
       return (
-        !isDisable.value &&
-        props.stepper.headerNav &&
+        props.stepper.headerNav === true &&
         (opt === true || opt === '' || opt === void 0)
       )
     })
 
-    const hasPrefix = computed(
-      () =>
-        props.step.prefix &&
-        (!isActive.value || props.stepper.activeIcon === 'none') &&
-        (!isError.value || props.stepper.errorIcon === 'none') &&
-        (!isDone.value || props.stepper.doneIcon === 'none')
-    )
+    // ...but only an enabled one is actually operable
+    const headerNav = computed(() => !isDisable.value && isNavTarget.value)
 
-    const icon = computed(() => {
-      const defaultIcon = props.step.icon || props.stepper.inactiveIcon
-
+    // the state icon, by priority: an active step wins over an erroring one,
+    // which wins over a done one; the step's own prop wins over the stepper's;
+    // 'none' opts out of the state icon (deferring to the prefix, then to the
+    // default icon), while no state at all yields undefined
+    const stateIcon = computed(() => {
       if (isActive.value) {
-        const localIcon = props.step.activeIcon || props.stepper.activeIcon
-        return localIcon === 'none'
-          ? defaultIcon
-          : localIcon || $q.iconSet.stepper.active
+        return (
+          props.step.activeIcon ||
+          props.stepper.activeIcon ||
+          $q.iconSet.stepper.active
+        )
       }
 
       if (isError.value) {
-        const localIcon = props.step.errorIcon || props.stepper.errorIcon
-        return localIcon === 'none'
-          ? defaultIcon
-          : localIcon || $q.iconSet.stepper.error
+        return (
+          props.step.errorIcon ||
+          props.stepper.errorIcon ||
+          $q.iconSet.stepper.error
+        )
       }
 
-      if (!isDisable.value && isDone.value) {
-        const localIcon = props.step.doneIcon || props.stepper.doneIcon
-        return localIcon === 'none'
-          ? defaultIcon
-          : localIcon || $q.iconSet.stepper.done
+      if (isDone.value) {
+        return (
+          props.step.doneIcon ||
+          props.stepper.doneIcon ||
+          $q.iconSet.stepper.done
+        )
       }
-
-      return defaultIcon
     })
+
+    const hasPrefix = computed(
+      () =>
+        Boolean(props.step.prefix) &&
+        (stateIcon.value === void 0 || stateIcon.value === 'none')
+    )
+
+    const icon = computed(() =>
+      stateIcon.value !== void 0 && stateIcon.value !== 'none'
+        ? stateIcon.value
+        : props.step.icon || props.stepper.inactiveIcon
+    )
 
     const color = computed(() => {
       const errorColor = isError.value
@@ -118,6 +130,7 @@ export default /*#__PURE__*/ createComponent({
     const classes = computed(
       () =>
         'q-stepper__tab col-grow flex items-center no-wrap relative-position' +
+        ` q-stepper__tab--${props.stepper.vertical ? 'vertical' : 'horizontal'}` +
         (color.value !== void 0 ? ` text-${color.value}` : '') +
         (isError.value
           ? ' q-stepper__tab--error q-stepper__tab--error-with-' +
@@ -151,18 +164,20 @@ export default /*#__PURE__*/ createComponent({
         'aria-current': isActive.value ? 'step' : void 0
       }
 
-      if (headerNav.value) {
-        data.onClick = onActivate
-        data.onKeydown = preventSpace
-        data.onKeyup = onKeyup
+      if (isNavTarget.value) {
         data.role = 'button'
 
-        Object.assign(
-          data,
-          isDisable.value
-            ? { tabindex: -1, 'aria-disabled': 'true' }
-            : { tabindex: attrs.tabindex || 0 }
-        )
+        if (isDisable.value) {
+          // perceivable as a disabled control, like QBtn and QChip, instead
+          // of losing the role and reaching AT as plain text
+          data.tabindex = -1
+          data['aria-disabled'] = 'true'
+        } else {
+          data.onClick = onActivate
+          data.onKeydown = preventSpace
+          data.onKeyup = onKeyup
+          data.tabindex = attrs.tabindex || 0
+        }
       }
 
       const child = [

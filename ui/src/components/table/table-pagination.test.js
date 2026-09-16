@@ -60,7 +60,6 @@ function mountPagination({ props = {}, rowsNumber = 0 } = {}) {
         state = useTablePaginationState(vm, getCellValue)
         api = useTablePagination(
           vm,
-          state.innerPagination,
           state.computedPagination,
           state.isServerSide,
           state.setPagination,
@@ -478,6 +477,72 @@ describe('[tablePagination API]', () => {
         expect(
           computedRowsPerPageOptions.value.map(opt => opt.value)
         ).toStrictEqual([7, 5, 10])
+      })
+
+      test('follows the page size a controlling parent writes', async () => {
+        const { computedRowsPerPageOptions } = mountPagination({
+          props: {
+            rowsPerPageOptions: [5, 10],
+            pagination: { page: 1, rowsPerPage: 5 },
+            'onUpdate:pagination': () => {}
+          }
+        })
+
+        expect(
+          computedRowsPerPageOptions.value.map(opt => opt.value)
+        ).toStrictEqual([5, 10])
+
+        await wrapper.setProps({ pagination: { page: 1, rowsPerPage: 7 } })
+
+        expect(
+          computedRowsPerPageOptions.value.map(opt => opt.value)
+        ).toStrictEqual([7, 5, 10])
+      })
+
+      test('drops a page size a controlling parent moved away from', async () => {
+        const { computedRowsPerPageOptions } = mountPagination({
+          props: {
+            rowsPerPageOptions: [5, 10],
+            pagination: { page: 1, rowsPerPage: 7 },
+            'onUpdate:pagination': () => {}
+          }
+        })
+
+        expect(
+          computedRowsPerPageOptions.value.map(opt => opt.value)
+        ).toStrictEqual([7, 5, 10])
+
+        await wrapper.setProps({ pagination: { page: 1, rowsPerPage: 3 } })
+
+        expect(
+          computedRowsPerPageOptions.value.map(opt => opt.value)
+        ).toStrictEqual([3, 5, 10])
+
+        await wrapper.setProps({ pagination: { page: 1, rowsPerPage: 10 } })
+
+        expect(
+          computedRowsPerPageOptions.value.map(opt => opt.value)
+        ).toStrictEqual([5, 10])
+      })
+
+      test('keeps the same options list while the page size stands', async () => {
+        const { computedRowsPerPageOptions, setPagination } = mountPagination({
+          props: { rowsPerPageOptions: [5, 10] },
+          rowsNumber: 50
+        })
+        const options = computedRowsPerPageOptions.value
+
+        setPagination({ page: 2 })
+        await nextTick()
+        setPagination({ sortBy: 'name', descending: true })
+        await nextTick()
+
+        expect(computedRowsPerPageOptions.value).toBe(options)
+
+        setPagination({ rowsPerPage: 10 })
+        await nextTick()
+
+        expect(computedRowsPerPageOptions.value).not.toBe(options)
       })
 
       test('announces the initial pagination to a controlling parent', () => {

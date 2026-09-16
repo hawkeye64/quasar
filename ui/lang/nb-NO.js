@@ -15,6 +15,11 @@ export default {
     search: 'Søk',
     filter: 'Filter',
     refresh: 'Oppdater',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Område',
+    noValue: 'Ingen verdi',
+    resize: 'Endre størrelse',
     expand: label => (label ? `Utvid "${label}"` : 'Utvide'),
     collapse: label => (label ? `Skjul "${label}"` : 'Kollapse')
   },
@@ -35,7 +40,11 @@ export default {
     nextYear: 'Neste år',
     today: 'I dag',
     prevRangeYears: range => `Forrige ${range} år`,
-    nextRangeYears: range => `Neste ${range} år`
+    nextRangeYears: range => `Neste ${range} år`,
+    hour: 'Time',
+    minute: 'Minutt',
+    second: 'Sekund',
+    now: 'Nåværende tid'
   },
   table: {
     noData: 'Ingen data tilgjengelig',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Rader pr side:',
     allRows: 'Alle',
     pagination: (start, end, total) => start + '-' + end + ' av ' + total,
-    columns: 'Kolonner'
+    columns: 'Kolonner',
+    selectAllRows: 'Velg alle rader',
+    selectRow: 'Velg rad'
   },
   pagination: {
+    label: 'Paginering',
     first: 'Første side',
     prev: 'Forrige side',
     next: 'Neste side',
     last: 'Siste side'
   },
+  carousel: {
+    prevSlide: 'Forrige lysbilde',
+    nextSlide: 'Neste lysbilde'
+  },
+  colorPicker: {
+    spectrum: 'Spektrum',
+    tune: 'Finjuster',
+    palette: 'Palett',
+    value: 'Fargeverdi',
+    hue: 'Fargetone',
+    alpha: 'Dekkevne',
+    saturation: 'Metning',
+    brightness: 'Lysstyrke'
+  },
+  uploader: {
+    addFiles: 'Velg filer',
+    upload: 'Last opp filer',
+    abort: 'Avbryt opplasting',
+    removeQueued: 'Fjern filer i kø',
+    removeUploaded: 'Fjern opplastede filer',
+    removeFile: 'Fjern fil'
+  },
   editor: {
+    toolbar: 'Editorens verktøylinje',
     url: 'URL',
     bold: 'Fet',
     italic: 'Kursiv',

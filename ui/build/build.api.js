@@ -21,6 +21,112 @@ const dest = resolveToRoot('dist/api')
 
 const extendApi = readJsonFile(resolveToRoot('src/api.extends.json'))
 
+// "__<key>__prefix" / "__<key>__suffix" keys append to the (inherited)
+// String value of <key> instead of replacing it; usable in object-form
+// mixin "overrideAll"/"overrides" and directly on any API entry
+const affixRE = /^__(\w+)__(prefix|suffix)$/
+
+// entries of api.extends.json can themselves use "extends" (referencing
+// another entry of the same section); pre-flatten them once so lookups
+// always hit fully resolved definitions
+for (const masterType of Object.keys(extendApi)) {
+  const section = extendApi[masterType]
+  const resolving = new Set()
+
+  const resolveEntry = name => {
+    const entry = section[name]
+
+    if (!Object.hasOwn(entry, 'extends')) return entry
+
+    if (resolving.has(name)) {
+      logError(
+        `build.api.js: api.extends.json -> "${masterType}" > "${name}" has a circular "extends" reference`
+      )
+      process.exit(1)
+    }
+
+    if (section[entry.extends] === void 0) {
+      logError(
+        `build.api.js: api.extends.json -> "${masterType}" > "${name}" extends "${entry.extends}" which does not exist`
+      )
+      process.exit(1)
+    }
+
+    resolving.add(name)
+    const base = resolveEntry(entry.extends)
+    resolving.delete(name)
+
+    section[name] = merge({}, base, entry)
+    delete section[name].extends
+
+    return section[name]
+  }
+
+  for (const name of Object.keys(section)) {
+    resolveEntry(name)
+  }
+}
+
+// top-level "extends" of an API file is resolved per file, BEFORE mixin
+// merging, so that referencing a definition beats mixin-inherited keys
+// (the entry's own literal keys still beat both); nested "extends"
+// (params, definition, scope, ...) keeps resolving during validation
+const topLevelExtendsSections = {
+  props: 'props',
+  computedProps: 'props',
+  value: 'props',
+  arg: 'props',
+  modifiers: 'modifiers',
+  slots: 'slots',
+  events: 'events',
+  methods: 'methods'
+}
+
+function resolveTopLevelExtends(api, file) {
+  const resolveOne = (entry, masterType, label) => {
+    if (Object(entry) !== entry || !Object.hasOwn(entry, 'extends')) {
+      return entry
+    }
+
+    const base = extendApi[masterType][entry.extends]
+
+    if (base === void 0) {
+      logError(
+        `build.api.js: ${relativeToRoot(file)} -> "${label}" extends ` +
+          `"${entry.extends}" which does not exists`
+      )
+      process.exit(1)
+    }
+
+    const resolved = merge({}, base, entry)
+    delete resolved.extends
+    return resolved
+  }
+
+  for (const section of Object.keys(topLevelExtendsSections)) {
+    if (api[section] === void 0) continue
+
+    const masterType = topLevelExtendsSections[section]
+    if (extendApi[masterType] === void 0) continue
+
+    if (section === 'value' || section === 'arg') {
+      api[section] = resolveOne(api[section], masterType, section)
+      continue
+    }
+
+    const target = api[section]
+    if (Object(target) !== target) continue
+
+    for (const name of Object.keys(target)) {
+      target[name] = resolveOne(
+        target[name],
+        masterType,
+        `${section}" > "${name}`
+      )
+    }
+  }
+}
+
 const passthroughValues = [true, false, 'child']
 
 const slotRE = /slots\[\s*['"](\S+)['"]\s*\]|slots\.([A-Za-z]+)/g
@@ -40,6 +146,7 @@ const apiValueRegex = {
   RegExp: /^\/.*\/[gimuy]*$/,
   Element: /(^document\.|^\..+|^#.+|.+El$|\$refs)/,
   Component: /^[A-Z][A-Za-z]+$/,
+  ComponentInstance: /\$refs/,
   'Promise<any>': apiValuePromiseRegex,
   'Promise<void>': apiValuePromiseRegex,
   'Promise<boolean>': apiValuePromiseRegex,
@@ -95,6 +202,20 @@ const topSections = {
       value: val => Object(val) === val || "'value' must be an Object",
       arg: val => Object(val) === val || "'arg' must be an Object",
       modifiers: val => parseObjectWithPascalCaseProps(val, 'modifiers')
+    }
+  },
+
+  composable: {
+    rootProps: [], // computed after this declaration
+    rootValidations: {
+      addedIn: parseAddedIn,
+      quasarConfOptions: val =>
+        parseObjectWithPascalCaseProps(val, 'quasarConfOptions'),
+      props: val => parseObjectWithKebabCaseProps(val, 'props'),
+      slots: val => Object(val) === val || "'slots' must be an Object", // TODO Qv3: kebabCase
+      events: val => parseObjectWithKebabCaseProps(val, 'events'),
+      methods: val => parseObjectWithPascalCaseProps(val, 'methods'),
+      computedProps: val => parseObjectWithPascalCaseProps(val, 'computedProps')
     }
   }
 }
@@ -175,6 +296,7 @@ function parseObjectWithKebabCaseProps(obj, objName) {
 
 const nativeTypes = [
   'Component',
+  'ComponentInstance',
   'Error',
   'Element',
   'File',
@@ -566,6 +688,7 @@ const typeList = [
   'Promise<object>',
   'Error',
   'Component',
+  'ComponentInstance',
   'null',
   'undefined'
 ]
@@ -598,8 +721,480 @@ function isSerializable(value) {
   return types.every(type => serializableTypes.includes(type))
 }
 
+/**
+ * Object-form mixins
+ *
+ * Next to the string form, a "mixins" entry can be an Object that pulls
+ * definitions from another component/plugin/directive API file, so that
+ * pass-through definitions inherit type/values/default/examples/addedIn
+ * from their source instead of hand-copying them (which drifts):
+ *
+ *   {
+ *     "from": "components/menu/QMenu",
+ *     "include?": { "props": "all", "events": ["escape-key"] },
+ *     "exclude?": { "props": ["separate-close-popup"] },
+ *     "rename?": { "props": { "anchor": "menu-anchor" } },
+ *     "overrideAll?": {
+ *       "props": {
+ *         "passthrough": true,
+ *         "category": "menu",
+ *         "__desc__suffix": "; Only applies when a Menu is used"
+ *       }
+ *     },
+ *     "overrides?": {
+ *       "props": {
+ *         "max-height": { "type": "String", "default": "'99vh'" }
+ *       }
+ *     },
+ *     "explicitOverrideForAll?": true
+ *   }
+ *
+ * - "from" resolves the source's fully merged API (cached and
+ *   cycle-guarded); "meta" never travels and "internal" entries are
+ *   skipped. Definitions of the pulling file itself (own JSON or
+ *   string-form mixins) always win over pulls.
+ * - "include"/"exclude"/"overrideAll"/"overrides" are all keyed by
+ *   section ("props", "slots", "events", "methods", ...). "include"
+ *   present means a strict allowlist (unlisted sections are not
+ *   pulled); omitted means everything. Each section is "all" or an
+ *   Array of entry names. "exclude" prunes after "include".
+ * - "rename" (also keyed by section) maps a source entry name to the
+ *   name it gets on the pulling file (e.g. QMenu's "anchor" pulled as
+ *   "menu-anchor"). It applies after "include"/"exclude" (which use
+ *   source names); "overrides" and "explicitOverrideForAll" use the
+ *   final (renamed) names.
+ * - Every name in "include"/"exclude"/"rename"/"overrides" is
+ *   existence-checked against the source, and an override must target
+ *   an actually pulled entry, so a renamed/removed source entry fails
+ *   the build here.
+ * - "overrideAll" merges its keys into every pulled entry of that
+ *   section; "overrides" > "overrideAll" > pulled definition. Inside an
+ *   override, "__delete" (Array) removes inherited keys.
+ * - "__<key>__prefix" / "__<key>__suffix" (in "overrideAll" or in a
+ *   per-entry override) append to the inherited String value instead of
+ *   replacing it; a key addressed by an entry's own override escapes
+ *   the section-wide affixes for that key.
+ * - The same entry pulled from two sources with differing final
+ *   definitions is an error: exclude it in one of them or align it via
+ *   "overrides".
+ * - "explicitOverrideForAll" requires an "overrides" entry (an empty
+ *   Object suffices) for every pulled entry, so an addition on the
+ *   source breaks the build until the pulling file makes a conscious
+ *   call; without it, additions flow in (and the Specs test workflow
+ *   still demands a test-case for them).
+ */
+const objectMixinKeys = [
+  'from',
+  'include',
+  'exclude',
+  'rename',
+  'overrideAll',
+  'overrides',
+  'explicitOverrideForAll'
+]
+const objectMixinSectionBlocklist = ['meta', 'addedIn', 'quasarConfOptions']
+const objectMixinApiTypes = [
+  ['components/', 'component'],
+  ['plugins/', 'plugin'],
+  ['directives/', 'directive'],
+  ['composables/', 'composable']
+]
+
+const objectMixinSourceCache = new Map()
+const objectMixinSourcePending = new Set()
+
+function stripUndefinedMarkers(obj) {
+  for (const key of Object.keys(obj)) {
+    if (obj[key] === void 0) {
+      delete obj[key]
+    } else if (Object(obj[key]) === obj[key]) {
+      stripUndefinedMarkers(obj[key])
+    }
+  }
+}
+
+function getObjectMixinSource(from, printErrorAndExit) {
+  const apiTypeEntry = objectMixinApiTypes.find(([prefix]) =>
+    from.startsWith(prefix)
+  )
+
+  if (apiTypeEntry === void 0) {
+    printErrorAndExit(
+      '"from" must point to a component, plugin, directive or composable API file'
+    )
+  }
+
+  const file = resolveToRoot('src/' + from + '.json')
+
+  if (!fse.existsSync(file)) {
+    printErrorAndExit('no such API file to pull from')
+  }
+
+  if (objectMixinSourcePending.has(file)) {
+    printErrorAndExit('circular "from" reference')
+  }
+
+  if (!objectMixinSourceCache.has(file)) {
+    objectMixinSourcePending.add(file)
+    objectMixinSourceCache.set(file, parseAPI(file, apiTypeEntry[1]))
+    objectMixinSourcePending.delete(file)
+  }
+
+  return objectMixinSourceCache.get(file)
+}
+
+function applyObjectMixins(api, objectMixins, mainFile) {
+  // section -> name -> { from, def }
+  const pulled = {}
+
+  objectMixins.forEach(mixin => {
+    const printErrorAndExit = msg => {
+      logError(
+        `build.api.js: ${relativeToRoot(mainFile)} -> "mixins" ` +
+          `(from "${mixin.from}") -> ${msg}`
+      )
+      console.log()
+      process.exit(1)
+    }
+
+    if (typeof mixin.from !== 'string') {
+      printErrorAndExit('"from" must be a String')
+    }
+
+    for (const key of Object.keys(mixin)) {
+      if (!objectMixinKeys.includes(key)) {
+        printErrorAndExit(`unrecognized "${key}" key`)
+      }
+    }
+
+    if (
+      mixin.explicitOverrideForAll !== void 0 &&
+      typeof mixin.explicitOverrideForAll !== 'boolean'
+    ) {
+      printErrorAndExit('"explicitOverrideForAll" must be a Boolean')
+    }
+
+    const source = getObjectMixinSource(mixin.from, printErrorAndExit)
+    const sourceSections = Object.keys(source).filter(
+      section => !objectMixinSectionBlocklist.includes(section)
+    )
+
+    const readFilter = (filter, filterName) => {
+      if (filter === void 0) return null
+
+      if (Object(filter) !== filter || Array.isArray(filter)) {
+        printErrorAndExit(`"${filterName}" must be an Object keyed by section`)
+      }
+
+      for (const section of Object.keys(filter)) {
+        if (!sourceSections.includes(section)) {
+          printErrorAndExit(
+            `"${filterName}" > "${section}" is not a pullable section of ` +
+              `${mixin.from}; available: ${sourceSections.join(', ')}`
+          )
+        }
+
+        const val = filter[section]
+
+        if (
+          val !== 'all' &&
+          (!Array.isArray(val) ||
+            val.length === 0 ||
+            val.some(name => typeof name !== 'string'))
+        ) {
+          printErrorAndExit(
+            `"${filterName}" > "${section}" must be "all" or a non-empty Array of Strings`
+          )
+        }
+      }
+
+      return filter
+    }
+
+    const include = readFilter(mixin.include, 'include')
+    const exclude = readFilter(mixin.exclude, 'exclude')
+
+    // section -> Map(final name -> source name);
+    // insertion order follows the source file
+    const selected = {}
+    const includedSections =
+      include === null ? sourceSections : Object.keys(include)
+
+    for (const section of includedSections) {
+      const useAll = include === null || include[section] === 'all'
+      const names = useAll ? Object.keys(source[section]) : include[section]
+
+      if (!useAll) {
+        for (const name of names) {
+          if (source[section][name] === void 0) {
+            printErrorAndExit(
+              `"include" > "${section}" > "${name}" does not exist on ${mixin.from}`
+            )
+          }
+        }
+      }
+
+      selected[section] = new Map(names.map(name => [name, name]))
+    }
+
+    if (exclude !== null) {
+      for (const section of Object.keys(exclude)) {
+        if (selected[section] === void 0) {
+          printErrorAndExit(
+            `"exclude" > "${section}" has no effect ("include" does not select that section)`
+          )
+        }
+
+        if (exclude[section] === 'all') {
+          delete selected[section]
+          continue
+        }
+
+        for (const name of exclude[section]) {
+          if (!selected[section].has(name)) {
+            printErrorAndExit(
+              `"exclude" > "${section}" > "${name}" has no effect (not in the included set)`
+            )
+          }
+
+          selected[section].delete(name)
+        }
+      }
+    }
+
+    if (mixin.rename !== void 0) {
+      if (
+        Object(mixin.rename) !== mixin.rename ||
+        Array.isArray(mixin.rename)
+      ) {
+        printErrorAndExit('"rename" must be an Object keyed by section')
+      }
+
+      for (const section of Object.keys(mixin.rename)) {
+        if (selected[section] === void 0) {
+          printErrorAndExit(
+            `"rename" > "${section}" has no effect (nothing is pulled from that section)`
+          )
+        }
+
+        const sectionRenames = mixin.rename[section]
+
+        if (Object(sectionRenames) !== sectionRenames) {
+          printErrorAndExit(`"rename" > "${section}" must be an Object`)
+        }
+
+        for (const sourceName of Object.keys(sectionRenames)) {
+          const finalName = sectionRenames[sourceName]
+
+          if (typeof finalName !== 'string' || finalName.length === 0) {
+            printErrorAndExit(
+              `"rename" > "${section}" > "${sourceName}" must map to a non-empty String`
+            )
+          }
+
+          if (!selected[section].has(sourceName)) {
+            printErrorAndExit(
+              `"rename" > "${section}" > "${sourceName}" does not target a pulled entry`
+            )
+          }
+
+          if (selected[section].has(finalName)) {
+            printErrorAndExit(
+              `"rename" > "${section}" > "${sourceName}" -> "${finalName}" collides with another pulled entry`
+            )
+          }
+        }
+
+        // re-key while preserving the source file's insertion order
+        selected[section] = new Map(
+          [...selected[section]].map(([finalName, sourceName]) => [
+            sectionRenames[sourceName] !== void 0
+              ? sectionRenames[sourceName]
+              : finalName,
+            sourceName
+          ])
+        )
+      }
+    }
+
+    // internal entries never travel; definitions of the target file
+    // itself (own JSON or string-form mixins) always win over pulls
+    for (const section of Object.keys(selected)) {
+      for (const [name, sourceName] of selected[section]) {
+        if (
+          source[section][sourceName].internal === true ||
+          api[section]?.[name] !== void 0
+        ) {
+          selected[section].delete(name)
+        }
+      }
+
+      if (selected[section].size === 0) {
+        delete selected[section]
+      }
+    }
+
+    const readOverrideMap = (value, keyName) => {
+      if (value === void 0) return null
+
+      if (Object(value) !== value || Array.isArray(value)) {
+        printErrorAndExit(`"${keyName}" must be an Object keyed by section`)
+      }
+
+      for (const section of Object.keys(value)) {
+        if (selected[section] === void 0) {
+          printErrorAndExit(
+            `"${keyName}" > "${section}" has no effect (nothing is pulled from that section)`
+          )
+        }
+
+        if (Object(value[section]) !== value[section]) {
+          printErrorAndExit(`"${keyName}" > "${section}" must be an Object`)
+        }
+      }
+
+      return value
+    }
+
+    const overrideAll = readOverrideMap(mixin.overrideAll, 'overrideAll')
+    const overrides = readOverrideMap(mixin.overrides, 'overrides')
+
+    if (overrides !== null) {
+      for (const section of Object.keys(overrides)) {
+        for (const name of Object.keys(overrides[section])) {
+          if (Object(overrides[section][name]) !== overrides[section][name]) {
+            printErrorAndExit(
+              `"overrides" > "${section}" > "${name}" must be an Object`
+            )
+          }
+
+          if (!selected[section].has(name)) {
+            printErrorAndExit(
+              `"overrides" > "${section}" > "${name}" does not target a pulled entry ` +
+                '(it is not included, excluded, internal, or already defined by the target file)'
+            )
+          }
+        }
+      }
+    }
+
+    if (mixin.explicitOverrideForAll === true) {
+      const missing = []
+
+      for (const section of Object.keys(selected)) {
+        for (const name of selected[section].keys()) {
+          if (overrides?.[section]?.[name] === void 0) {
+            missing.push(`"${section}" > "${name}"`)
+          }
+        }
+      }
+
+      if (missing.length !== 0) {
+        printErrorAndExit(
+          '"explicitOverrideForAll" requires an explicit override ' +
+            `(an empty Object suffices) for: ${missing.join(', ')}`
+        )
+      }
+    }
+
+    const applyPlainKeys = (def, spec) => {
+      for (const key of Object.keys(spec)) {
+        if (!affixRE.test(key)) {
+          def[key] = structuredClone(spec[key])
+        }
+      }
+    }
+
+    const applyAffixes = (def, spec, skipKeys, entryLabel) => {
+      for (const key of Object.keys(spec)) {
+        const match = affixRE.exec(key)
+        if (match === null) continue
+
+        const [, target, kind] = match
+        if (skipKeys !== null && skipKeys.has(target)) continue
+
+        if (typeof def[target] !== 'string') {
+          printErrorAndExit(
+            `"${key}" (on ${entryLabel}) targets "${target}" which is not a String`
+          )
+        }
+
+        def[target] =
+          kind === 'prefix' ? spec[key] + def[target] : def[target] + spec[key]
+      }
+    }
+
+    for (const section of Object.keys(selected)) {
+      const oAll = overrideAll?.[section]
+
+      for (const [name, sourceName] of selected[section]) {
+        const def = structuredClone(source[section][sourceName])
+        const oItem = overrides?.[section]?.[name]
+        const entryLabel = `"${section}" > "${name}"`
+
+        // the source went through parseObject already, which leaves
+        // undefined-valued markers (e.g. "required") behind, at any
+        // nesting level (e.g. method "params")
+        stripUndefinedMarkers(def)
+
+        if (oAll !== void 0) applyPlainKeys(def, oAll)
+        if (oItem !== void 0) applyPlainKeys(def, oItem)
+
+        if (oAll !== void 0) {
+          // a key addressed by the item's own override (as plain value
+          // or as affix) escapes the section-wide affixes for that key
+          const skipKeys = new Set(
+            oItem === void 0
+              ? []
+              : Object.keys(oItem).map(key => {
+                  const match = affixRE.exec(key)
+                  return match === null ? key : match[1]
+                })
+          )
+
+          applyAffixes(def, oAll, skipKeys, entryLabel)
+        }
+
+        if (oItem !== void 0) applyAffixes(def, oItem, null, entryLabel)
+
+        const existing = pulled[section]?.[name]
+
+        if (existing !== void 0) {
+          if (JSON.stringify(existing.def) !== JSON.stringify(def)) {
+            printErrorAndExit(
+              `${entryLabel} is also pulled from ${existing.from} with a ` +
+                'differing definition; exclude it in one of them or align it via "overrides"'
+            )
+          }
+
+          continue
+        }
+
+        ;(pulled[section] ??= {})[name] = { from: mixin.from, def }
+      }
+    }
+  })
+
+  for (const section of Object.keys(pulled)) {
+    api[section] ??= {}
+
+    for (const name of Object.keys(pulled[section])) {
+      api[section][name] = pulled[section][name].def
+    }
+  }
+
+  return api
+}
+
 function getApiWithMixins(api, mainFile) {
+  const objectMixins = []
+
   api.mixins.forEach(mixin => {
+    if (Object(mixin) === mixin) {
+      objectMixins.push(mixin)
+      return
+    }
+
     const mixinFile = resolveToRoot('src/' + mixin + '.json')
 
     if (!fse.existsSync(mixinFile)) {
@@ -610,6 +1205,7 @@ function getApiWithMixins(api, mainFile) {
     }
 
     const content = readJsonFile(mixinFile)
+    resolveTopLevelExtends(content, mixinFile)
 
     api = merge(
       {},
@@ -619,6 +1215,10 @@ function getApiWithMixins(api, mainFile) {
       api
     )
   })
+
+  if (objectMixins.length !== 0) {
+    api = applyObjectMixins(api, objectMixins, mainFile)
+  }
 
   const { mixins, ...finalApi } = api
   return finalApi
@@ -805,6 +1405,31 @@ function parseObject({
 
     // now delete the __delete prop itself (we don't need it in the final API)
     delete obj.__delete
+  }
+
+  // apply "__<key>__prefix" / "__<key>__suffix" onto the (inherited) base value
+  for (const key of Object.keys(obj)) {
+    const affixMatch = affixRE.exec(key)
+    if (affixMatch === null) continue
+
+    const [, affixTarget, affixKind] = affixMatch
+
+    if (typeof obj[key] !== 'string') {
+      printErrorAndExit(`"${key}" must be a String`)
+    }
+
+    if (typeof obj[affixTarget] !== 'string') {
+      printErrorAndExit(
+        `"${key}" targets "${affixTarget}" which is not a String`
+      )
+    }
+
+    obj[affixTarget] =
+      affixKind === 'prefix'
+        ? obj[key] + obj[affixTarget]
+        : obj[affixTarget] + obj[key]
+
+    delete obj[key]
   }
 
   let type
@@ -1228,6 +1853,8 @@ function getExposedMethodNames(content) {
 function parseAPI(file, apiType) {
   let api = readJsonFile(file)
 
+  resolveTopLevelExtends(api, file)
+
   if (api.mixins !== void 0) {
     api = getApiWithMixins(api, file)
   }
@@ -1239,7 +1866,10 @@ function parseAPI(file, apiType) {
     process.exit(1)
   }
 
-  if (api.meta === void 0 || api.meta.docsUrl === void 0) {
+  if (
+    apiType !== 'composable' &&
+    (api.meta === void 0 || api.meta.docsUrl === void 0)
+  ) {
     printErrorAndExit('API file does not contain meta > docsUrl')
   }
 

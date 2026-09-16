@@ -1,5 +1,5 @@
 export default {
-  isoName: 'kur-CKB',
+  isoName: 'ckb',
   nativeName: 'کوردی سۆرانی',
   rtl: true,
   label: {
@@ -16,6 +16,11 @@ export default {
     search: 'گەڕان',
     filter: 'پاڵاوتن',
     refresh: 'تازەکردنەوە',
+    minimum: 'کەمترین',
+    maximum: 'زۆرترین',
+    range: 'مەودا',
+    noValue: 'بێ بەها',
+    resize: 'گۆڕینی قەبارە',
     expand: label => (label ? `"${label}" فراوانکردنی` : 'فراوانکردن'),
     collapse: label => (label ? `"${label}" داخستنی` : 'شکست هێنان')
   },
@@ -41,7 +46,11 @@ export default {
     nextYear: 'ساڵی داهاتوو',
     today: 'ئه‌م ڕوژیە',
     prevRangeYears: range => `پێشوو ${range} ساڵ`,
-    nextRangeYears: range => `nدواتر ${range} ساڵ`
+    nextRangeYears: range => `دواتر ${range} ساڵ`,
+    hour: 'کاتژمێر',
+    minute: 'خولەک',
+    second: 'چرکە',
+    now: 'کاتی ئێستا'
   },
   table: {
     noData: 'هیچ داتەیەک نییە',
@@ -54,15 +63,41 @@ export default {
     recordsPerPage: 'ئەنجام بۆهەر پەڕەیەک:',
     allRows: 'هەمووی',
     pagination: (start, end, total) => start + ' - ' + end + ' لە ' + total,
-    columns: 'ڕیز'
+    columns: 'ڕیز',
+    selectAllRows: 'هەڵبژاردنی هەموو ڕیزەکان',
+    selectRow: 'هەڵبژاردنی ڕیز'
   },
   pagination: {
+    label: 'پەڕەبەندی',
     first: 'پەڕەی یەکەمی',
     prev: 'پەڕەی پێشوو',
     next: 'پەڕەی داهاتوو',
     last: 'پەڕەی کۆتایی'
   },
+  carousel: {
+    prevSlide: 'سلایدی پێشوو',
+    nextSlide: 'سلایدی داهاتوو'
+  },
+  colorPicker: {
+    spectrum: 'تیشک',
+    tune: 'ڕێکخستن',
+    palette: 'تەختەڕەنگ',
+    value: 'بەهای ڕەنگ',
+    hue: 'ڕەنگ',
+    alpha: 'ناڕوونی',
+    saturation: 'تێری ڕەنگ',
+    brightness: 'ڕووناکی'
+  },
+  uploader: {
+    addFiles: 'هەڵبژاردنی پەڕگەکان',
+    upload: 'بارکردنی پەڕگەکان',
+    abort: 'وەستاندنی بارکردن',
+    removeQueued: 'سڕینەوەی پەڕگە چاوەڕوانەکان',
+    removeUploaded: 'سڕینەوەی پەڕگە بارکراوەکان',
+    removeFile: 'سڕینەوەی پەڕگە'
+  },
   editor: {
+    toolbar: 'شریتی ئامرازەکانی دەستکاریکەر',
     url: 'لینک',
     bold: 'تۆخ',
     italic: 'لار',
@@ -94,7 +129,7 @@ export default {
     heading3: 'ناونیشان ٣',
     heading4: 'ناونیشان ٤',
     heading5: 'ناونیشان ٥',
-    heading6: 'ناونیشان  ٦',
+    heading6: 'ناونیشان ٦',
     paragraph: 'بڕگە',
     code: 'کۆد',
     size1: 'زۆر بچووک',

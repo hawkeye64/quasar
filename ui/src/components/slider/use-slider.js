@@ -1,7 +1,15 @@
-import { computed, getCurrentInstance, h, onBeforeUnmount, ref } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  h,
+  onBeforeUnmount,
+  ref,
+  withDirectives
+} from 'vue'
 
 import TouchPan from '../../directives/touch-pan/TouchPan.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -13,7 +21,6 @@ import {
 import { between } from '../../utils/format/format.js'
 import { position } from '../../utils/event/event.js'
 import { isNumber, isObject } from '../../utils/is/is.js'
-import { hDir } from '../../utils/private.render/render.js'
 
 const markerPrefixClass = 'q-slider__marker-labels'
 const defaultMarkerConvertFn = v => ({ value: v })
@@ -28,8 +35,8 @@ const defaultMarkerLabelRenderFn = ({ marker }) =>
     marker.label
   )
 
-// PGDOWN, LEFT, DOWN, PGUP, RIGHT, UP
-export const keyCodes = [34, 37, 40, 33, 39, 38]
+// PGDOWN, LEFT, DOWN, PGUP, RIGHT, UP, END, HOME
+export const keyCodes = [34, 37, 40, 33, 39, 38, 35, 36]
 
 export const useSliderProps = {
   ...useDarkProps,
@@ -107,12 +114,8 @@ export default function useSlider({
   getDragging,
   formAttrs
 }) {
-  const {
-    props,
-    emit,
-    slots,
-    proxy: { $q }
-  } = getCurrentInstance()
+  const { props, emit, slots } = getCurrentInstance()
+  const $q = useQuasar()
   const isDark = useDark(props, $q)
 
   const injectFormInput = useFormInject(formAttrs)
@@ -178,24 +181,6 @@ export default function useSlider({
     props.vertical ? 'vertical' : 'horizontal'
   )
 
-  const attributes = computed(() => {
-    const acc = {
-      role: 'slider',
-      'aria-valuemin': innerMin.value,
-      'aria-valuemax': innerMax.value,
-      'aria-orientation': orientation.value,
-      'data-step': props.step
-    }
-
-    if (props.disable) {
-      acc['aria-disabled'] = 'true'
-    } else if (props.readonly) {
-      acc['aria-readonly'] = 'true'
-    }
-
-    return acc
-  })
-
   const classes = computed(
     () =>
       `q-slider q-slider${axis.value} q-slider--${active.value ? '' : 'in'}active inline no-wrap ` +
@@ -207,7 +192,7 @@ export default function useSlider({
       (focus.value === 'both' ? ' q-slider--focus' : '') +
       (props.label || props.labelAlways ? ' q-slider--label' : '') +
       (props.labelAlways ? ' q-slider--label-always' : '') +
-      (isDark.value ? ' q-slider--dark' : '') +
+      (isDark() ? ' q-slider--dark' : '') +
       (props.dense ? ' q-slider--dense q-slider--dense' + axis.value : '')
   )
 
@@ -312,10 +297,24 @@ export default function useSlider({
     const step = markerStep.value
     const max = props.max
 
+    // accumulating floats drifts (0.1 + 0.1 + 0.1 = 0.30000000000000004),
+    // so each tick is computed from the start and rounded back to its
+    // operands' precision; the raw sum stays the fallback so an exotic
+    // step (e.g. 1e-7, where the rounding is a no-op) cannot stall the loop
+    const decimals = Math.max(
+      (String(step).trim().split('.')[1] || '').length,
+      (String(props.min).trim().split('.')[1] || '').length
+    )
+
+    let index = 0
     let value = props.min
     do {
       acc.push(value)
-      value += step
+      index++
+      const tick = Number.parseFloat(
+        (props.min + index * step).toFixed(decimals)
+      )
+      value = tick > value ? tick : props.min + index * step
     } while (value < max)
 
     acc.push(max)
@@ -431,7 +430,10 @@ export default function useSlider({
   const panDirective = computed(() => [
     [
       TouchPan,
-      onPan,
+      // TouchPan only acquires gestures while its value is a function;
+      // detaching the directive instead would re-create the track and its
+      // thumbs on every disable/readonly toggle
+      editable.value ? onPan : void 0,
       void 0,
       {
         [orientation.value]: true,
@@ -490,9 +492,15 @@ export default function useSlider({
     document.removeEventListener('mouseup', onDeactivate, true)
   }
 
-  function onMobileClick(evt) {
+  function onClick(evt) {
     updatePosition(evt, getDragging(evt))
     updateValue(true)
+
+    // end without a focus ring, like onDeactivate: QRange's
+    // updatePosition marks the moved thumb as focused, and on touch
+    // platforms no blur ever arrives to clear that mark (a tap focuses
+    // nothing, so scrolling or tapping away leaves the ring on forever)
+    onBlur()
   }
 
   function onKeyup(evt) {
@@ -659,27 +667,27 @@ export default function useSlider({
     injectThumb(trackContent)
 
     const content = [
-      hDir(
-        'div',
-        {
-          key: 'trackC',
-          class: trackContainerClass.value,
-          tabindex: trackContainerTabindex.value,
-          ...trackContainerEvents.value
-        },
-        [
-          h(
-            'div',
-            {
-              class: trackClass.value,
-              style: trackStyle.value
-            },
-            trackContent
-          )
-        ],
-        'slide',
-        editable.value,
-        () => panDirective.value
+      withDirectives(
+        h(
+          'div',
+          {
+            key: 'trackC',
+            class: trackContainerClass.value,
+            tabindex: trackContainerTabindex.value,
+            ...trackContainerEvents.value
+          },
+          [
+            h(
+              'div',
+              {
+                class: trackClass.value,
+                style: trackStyle.value
+              },
+              trackContent
+            )
+          ]
+        ),
+        panDirective.value
       )
     ]
 
@@ -715,7 +723,7 @@ export default function useSlider({
       editable,
       classes,
       tabindex,
-      attributes,
+      orientation,
 
       roundValueFn,
       keyStep,
@@ -731,7 +739,7 @@ export default function useSlider({
 
     methods: {
       onActivate,
-      onMobileClick,
+      onClick,
       onBlur,
       onKeyup,
       getContent,

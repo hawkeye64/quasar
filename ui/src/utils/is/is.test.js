@@ -15,6 +15,18 @@ describe('[is API]', () => {
         ['Infinity', Infinity, Infinity],
         ['Date', new Date(150), new Date(150)],
         ['RegExp', /./, /./],
+        ['ArrayBuffer', Uint8Array.of(1).buffer, Uint8Array.of(1).buffer],
+        ['Uint8Array', Uint8Array.of(1, 2), Uint8Array.of(1, 2)],
+        [
+          'object with a buffer property',
+          { buffer: new ArrayBuffer(2) },
+          { buffer: new ArrayBuffer(2) }
+        ],
+        [
+          'DataView',
+          new DataView(Uint8Array.of(0, 1, 0).buffer, 1, 1),
+          new DataView(Uint8Array.of(2, 1, 2).buffer, 1, 1)
+        ],
         ['Array', [1, 2, 3], [1, 2, 3]],
         [
           'Map',
@@ -72,6 +84,63 @@ describe('[is API]', () => {
       ])('deepEqual(%s)', (_, a, b) => {
         expect(is.deepEqual(a, b)).toBe(false)
       })
+
+      test.each([
+        ['ArrayBuffer', Uint8Array.of(1).buffer, Uint8Array.of(2).buffer],
+        ['ArrayBuffer (length)', new ArrayBuffer(1), new ArrayBuffer(2)],
+        [
+          'DataView',
+          new DataView(Uint8Array.of(1).buffer),
+          new DataView(Uint8Array.of(2).buffer)
+        ],
+        [
+          'DataView (length)',
+          new DataView(new ArrayBuffer(2), 0, 1),
+          new DataView(new ArrayBuffer(2), 0, 2)
+        ],
+        ['Uint8Array', Uint8Array.of(1), Uint8Array.of(2)],
+        [
+          'object with a buffer property',
+          { buffer: Uint8Array.of(1).buffer },
+          { buffer: Uint8Array.of(2).buffer }
+        ]
+      ])('distinguishes %s instances by content', (_, a, b) => {
+        expect(is.deepEqual(a, b)).toBe(false)
+      })
+
+      test('handles objects without Object.prototype', () => {
+        const a = Object.assign(Object.create(null), { value: 1 })
+        const b = Object.assign(Object.create(null), { value: 1 })
+        const c = Object.assign(Object.create(null), { value: 2 })
+
+        expect(is.deepEqual(a, b)).toBe(true)
+        expect(is.deepEqual(a, c)).toBe(false)
+      })
+
+      test.each(['valueOf', 'toString'])(
+        'uses %s only when both objects override it',
+        method => {
+          const a = { value: 1 }
+          const b = Object.assign(Object.create({ [method]: () => 'custom' }), {
+            value: 1
+          })
+
+          expect(is.deepEqual(a, b)).toBe(true)
+          expect(is.deepEqual(b, a)).toBe(true)
+        }
+      )
+
+      test.each(['valueOf', 'toString'])(
+        'compares a non-callable %s as a regular key',
+        method => {
+          const a = { [method]: 42, value: 1 }
+          const b = { [method]: 42, value: 1 }
+          const c = { [method]: 43, value: 1 }
+
+          expect(is.deepEqual(a, b)).toBe(true)
+          expect(is.deepEqual(a, c)).toBe(false)
+        }
+      )
     })
 
     describe('[(function)object]', () => {

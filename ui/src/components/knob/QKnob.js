@@ -1,4 +1,11 @@
-import { computed, getCurrentInstance, h, ref, watch } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  h,
+  ref,
+  watch,
+  withDirectives
+} from 'vue'
 
 import QCircularProgress from '../circular-progress/QCircularProgress.js'
 import TouchPan from '../../directives/touch-pan/TouchPan.js'
@@ -6,8 +13,8 @@ import TouchPan from '../../directives/touch-pan/TouchPan.js'
 import { createComponent } from '../../utils/private.create/create.js'
 import { position, stopAndPrevent } from '../../utils/event/event.js'
 import { between, normalizeToInterval } from '../../utils/format/format.js'
-import { hDir } from '../../utils/private.render/render.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import {
   useFormAttrs,
   useFormProps
@@ -52,7 +59,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const model = ref(props.modelValue)
     const dragging = ref(false)
@@ -70,13 +77,34 @@ export default /*#__PURE__*/ createComponent({
 
     let centerPosition
 
+    // dedups re-emissions towards a parent that does not sync the model
+    // prop back; see QSlider's emittedValue
+    let emittedValue = null
+
+    // snapshotted when an interaction starts and compared at commit
+    // time (see QSlider's changeBaseline): an interaction ending where
+    // it started stays silent, and model normalization (mount, parent
+    // writes, clamping) is not a user adjustment, so it never emits
+    // change on its own
+    let changeBaseline = null
+
+    function armChangeBaseline() {
+      if (changeBaseline === null) {
+        changeBaseline = model.value
+      }
+    }
+
     function normalizeModel() {
+      emittedValue = null
       model.value =
         props.modelValue === null
           ? innerMin.value
           : between(props.modelValue, innerMin.value, innerMax.value)
 
-      updateValue(true)
+      // false: still pushes a clamped correction back through
+      // update:modelValue, but must not touch the change lifecycle
+      // (the parent syncing v-model mid-drag lands here)
+      updateValue(false)
     }
 
     watch(
@@ -106,18 +134,17 @@ export default /*#__PURE__*/ createComponent({
       () => props.instantFeedback || dragging.value
     )
 
-    const onEvents = $q.platform.is.mobile
-      ? computed(() => (editable.value ? { onClick } : {}))
-      : computed(() =>
-          editable.value
-            ? {
-                onMousedown,
-                onClick,
-                onKeydown,
-                onKeyup
-              }
-            : {}
-        )
+    // same wiring on every device; see QSlider's trackContainerEvents
+    const onEvents = computed(() =>
+      editable.value
+        ? {
+            onMousedown,
+            onClick,
+            onKeydown,
+            onKeyup
+          }
+        : {}
+    )
 
     const attrs = computed(() =>
       editable.value
@@ -143,6 +170,7 @@ export default /*#__PURE__*/ createComponent({
       }
 
       if (event.isFirst) {
+        armChangeBaseline()
         updateCenterPosition()
         dragging.value = true
       }
@@ -151,7 +179,15 @@ export default /*#__PURE__*/ createComponent({
     }
 
     const directives = computed(() => [
-      [TouchPan, pan, void 0, { prevent: true, stop: true, mouse: true }]
+      [
+        TouchPan,
+        // TouchPan only acquires gestures while its value is a function;
+        // detaching the directive instead would re-create the default slot
+        // content on every disable/readonly toggle (#12668)
+        editable.value ? pan : void 0,
+        void 0,
+        { prevent: true, stop: true, mouse: true }
+      ]
     ])
 
     function updateCenterPosition() {
@@ -163,11 +199,13 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function onMousedown(evt) {
+      armChangeBaseline()
       updateCenterPosition()
       updatePosition(evt, false)
     }
 
     function onClick(evt) {
+      armChangeBaseline()
       updateCenterPosition()
       updatePosition(evt, true)
     }
@@ -176,6 +214,7 @@ export default /*#__PURE__*/ createComponent({
       if (!keyCodes.includes(evt.keyCode)) return
 
       stopAndPrevent(evt)
+      armChangeBaseline()
 
       const stepVal = ([34, 33].includes(evt.keyCode) ? 10 : 1) * step.value,
         offset = [34, 37, 40].includes(evt.keyCode) ? -stepVal : stepVal
@@ -243,17 +282,23 @@ export default /*#__PURE__*/ createComponent({
     }
 
     function updateValue(change) {
-      if (props.modelValue !== model.value) {
+      if (props.modelValue !== model.value && model.value !== emittedValue) {
+        emittedValue = model.value
         emit('update:modelValue', model.value)
       }
 
-      if (change) emit('change', model.value)
+      if (change) {
+        if (changeBaseline !== null && changeBaseline !== model.value) {
+          emit('change', model.value)
+        }
+        changeBaseline = null
+      }
     }
 
     const formAttrs = useFormAttrs(props)
 
     function getNameInput() {
-      return h('input', formAttrs.value)
+      return h('input', formAttrs())
     }
 
     return () => {
@@ -278,14 +323,7 @@ export default /*#__PURE__*/ createComponent({
         child.internal = getNameInput
       }
 
-      return hDir(
-        QCircularProgress,
-        data,
-        child,
-        'knob',
-        editable.value,
-        () => directives.value
-      )
+      return withDirectives(h(QCircularProgress, data, child), directives.value)
     }
   }
 })

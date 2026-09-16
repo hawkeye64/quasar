@@ -5,7 +5,7 @@ import {
   onBeforeUnmount,
   onDeactivated,
   onMounted,
-  ref,
+  shallowRef,
   watch
 } from 'vue'
 
@@ -55,7 +55,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, attrs }) {
     let localScrollTarget
-    const rootRef = ref(null)
+    const rootRef = shallowRef(null)
 
     const virtualScrollLength = computed(() =>
       props.itemsSize >= 0 && props.itemsFn !== void 0
@@ -205,7 +205,12 @@ export default /*#__PURE__*/ createComponent({
 
       return props.type === '__qtable'
         ? getTableMiddle(
-            { ref: rootRef, class: 'q-table__middle ' + classes.value },
+            {
+              ref: rootRef,
+              class: 'q-table__middle ' + classes.value,
+              // scrollable region: keyboard users need a way in (WCAG 2.1.1)
+              tabindex: 0
+            },
             __getVirtualChildren()
           )
         : h(

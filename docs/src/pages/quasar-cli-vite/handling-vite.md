@@ -37,6 +37,30 @@ Notice that you don't need to return anything. The parameter of extendViteConf(v
 
 If you want to add some Vite plugins, see the [Adding Vite plugins](#adding-vite-plugins) section below.
 
+## Npm packages that import from Quasar
+
+An npm package (a component library, a helper package, an [App Extension](/app-extensions/introduction)) that does `import { Notify }` from "quasar" in its own code gets pre-bundled by Vite's dep optimizer, which links it against a second copy of Quasar. Quasar Plugins installed by your app then appear uninstalled to that package, with errors like `Notify.create is not a function`.
+
+The fix is excluding such packages from pre-bundling, so their Quasar imports resolve to the same modules as your app code:
+
+```js /quasar.config file
+build: {
+  extendViteConf () {
+    // gets deeply merged into the generated Vite config
+    return {
+      optimizeDeps: {
+        exclude: ['my-quasar-helper-package']
+      }
+    }
+  }
+}
+```
+
+App Extensions can (and should) configure this themselves instead of relying on the host app. See [Injecting Quasar Plugin](/app-extensions/common-formulas-and-patterns/inject-quasar-plugin).
+
+> [!WARNING]
+> The dep optimizer only runs for the dev server. Production builds instead rely on Quasar's import mapping, which processes the file extensions listed in `quasar.config file > framework > autoImportScriptExtensions` (default: `['js', 'jsx', 'ts', 'tsx']`). If such a package ships its ESM build as `.mjs` files, add `'mjs'` to that list, otherwise the production bundle will contain a second copy of Quasar with the same symptoms as above.
+
 ## Inspecting Vite Config
 
 Quasar CLI offers a useful command for this:
@@ -218,26 +242,121 @@ build: {
 }
 ```
 
+## JSX/TSX <q-badge label="Quasar UI v2.26+" /> <q-badge label="@quasar/app-vite v3.8+" />
+
+### Enabling JSX/TSX
+
+If you want to write components with JSX/TSX instead of (or alongside) Vue templates, enable it through quasar.config file > build > vueJsx:
+
+```ts /quasar.config file
+build: {
+  /**
+   * Should you want to write your components with JSX/TSX (.jsx/.tsx files
+   * or <script lang="jsx|tsx"> in .vue files).
+   *
+   * Vite compiles them itself, so all this does is pointing it at Vue's JSX
+   * runtime (instead of the React one that it assumes by default) and adding
+   * the matching "jsx"/"jsxImportSource" to the generated
+   * .quasar/tsconfig.json (TypeScript projects).
+   *
+   * Set to `true`, or to an options object to override the defaults below,
+   * or to "preserve" when a Vite plugin (like @vitejs/plugin-vue-jsx, which
+   * adds the Vue specific JSX sugar: v-model, v-show, v-slots) should
+   * transform the JSX instead.
+   *
+   * Default options supplied to Vite (Oxc) when `true`:
+   * @example
+   * {
+   *   runtime: 'automatic',
+   *   importSource: 'vue'
+   * }
+   *
+   * @default false
+   */
+  vueJsx?: boolean | NonNullable<OxcOptions["jsx"]>;
+}
+```
+
+This is all that is needed. Vite compiles the JSX/TSX itself, so no additional package is required. What the option does is telling it to use Vue's JSX runtime (instead of the React one that it assumes by default) and, on TypeScript projects, adding the matching `jsx` / `jsxImportSource` to the generated `.quasar/tsconfig.json`.
+
+You can now use `.jsx` / `.tsx` files:
+
+```tabs
+<<| js /src/components/MyBadge.jsx |>>
+import { QBadge } from 'quasar'
+
+export default function MyBadge({ text }) {
+  return <QBadge class="q-ma-sm" color="accent" label={text} />
+}
+<<| ts /src/components/MyBadge.tsx |>>
+import { QBadge } from 'quasar'
+
+export default function MyBadge({ text }: { text: string }) {
+  return <QBadge class="q-ma-sm" color="accent" label={text} />
+}
+```
+
+...and `<script>` blocks in `.vue` files, by declaring their language:
+
+```tabs
+<<| html lang=jsx |>>
+<script setup lang="jsx">
+  import { QBadge } from 'quasar'
+
+  const MyBadge = () => <QBadge color="accent" label="Hello" />
+</script>
+<<| html lang=tsx |>>
+<script setup lang="tsx">
+  import { QBadge } from 'quasar'
+
+  const MyBadge = () => <QBadge color="accent" label="Hello" />
+</script>
+```
+
+Quasar components are fully typed in JSX/TSX: their props, their events (`onClick`, `onUpdate:modelValue`, ...) and the props that Vue accepts on any component (`class`, `style`, `key`, `ref`).
+
+> [!TIP]
+> **Vue sugar**
+>
+> Check the Vite's specific [vue jsx plugin](#using-vitejs-plugin-vue-jsx) if you also want the Vue specific JSX sugar.
+
+### Configuring the JSX transformation
+
+Instead of `true`, you can supply an options object, which is handed over to Vite (Oxc). It overrides the defaults, which are:
+
+```js /quasar.config file
+build: {
+  vueJsx: {
+    runtime: 'automatic',
+    importSource: 'vue'
+  }
+}
+```
+
+### Using @vitejs/plugin-vue-jsx
+
+Vite compiles plain JSX, which does not include the Vue specific JSX sugar (`v-model`, `v-show`, `v-slots`). Should you need it, install [@vitejs/plugin-vue-jsx](https://github.com/vitejs/vite-plugin-vue/tree/main/packages/plugin-vue-jsx) in the root of your app, then hand the transformation over to it:
+
+```js /quasar.config file
+build: {
+  // Vite leaves the JSX alone, for the plugin to transform
+  vueJsx: 'preserve',
+
+  vitePlugins: [
+    [ '@vitejs/plugin-vue-jsx', { /* plugin options */ } ]
+  ]
+}
+```
+
 ## Folder aliases
 
-Quasar comes with a bunch of useful folder aliases pre-configured. You can use them anywhere in your project and Vite will resolve the correct path.
+Quasar comes with the `@` folder alias pre-configured. It points to `/src`.
 
-| Alias        | Resolves to                |
-| ------------ | -------------------------- |
-| `src`        | /src                       |
-| `app`        | /                          |
-| `components` | /src/components            |
-| `layouts`    | /src/layouts               |
-| `pages`      | /src/pages                 |
-| `assets`     | /src/assets                |
-| `boot`       | /src/boot                  |
-| `stores`     | /src/stores (Pinia stores) |
+However, should you wish to add more aliases, for example an `utils` one to point to `/src/utils`, which may be used as `import { formatTime } from 'utils/time.js'`, then there are three ways:
 
-#### Adding folder aliases
+1. (Recommended) Just use `@/utils/`. Plain and simple, no config needed. Makes it easier for contributors to your code since the `@` alias is already popular.
 
-We will use `utils` as an example, which may be used as `import { formatTime } from 'utils/time.js'`. There are two ways to add a folder alias:
-
-1. Through /quasar.config file > build > "alias" property. This is the simplest way to add a folder alias. Use an absolute path to your alias. Example:
+2. Through /quasar.config file > build > "alias" property. This is the simplest way to add a folder alias. Use an absolute path to your alias. Example:
 
 ```js /quasar.config file
 export default defineConfig(ctx => {
@@ -252,7 +371,7 @@ export default defineConfig(ctx => {
 })
 ```
 
-2. By extending the Vite config directly. Do not assign to `viteConf.resolve.alias` directly to preserve the built-in aliases, use `Object.assign` instead or return an Object with your extra aliases. Always use absolute paths.
+3. By extending the Vite config directly. Do not assign to `viteConf.resolve.alias` directly to preserve the built-in aliases, use `Object.assign` instead or return an Object with your extra aliases. Always use absolute paths.
 
 ```js /quasar.config file
 export default defineConfig(ctx => {
@@ -266,9 +385,10 @@ export default defineConfig(ctx => {
 })
 ```
 
-##### Using with TypeScript
-
-If you are using TypeScript, you DON'T have to also add the aliases to your `tsconfig.json` file (nor use packages like vite-tsconfig-paths). These are taken care of by the Quasar CLI by default.
+> [!TIP]
+> **Using with TypeScript**
+>
+> If you are using TypeScript, you DON'T have to also add the aliases to your `tsconfig.json` file (nor use packages like vite-tsconfig-paths). These are taken care of by the Quasar CLI by default.
 
 ## PostCSS
 

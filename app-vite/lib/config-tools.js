@@ -5,6 +5,7 @@ import { mergeConfig } from 'vite'
 import { merge } from 'webpack-merge'
 
 import { getPackage } from './utils/get-package.js'
+import { isModeInstalled } from './modes/modes-utils.js'
 import { tip, warn } from './utils/logger.js'
 import {
   BASELINE_WIDELY_AVAILABLE,
@@ -115,6 +116,43 @@ async function parseVitePlugins(entries, appDir, compileId) {
 }
 
 /**
+ * Deps installed in a /src-<modeName> folder instead of the app root
+ * would otherwise not be resolvable by Vite from /src code.
+ *
+ * Capacitor deps are aliased in EVERY mode (not just Capacitor mode):
+ * Capacitor plugins ship web implementations, so shared /src code may
+ * import them guarded by import.meta.env.QUASAR_CAPACITOR_MODE (the
+ * guarded branch is dead-code eliminated in production builds). #17681
+ * The types-generator mirrors this by adding these deps to
+ * compilerOptions.paths whenever Capacitor mode is installed.
+ *
+ * Exported for testing purposes.
+ */
+export function getModeDepsAliases(appPaths, pkg, modeDeps) {
+  const acc = {}
+
+  const injectDeps = ({ dir, deps }) => {
+    if (!deps) return
+
+    // dir is of type: "src-<modeName>", example: "src-pwa"
+    const target = appPaths.resolve.app(`${dir}/node_modules`)
+
+    Object.keys(deps).forEach(depName => {
+      acc[depName] = join(target, depName)
+    })
+  }
+
+  if (isModeInstalled(appPaths, 'capacitor')) {
+    injectDeps({ dir: 'src-capacitor', deps: pkg.capacitorPkg.dependencies })
+  }
+
+  // specified last so that a mode's own deps win on any name clash
+  modeDeps?.forEach(injectDeps)
+
+  return acc
+}
+
+/**
  * Warning!
  *
  * Remember to update this.#registerDiff() calls when adding/removing quasarConf
@@ -177,6 +215,11 @@ export async function createViteConfig(
         ...build.alias
       }
     },
+
+    // when JSX/TSX is enabled, tell Oxc which JSX runtime to compile to
+    // (Vue's, not the React default); the generated .quasar/tsconfig.json
+    // is kept in sync by types-generator.js
+    ...(build.vueJsx ? { oxc: { jsx: build.vueJsx } } : {}),
 
     css: {
       preprocessorOptions: {
@@ -272,19 +315,10 @@ export async function createViteConfig(
     viteConf.build.outDir = build.distDir
   }
 
-  modeDeps?.forEach(({ dir, deps }) => {
-    if (!deps) return
-
-    // dir is of type: "src-<modeName>", example: "src-pwa"
-    const target = appPaths.resolve.app(`${dir}/node_modules`)
-
-    // we need to set alias as various mode deps
-    // are installed in /src-{modeName} and not in root
-    // so it breaks Vite
-    Object.keys(deps).forEach(depName => {
-      viteConf.resolve.alias[depName] = join(target, depName)
-    })
-  })
+  Object.assign(
+    viteConf.resolve.alias,
+    getModeDepsAliases(appPaths, ctx.pkg, modeDeps)
+  )
 
   return viteConf
 }
@@ -402,6 +436,10 @@ export function createBrowserRolldownConfig(quasarConf, { shippedToClient }) {
 
     transform: {
       target,
+      // same JSX/TSX handling as the Vite pipeline (see createViteConfig),
+      // for the browser-targeted scripts built by Rolldown alone
+      // (BEX scripts, the custom PWA service worker)
+      ...(quasarConf.build.vueJsx ? { jsx: quasarConf.build.vueJsx } : {}),
       define: {
         ...quasarConf.metaConf[
           shippedToClient ? 'clientEnvDefineList' : 'backendEnvDefineList'

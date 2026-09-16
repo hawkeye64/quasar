@@ -1,5 +1,5 @@
 ---
-title: QTime
+title: Time Picker
 desc: The QTime component provides a method to input time.
 keys: QTime
 examples: QTime
@@ -11,9 +11,8 @@ related:
 
 The QTime component provides a method to input time.
 
-::: tip
-For handling date and/or time, also check out [Quasar Date Utils](/quasar-utils/date-utils).
-:::
+> [!TIP]
+> For handling date and/or time, also check out [Quasar Date Utils](/quasar-utils/date-utils).
 
 <DocApi file="QTime" />
 
@@ -27,13 +26,16 @@ Notice that the model is a String only.
 
 <DocExample title="Landscape" file="Landscape" overflow />
 
-::: tip
-For landscape mode, you can use it along with `$q.screen` to make QTime responsive. Example: `:landscape="$q.screen.gt.xs"`. More info: [Quasar Screen Plugin](/options/screen-plugin).
-:::
+> [!TIP]
+> For landscape mode, you can use it along with `$q.screen` to make QTime responsive. Example: `:landscape="$q.screen.gt.xs"`. More info: [Quasar Screen Plugin](/options/screen-plugin).
 
-### Keyboard navigation
+### Accessibility <q-badge label="v2.25+" />
 
-The hour, minute, second, and AM/PM controls can be activated with <kbd>Space</kbd> or <kbd>Enter</kbd>. When an hour, minute, or second control has focus, use <kbd>Arrow Left</kbd> and <kbd>Arrow Right</kbd> to adjust its value.
+The header's hour, minute and second sections are exposed as `role="spinbutton"` elements per the [WAI-ARIA spinbutton pattern](https://www.w3.org/WAI/ARIA/apg/patterns/spinbutton/), each with a localized `aria-label` from the [Quasar Language Pack](/options/quasar-language-packs) and `aria-valuemin`/`aria-valuemax`/`aria-valuenow` reflecting its current value. The AM/PM controls are toggle buttons (`aria-pressed`). The clock face itself is a pointer-only visualization that is deliberately hidden from assistive technology — the header spinbuttons are the accessible way to set the time.
+
+#### Keyboard navigation
+
+The hour, minute, second, and AM/PM controls can be activated with <kbd>Space</kbd> or <kbd>Enter</kbd>. The hour, minute and second controls are exposed as spinbuttons: when one has focus, use the <kbd>Arrow</kbd> keys to adjust its value, <kbd>Home</kbd> / <kbd>End</kbd> to jump to the first/last valid value, or type digits to enter a value directly (e.g. <kbd>1</kbd> <kbd>5</kbd> sets 15). Their screen reader labels come from the `date.hour`/`date.minute`/`date.second` keys of the [Quasar Language Pack](/options/quasar-language-packs).
 
 ### Functionality
 
@@ -53,15 +55,17 @@ The default model mask is `HH:mm` (or `HH:mm:ss` when using `with-seconds` prop)
 
 The `mask` prop tokens can be found at [Quasar Utils > Date utils](/quasar-utils/date-utils#format-for-display).
 
-::: warning Note on SSR/SSG
-Using `x` or `X` (timestamps) in the mask may cause hydration errors on the client, because decoding the model String must be done with `new Date()` which takes into account the local timezone. As a result, if the server is in a different timezone than the client, then the rendered output of the server will differ than the one on the client so hydration will fail.
+> [!WARNING]
+> **Note on SSR/SSG**
+>
+> Using `x` or `X` (timestamps) in the mask may cause hydration errors on the client, because decoding the model String must be done with `new Date()` which takes into account the local timezone. As a result, if the server is in a different timezone than the client, then the rendered output of the server will differ than the one on the client so hydration will fail.
+>
+> If the mask contains date tokens, set `default-date` explicitly when using SSR or SSG. The runtime default is the current local date, which can differ between the server and browser.
 
-If the mask contains date tokens, set `default-date` explicitly when using SSR or SSG. The runtime default is the current local date, which can differ between the server and browser.
-:::
-
-::: danger Note on persian calendar
-When using the persian calendar, the mask for QTime is forced to `HH:mm` or `HH:mm:ss` (if `with-seconds` is specified).
-:::
+> [!CAUTION]
+> **Note on persian calendar**
+>
+> When using the persian calendar, the mask for QTime is forced to `HH:mm` or `HH:mm:ss` (if `with-seconds` is specified).
 
 <DocExample title="Simple mask" file="MaskSimple" overflow />
 
@@ -78,6 +82,8 @@ Using the mask to connect a [QDate](/vue-components/date) and QTime to the same 
 If, for some reason, you need to use a custom ad-hoc locale rather than the current Quasar Language Pack that has been set, you can use the `locale` prop:
 
 <DocExample title="Custom ad-hoc locale" file="CustomLocale" overflow />
+
+The digits shown in the header and on the clock face follow the `formatNumber` function of the language pack, or one passed through the `locale` prop, when one is defined (see [Localized digits](/vue-components/date#localized-digits)). The `fa` and `fa-IR` packs render Persian digits; the model always keeps ASCII digits.
 
 ### Coloring
 

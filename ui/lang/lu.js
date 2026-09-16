@@ -15,6 +15,11 @@ export default {
     search: 'Sichen',
     filter: 'Filter',
     refresh: 'Aktualiséieren',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Plage',
+    noValue: 'Kwakwidi bukata',
+    resize: 'Gréisst änneren',
     expand: label => (label ? `"${label}" erweideren` : 'Erweideren'),
     collapse: label => (label ? `"${label}" zesummeklappen` : 'Zesummebroch')
   },
@@ -36,11 +41,15 @@ export default {
     prevYear: 'Joer virdrun',
     nextYear: 'Nächst Joer',
     today: 'Haut',
-    prevRangeYears: range => `Prévisch ${range} Joren`,
-    nextRangeYears: range => `Nächst ${range} Joren`
+    prevRangeYears: range => `Vireg ${range} Joer`,
+    nextRangeYears: range => `Nächst ${range} Joer`,
+    hour: 'Stonn',
+    minute: 'Minutt',
+    second: 'Sekonn',
+    now: 'Aktuell Zäit'
   },
   table: {
-    noData: 'Keng Donnéen do',
+    noData: 'Keng Donnéen do',
     noResults: 'Keng Anträg fonnt',
     loading: 'Luedt...',
     selectedRecords: rows =>
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Zeilen pro Säit:',
     allRows: 'All',
     pagination: (start, end, total) => start + '-' + end + ' vun ' + total,
-    columns: 'Kolonnen'
+    columns: 'Kolonnen',
+    selectAllRows: 'Sungula milongo yonso',
+    selectRow: 'Sungula mulongo'
   },
   pagination: {
+    label: 'Kutanga kwa mabaji',
     first: 'Éischt Säit',
     prev: 'Virdrun Säit',
     next: 'Nächst Säit',
     last: 'Lescht Säit'
   },
+  carousel: {
+    prevSlide: 'Virescht Folie',
+    nextSlide: 'Nächst Folie'
+  },
+  colorPicker: {
+    spectrum: 'Mfwalansa ya mikuba',
+    tune: 'Kulongolola',
+    palette: 'Kibaya kya mikuba',
+    value: 'Bukata bwa mukuba',
+    hue: 'Mukuba',
+    alpha: 'Bukole bwa mukuba',
+    saturation: 'Bukole bwa mukuba',
+    brightness: 'Kutoka kwa mukuba'
+  },
+  uploader: {
+    addFiles: 'Sungula bifile',
+    upload: 'Tuma bifile',
+    abort: 'Jimija kutuma',
+    removeQueued: 'Fundula bifile bidi mu kindi',
+    removeUploaded: 'Fundula bifile bitumibwe',
+    removeFile: 'Fundula file'
+  },
   editor: {
+    toolbar: 'Toolbar vum Editeur',
     url: 'URL',
     bold: 'Fett',
     italic: 'Kursiv',

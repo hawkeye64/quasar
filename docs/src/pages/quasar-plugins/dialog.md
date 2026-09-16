@@ -13,9 +13,8 @@ Quasar Dialogs are a great way to offer the user the ability to choose a specifi
 
 From a UI perspective, you can think of Dialogs as a type of floating modal, which covers only a portion of the screen. This means Dialogs should only be used for quick user actions.
 
-::: tip
-Dialogs can also be used as a component in your Vue file templates (for complex use-cases, like specific form components, selectable options, etc.). For this, go to [QDialog](/vue-components/dialog) page.
-:::
+> [!TIP]
+> Dialogs can also be used as a component in your Vue file templates (for complex use-cases, like specific form components, selectable options, etc.). For this, go to [QDialog](/vue-components/dialog) page.
 
 The advantage of using Dialogs as Quasar Plugins as opposed to QDialog component is that the plugin can also be called from outside of Vue space and doesn't require you to manage their templates. But as a result, their customization cannot be compared to their component counterpart.
 
@@ -54,13 +53,11 @@ Please check the API card to see what the returned Object is.
 
 ### Usage
 
-::: tip
-For all the examples below, also see the browser console while you check them out.
-:::
+> [!TIP]
+> For all the examples below, also see the browser console while you check them out.
 
-::: warning
-This is not an exhaustive list of what you can do with Dialogs as Quasar Plugins. For further exploration check out the API section.
-:::
+> [!WARNING]
+> This is not an exhaustive list of what you can do with Dialogs as Quasar Plugins. For further exploration check out the API section.
 
 <DocExample title="Basic" file="Basic" />
 
@@ -69,6 +66,16 @@ This is not an exhaustive list of what you can do with Dialogs as Quasar Plugins
 <DocExample title="Radios, Checkboxes, Toggles" file="Pickers" />
 
 <DocExample title="Other options" file="OtherOptions" />
+
+### Dismissal reason <q-badge label="v2.28+" />
+
+The `onCancel` callback receives the reason for the dismissal: `cancel` (the Cancel button), `backdrop`, `escape` (the ESC key) or `programmatic` (hidden through code, which includes an app route change).
+
+The `onDismiss` callback receives the same reason, except when the dialog gets closed through OK, in which case it receives the payload that `onOk` callbacks get.
+
+When invoking a custom component (see the sections below), the reason mirrors the payload of your component's `hide` event: the [useDialogPluginComponent](/vue-composables/use-dialog-plugin-component) composable emits the values above for you, while a hand-written component decides its own payload (or none).
+
+<DocExample title="Dismissal reason" file="DismissReason" />
 
 ### Native attributes
 
@@ -123,8 +130,10 @@ Dialog.create({
   }
 }).onOk(() => {
   console.log('OK')
-}).onCancel(() => {
-  console.log('Cancel')
+}).onCancel(reason => {
+  // reason (Quasar v2.28+) is 'cancel', 'backdrop',
+  // 'escape' or 'programmatic'
+  console.log('Cancel', reason)
 }).onDismiss(() => {
   console.log('Called on OK or Cancel')
 })
@@ -151,8 +160,10 @@ setup () {
     }
   }).onOk(() => {
     console.log('OK')
-  }).onCancel(() => {
-    console.log('Cancel')
+  }).onCancel(reason => {
+    // reason (Quasar v2.28+) is 'cancel', 'backdrop',
+    // 'escape' or 'programmatic'
+    console.log('Cancel', reason)
   }).onDismiss(() => {
     console.log('Called on OK or Cancel')
   })
@@ -161,9 +172,8 @@ setup () {
 
 The equivalent of the above with Options API is by directly using `this.$q.dialog({ ... })`.
 
-::: warning
-Your custom component however must follow the interface described below in order to perfectly hook into the Dialog plugin. **Notice the "REQUIRED" comments** and take it as is -- just a bare-bone example, nothing more.
-:::
+> [!WARNING]
+> Your custom component however must follow the interface described below in order to perfectly hook into the Dialog plugin. **Notice the "REQUIRED" comments** and take it as is -- just a bare-bone example, nothing more.
 
 ### Writing the custom component
 
@@ -205,7 +215,10 @@ We will be using the [useDialogPluginComponent](/vue-composables/use-dialog-plug
   const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
     useDialogPluginComponent()
   // dialogRef      - Vue ref to be applied to QDialog
-  // onDialogHide   - Function to be used as handler for @hide on QDialog
+  // onDialogHide   - Function to be used as handler for @hide on QDialog;
+  //                    bind it directly (no wrapping) so it receives QDialog's
+  //                    event and can forward the dismissal reason to the
+  //                    chained onCancel/onDismiss callbacks (Quasar v2.28+)
   // onDialogOK     - Function to call to settle dialog with "ok" outcome
   //                    example: onDialogOK() - no payload
   //                    example: onDialogOK({ /*...*/ }) - with payload
@@ -222,13 +235,13 @@ We will be using the [useDialogPluginComponent](/vue-composables/use-dialog-plug
 </script>
 ```
 
-If you want to define `emits` in Object form, then (requires Quasar v2.2.5+):
+If you want to define `emits` in Object form, then:
 
-```
+```js
 defineEmits({
   // REQUIRED; need to specify some events that your
   // component will emit through useDialogPluginComponent()
-  ...useDialogPluginComponent.emitsObject,
+  ...useDialogPluginComponent.emitsObject
 
   // ...your own definitions
 })
@@ -276,10 +289,14 @@ We will be using the [useDialogPluginComponent](/vue-composables/use-dialog-plug
       const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
         useDialogPluginComponent()
       // dialogRef      - Vue ref to be applied to QDialog
-      // onDialogHide   - Function to be used as handler for @hide on QDialog
+      // onDialogHide   - Function to be used as handler for @hide on QDialog;
+      //                    bind it directly (no wrapping) so it receives
+      //                    QDialog's event and can forward the dismissal
+      //                    reason to the chained onCancel/onDismiss
+      //                    callbacks (Quasar v2.28+)
       // onDialogOK     - Function to call to settle dialog with "ok" outcome
       //                    example: onDialogOK() - no payload
-      //                    example: onDialogOK({ /*.../* }) - with payload
+      //                    example: onDialogOK({ /*...*/ }) - with payload
       // onDialogCancel - Function to call to settle dialog with "cancel" outcome
 
       return {
@@ -307,9 +324,9 @@ We will be using the [useDialogPluginComponent](/vue-composables/use-dialog-plug
 </script>
 ```
 
-If you want to define `emits` in Object form, then (requires Quasar v2.2.5+):
+If you want to define `emits` in Object form, then:
 
-```
+```js
 emits: {
   // REQUIRED; need to specify some events that your
   // component will emit through useDialogPluginComponent()
@@ -351,10 +368,17 @@ emits: {
       'hide'
     ],
 
+    data() {
+      return {
+        dismissReason: null
+      }
+    },
+
     methods: {
       // following method is REQUIRED
       // (don't change its name --> "show")
       show() {
+        this.dismissReason = null
         this.$refs.dialog.show()
       },
 
@@ -364,10 +388,22 @@ emits: {
         this.$refs.dialog.hide()
       },
 
-      onDialogHide() {
+      onDialogHide(evt) {
         // required to be emitted
-        // when QDialog emits "hide" event
-        this.$emit('hide')
+        // when QDialog emits "hide" event;
+        // the payload reaches the plugin's chained
+        // onCancel/onDismiss callbacks as the
+        // dismissal reason (Quasar v2.28+)
+        this.$emit(
+          'hide',
+          this.dismissReason !== null
+            ? this.dismissReason
+            : evt === undefined
+              ? 'programmatic'
+              : evt.type.indexOf('key') === 0
+                ? 'escape'
+                : 'backdrop'
+        )
       },
 
       onOKClick() {
@@ -382,12 +418,104 @@ emits: {
       },
 
       onCancelClick() {
-        // we just need to hide the dialog
+        // record the reason, then hide the dialog
+        this.dismissReason = 'cancel'
         this.hide()
       }
     }
   }
 </script>
+```
+
+The dismissal-reason plumbing above (`dismissReason` and the `hide` payload) is optional: a plain `this.$emit('hide')` still works, but then the chained `onCancel`/`onDismiss` callbacks receive no reason. The [useDialogPluginComponent](/vue-composables/use-dialog-plugin-component) composable handles all of it for you.
+
+### Example: async submission
+
+The built-in dialog settles as soon as its OK button is clicked. When submitting must wait on an asynchronous operation (saving to a server, for example), invoke a custom component instead: nothing forces you to call `onDialogOK()` right away, so you can keep the dialog open with the submit button in a loading state, settle it only when the operation succeeds and keep it open to display the error when it fails.
+
+Notice the `:persistent="submitting"` below. It prevents the user from dismissing the dialog (backdrop click or ESC) while the operation is still in flight.
+
+```html
+<template>
+  <q-dialog ref="dialogRef" :persistent="submitting" @hide="onDialogHide">
+    <q-card class="q-dialog-plugin">
+      <q-card-section>
+        <q-input
+          v-model="name"
+          label="Name"
+          :disable="submitting"
+          :error="error !== null"
+          :error-message="error"
+        />
+      </q-card-section>
+
+      <q-card-actions align="right">
+        <q-btn
+          flat
+          color="primary"
+          label="Cancel"
+          :disable="submitting"
+          @click="onDialogCancel"
+        />
+        <q-btn
+          color="primary"
+          label="Save"
+          :loading="submitting"
+          @click="onSaveClick"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+</template>
+
+<script setup>
+  import { ref } from 'vue'
+  import { useDialogPluginComponent } from 'quasar'
+
+  defineEmits([
+    // REQUIRED; need to specify some events that your
+    // component will emit through useDialogPluginComponent()
+    ...useDialogPluginComponent.emits
+  ])
+
+  const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } =
+    useDialogPluginComponent()
+
+  const name = ref('')
+  const submitting = ref(false)
+  const error = ref(null)
+
+  async function onSaveClick() {
+    submitting.value = true
+    error.value = null
+
+    try {
+      // replace with your own async operation (fetch/axios/etc)
+      const result = await api.save({ name: name.value })
+
+      // settle the dialog with an "ok" outcome only now;
+      // the payload reaches the chained onOk() callbacks
+      // and the dialog hides automatically
+      onDialogOK(result)
+    } catch (err) {
+      // the dialog stays open; display the error
+      error.value = err.message
+    } finally {
+      submitting.value = false
+    }
+  }
+</script>
+```
+
+The invoking side does not change in any way:
+
+```js
+$q.dialog({
+  component: SaveDialog
+}).onOk(result => {
+  // the payload passed to onDialogOK() above
+  console.log('saved', result)
+})
 ```
 
 ## Cordova/Capacitor back button

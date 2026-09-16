@@ -11,10 +11,13 @@
       >
         <input
           ref="inputRef"
+          type="search"
           name="listing-search"
-          class="page-all__search-input text-white letter-spacing-225"
+          class="page-all__search-input"
+          autocomplete="off"
           v-model="searchTerms"
           placeholder="Search item"
+          aria-label="Search components, directives and plugins"
         />
         <q-icon
           v-if="!searchTerms"
@@ -22,12 +25,15 @@
           size="24px"
           color="brand-primary"
         />
-        <q-icon
+        <q-btn
           v-else
-          name="clear"
-          size="24px"
+          flat
+          dense
+          round
+          icon="clear"
+          size="sm"
           color="brand-primary"
-          class="cursor-pointer"
+          aria-label="Clear search"
           @click.stop="clearSearchTerms"
         />
       </div>
@@ -38,7 +44,6 @@
           :key="chipIndex"
           :label="chip.label"
           :color="chipColor[chipIndex]"
-          clickable
           text-color="white"
           @click="chip.onClick"
         />
@@ -47,7 +52,7 @@
 
     <div
       v-if="noResultsLabel"
-      class="col flex flex-center text-size-20 letter-spacing-225 q-pa-xl"
+      class="col flex flex-center text-size-20 q-pa-xl"
       >{{ noResultsLabel }}</div
     >
 
@@ -56,29 +61,11 @@
       class="q-py-xl text-size-14 row items-center justify-center q-gutter-lg relative-position"
     >
       <transition-group name="page-all-transition">
-        <DocCardLink
+        <ComponentLink
           v-for="entry in searchResults"
           :key="entry.key"
-          :to="entry.to"
-        >
-          <q-card
-            class="page-all__card bg-white shadow-bottom-large cursor-pointer overflow-hidden letter-spacing-300"
-          >
-            <div class="page-all__card-img">
-              <q-img v-if="entry.img" :src="entry.img" />
-            </div>
-            <q-card-section
-              class="text-size-14 text-brand-primary text-weight-bold"
-            >
-              {{ entry.name }}
-            </q-card-section>
-            <q-card-section
-              class="text-size-12 page-all__card-description text-dark q-pt-none"
-            >
-              {{ entry.description }}
-            </q-card-section>
-          </q-card>
-        </DocCardLink>
+          :entry="entry"
+        />
       </transition-group>
     </div>
   </div>
@@ -91,7 +78,7 @@ import { useRoute } from 'vue-router'
 import { quasarElements } from '@/assets/links.components.js'
 
 import DocStars from '@/components/DocStars.vue'
-import DocCardLink from '@/components/DocCardLink.vue'
+import ComponentLink from './ComponentLink.vue'
 
 const filterChips = [
   { label: 'Buttons', value: 'button' },
@@ -170,6 +157,7 @@ function filterResults() {
 
   if (terms === '' && tag === null) {
     searchResults.value = quasarElements
+    noResultsLabel.value = false
     return
   }
 
@@ -216,10 +204,10 @@ function onSearchFieldClick() {
     position: sticky
     top: $header-height
     z-index: 1
-    background: rgba($dark-bg, .7)
-    backdrop-filter: blur(5px)
 
   &__search-field
+    color: $cold-black
+    background: #fff
     border: 1px solid $brand-primary
     border-radius: $generic-border-radius
     height: 40px
@@ -227,26 +215,22 @@ function onSearchFieldClick() {
     transition: box-shadow $header-quick-transition
 
     &:focus-within
-      box-shadow: 0 3px 6px 3px rgba($brand-primary, 0.38)
+      box-shadow: 0 8px 8px 0 rgba($dark, 0.2) !important
 
   &__search-input
     font-size: 14px
     border: 0
     outline: 0
+    color: inherit
     background: none
 
-  &__card
-    width: 300px
-    height: 289px
-    transition: transform $header-quick-transition, box-shadow $header-quick-transition
+body.body--dark .page-all
+  &__search-field
+    color: #fff
+    background: $dark-bg
 
-    &:hover
-      box-shadow: 0 24px 24px 0 rgba(0, 180, 255, 0.4)
-      transform: scale(1.03)
-
-  &__card-img
-    height: 170px
-    background-color: $floating-rock
+    &:focus-within
+      box-shadow: 0 0 8px 6px rgba($brand-primary, 0.8) !important
 
 .page-all-transition
   &-move,

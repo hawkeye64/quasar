@@ -3,6 +3,8 @@
     <div
       class="twitter-cards__content col row items-stretch no-wrap q-pa-xl"
       ref="contentRef"
+      role="region"
+      aria-label="Community tweets"
       @scroll="updateArrows"
     >
       <q-card
@@ -12,7 +14,7 @@
       >
         <q-card-section class="row items-center no-wrap">
           <q-avatar class="q-mr-sm">
-            <q-img :src="tweet.avatar" />
+            <q-img :src="tweet.avatar" :ratio="1" />
           </q-avatar>
           <div class="col">
             <div class="text-weight-bold">{{ tweet.author }}</div>
@@ -50,21 +52,27 @@
       <q-resize-observer @resize="updateArrows" debounce="0" />
     </div>
 
-    <div
+    <button
+      type="button"
       class="twitter-cards__arrow twitter-cards__arrow--left cursor-pointer absolute-left row items-center"
       :class="leftArrowClass"
+      :disabled="leftArrowClass !== null"
+      aria-label="Scroll tweets left"
       @click="scrollToStart"
     >
       <q-icon :name="mdiChevronLeft" size="56px" color="brand-primary" />
-    </div>
+    </button>
 
-    <div
+    <button
+      type="button"
       class="twitter-cards__arrow twitter-cards__arrow--right cursor-pointer absolute-right row items-center"
       :class="rightArrowClass"
+      :disabled="rightArrowClass !== null"
+      aria-label="Scroll tweets right"
       @click="scrollToEnd"
     >
       <q-icon :name="mdiChevronRight" size="56px" color="brand-primary" />
-    </div>
+    </button>
   </div>
 </template>
 
@@ -256,7 +264,8 @@ const tweetsList = [
   margin-right: -24px
 
   &__content
-    overflow: hidden
+    overflow-y: auto
+    scrollbar-width: none
 
   &__entry
     border-radius: 14px
@@ -271,14 +280,18 @@ const tweetsList = [
     box-shadow: none !important
 
   &__arrow
+    // native <button> for accessibility
+    border: 0
+    padding: 0
     transition: opacity .5s ease-in-out
+    color: #fff
     &--left
-      background: linear-gradient(to right, $dark-bg 0%, $dark-bg 5%, transparent 100%)
+      background: linear-gradient(to right, currentColor 0%, currentColor 5%, transparent 100%)
     &--right
-      background: linear-gradient(to left, $dark-bg 0%, $dark-bg 5%, transparent 100%)
+      background: linear-gradient(to left, currentColor 0%, currentColor 5%, transparent 100%)
     &--hidden
       opacity: 0
 
-body.mobile .twitter-cards__content
-  overflow: auto
+body.body--dark .twitter-cards__arrow
+  color: $dark-bg
 </style>

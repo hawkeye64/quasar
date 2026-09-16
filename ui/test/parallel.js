@@ -1,15 +1,16 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
-// Runs the four ui suites CONCURRENTLY on dev machines — they are
+// Runs the ui suites CONCURRENTLY on dev machines — they are
 // independent (separate vitest processes, separate vite graphs), so
-// wall-clock drops to the slowest suite. CI runners stay SERIAL: four
+// wall-clock drops to the slowest suite. CI runners stay SERIAL: five
 // chromium+vite processes contend badly on 2-core/7GB machines.
 // Shared prerequisites are settled serially first, so the scripts'
 // own pretest hooks become no-ops instead of racing.
 
 const uiDir = join(import.meta.dirname, '..')
 const scripts = [
+  'test:build',
   'test:unit',
   'test:hydration',
   'test:hydration:pwa',
@@ -37,6 +38,11 @@ function run(script) {
         }
       })
     }
+
+    child.on('error', err => {
+      console.log(`[${script}] failed to spawn: ${err.message}`)
+      resolve(1)
+    })
 
     child.on('exit', code => {
       console.log(`[${script}] exited with code ${code}`)

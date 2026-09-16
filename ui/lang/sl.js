@@ -15,6 +15,11 @@ export default {
     search: 'Išči',
     filter: 'Filtriraj',
     refresh: 'Ponovno naloži',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Razpon',
+    noValue: 'Brez vrednosti',
+    resize: 'Spremeni velikost',
     expand: label => (label ? `Razširi "${label}"` : 'Razširi'),
     collapse: label => (label ? `Strni "${label}"` : 'Strni')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Prejšnje leto',
     nextYear: 'Naslednje leto',
     today: 'Danes',
-    prevRangeYears: range => `Prejšnja ${range} leta`,
-    nextRangeYears: range => `Naslednja ${range} leta`
+    prevRangeYears: range => `Prejšnjih ${range} let`,
+    nextRangeYears: range => `Naslednjih ${range} let`,
+    hour: 'Ura',
+    minute: 'Minuta',
+    second: 'Sekunda',
+    now: 'Trenutni čas'
   },
   table: {
     noData: 'Ni dosegljivih podatkov',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Vrstic na stran:',
     allRows: 'Vse',
     pagination: (start, end, total) => start + '-' + end + ' od ' + total,
-    columns: 'Stolpci'
+    columns: 'Stolpci',
+    selectAllRows: 'Izberi vse vrstice',
+    selectRow: 'Izberi vrstico'
   },
   pagination: {
+    label: 'Oštevilčenje strani',
     first: 'Prva stran',
     prev: 'Prejšnja stran',
     next: 'Naslednja stran',
     last: 'Zadnja stran'
   },
+  carousel: {
+    prevSlide: 'Prejšnji diapozitiv',
+    nextSlide: 'Naslednji diapozitiv'
+  },
+  colorPicker: {
+    spectrum: 'Spekter',
+    tune: 'Uravnavanje',
+    palette: 'Paleta',
+    value: 'Vrednost barve',
+    hue: 'Odtenek',
+    alpha: 'Prekrivnost',
+    saturation: 'Nasičenost',
+    brightness: 'Svetlost'
+  },
+  uploader: {
+    addFiles: 'Izberi datoteke',
+    upload: 'Naloži datoteke',
+    abort: 'Prekini nalaganje',
+    removeQueued: 'Odstrani čakajoče datoteke',
+    removeUploaded: 'Odstrani naložene datoteke',
+    removeFile: 'Odstrani datoteko'
+  },
   editor: {
+    toolbar: 'Orodna vrstica urejevalnika',
     url: 'URL',
     bold: 'Krepko',
     italic: 'Ležeče',

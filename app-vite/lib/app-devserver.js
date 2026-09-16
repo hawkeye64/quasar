@@ -1,6 +1,8 @@
 import { AppTool } from './app-tool.js'
 import { printDevRunningBanner } from './utils/banner.js'
 import { encodeForDiff } from './utils/encode-for-diff.js'
+import { openBrowser } from './utils/open-browser.js'
+import { warn } from './utils/logger.js'
 import { EntryFilesGenerator } from './entry-files-generator.js'
 import { generateTypes } from './types-generator.js'
 
@@ -14,8 +16,10 @@ export class AppDevserver extends AppTool {
   #diffList = {}
   #diffExtractFnMap = {}
   #entryFiles
-  #runQueue = Promise.resolve()
-  #runId = 0
+  #latestQuasarConf = null
+  #runSteps = []
+  #pendingTask = null
+  #watcherQueue = []
 
   clientNeedsReload = false
   clientServer = null
@@ -35,7 +39,7 @@ export class AppDevserver extends AppTool {
       quasarConf.preFetch,
       quasarConf.build.publicPath,
       quasarConf.build.vueRouterMode,
-      ...(quasarConf.ctx.ssr
+      ...(quasarConf.ctx.mode.ssr
         ? [
             quasarConf.ssr.pwa,
             quasarConf.ssr.middlewares,
@@ -44,7 +48,7 @@ export class AppDevserver extends AppTool {
             quasarConf.ssr.manualStoreHydration,
             quasarConf.ssr.manualPostHydrationTrigger
           ]
-        : quasarConf.ctx.ssg
+        : quasarConf.ctx.mode.ssg
           ? [
               quasarConf.ssg.pwa,
               quasarConf.ssg.manualStoreSsrContextInjection,
@@ -60,6 +64,7 @@ export class AppDevserver extends AppTool {
       quasarConf.build.alias,
       quasarConf.build.define,
       quasarConf.build.filenameBasedRouting,
+      quasarConf.build.vueJsx,
       quasarConf.metaConf.clientEnvDefineList,
       quasarConf.metaConf.backendEnvDefineList
     ])
@@ -106,7 +111,8 @@ export class AppDevserver extends AppTool {
       quasarConf.build.define,
       quasarConf.build.alias,
       quasarConf.build.minify,
-      quasarConf.build.target
+      quasarConf.build.target,
+      quasarConf.build.vueJsx
       /**
        * Warning!
        *
@@ -136,58 +142,81 @@ export class AppDevserver extends AppTool {
       quasarConf.pwa.workboxMode,
       quasarConf.pwa.swFilename,
       quasarConf.build,
-      quasarConf.ctx.ssr && quasarConf.ssr.pwaOfflineHtmlFilename,
-      quasarConf.ctx.ssg && quasarConf.ssg.pwaOfflineHtmlFilename,
+      quasarConf.ctx.mode.ssr && quasarConf.ssr.pwaOfflineHtmlFilename,
+      quasarConf.ctx.mode.ssg && quasarConf.ssg.pwaOfflineHtmlFilename,
       quasarConf.pwa.workboxMode === 'GenerateSW'
         ? [
             quasarConf.pwa.extendPWAGenerateSWOptions,
-            quasarConf.ctx.ssr && quasarConf.ssr.extendSSRGenerateSWOptions,
-            quasarConf.ctx.ssg && quasarConf.ssg.extendSSGGenerateSWOptions
+            quasarConf.ctx.mode.ssr &&
+              quasarConf.ssr.extendSSRGenerateSWOptions,
+            quasarConf.ctx.mode.ssg && quasarConf.ssg.extendSSGGenerateSWOptions
           ]
         : [
             quasarConf.pwa.extendPWAInjectManifestOptions,
             quasarConf.pwa.extendPWACustomSWConf,
             quasarConf.sourceFiles.pwaServiceWorker,
             quasarConf.metaConf.clientEnvDefineList,
-            quasarConf.ctx.ssr && quasarConf.ssr.extendSSRInjectManifestOptions,
-            quasarConf.ctx.ssg && quasarConf.ssg.extendSSGInjectManifestOptions
+            quasarConf.ctx.mode.ssr &&
+              quasarConf.ssr.extendSSRInjectManifestOptions,
+            quasarConf.ctx.mode.ssg &&
+              quasarConf.ssg.extendSSGInjectManifestOptions
           ]
     ])
   }
 
-  // to be called from inheriting class
-  run(quasarConf, __isRetry) {
-    if (this.#diff('entryFiles', quasarConf)) {
-      this.#entryFiles.generate(quasarConf)
-    }
+  registerRunSteps(stepsList) {
+    this.#runSteps = stepsList
+  }
 
-    if (this.#diff('types', quasarConf)) {
-      generateTypes(quasarConf)
-    }
-
-    if (__isRetry !== true) {
-      this.#runId++
-    }
-
-    // we return wrappers because we want these methods private
-    // -- they shouldn't be called in all scenarios, which is why we
-    // artificially restrict them to run() only
-    return {
-      diff: (name, diffQuasarConf) => this.#diff(name, diffQuasarConf),
-      queue: fn => this.#queue(this.#runId, quasarConf, fn)
+  #runTask(fnReturnValue) {
+    if (fnReturnValue instanceof Promise) {
+      this.#pendingTask = fnReturnValue
+      return fnReturnValue.finally(() => {
+        this.#pendingTask = null
+      })
     }
   }
 
-  #queue(runId, quasarConf, fn) {
-    this.#runQueue = this.#runQueue
-      .then(() => fn())
-      .then(() => {
-        if (this.#runId === runId) {
-          this.run(quasarConf, true)
-        }
-      })
+  // to be called from inheriting class
+  async run(quasarConf) {
+    this.#latestQuasarConf = quasarConf
 
-    return this.#runQueue
+    while (this.#pendingTask !== null) {
+      // we only care that the task settled, not how;
+      // its failure is reported by whoever started it
+      await this.#pendingTask.catch(() => {})
+      if (quasarConf !== this.#latestQuasarConf) return
+    }
+
+    if (this.#diff('entryFiles')) {
+      this.#entryFiles.generate(quasarConf)
+    }
+
+    if (this.#diff('types')) {
+      generateTypes(quasarConf)
+    }
+
+    if (this.#diff('vueDevtools')) {
+      await this.#runTask(this.#installVueDevtools(quasarConf))
+      if (quasarConf !== this.#latestQuasarConf) return
+    }
+
+    for (const step of this.#runSteps) {
+      // a watcher queue task may have started while awaiting
+      // the previous step, so wait it out before the next one
+      while (this.#pendingTask !== null) {
+        await this.#pendingTask.catch(() => {})
+        if (quasarConf !== this.#latestQuasarConf) return
+      }
+
+      if (this.#diff(step.diff)) {
+        await this.#runTask(step.fn(quasarConf, step.diff))
+      }
+
+      if (quasarConf !== this.#latestQuasarConf) return
+    }
+
+    if (this.clientNeedsReload) this.reloadClient()
   }
 
   registerDiff(name, extractFn) {
@@ -199,16 +228,19 @@ export class AppDevserver extends AppTool {
     this.#diffExtractFnMap[name] = extractFn
   }
 
-  #diff(name, quasarConf) {
+  #diff(name, updateSnapshot = true) {
     const target = this.#diffList[name]
     const { snapshot, extractFn } = target
 
     const newSnapshot = getConfSnapshot(
       extractFn,
-      quasarConf,
+      this.#latestQuasarConf,
       this.#diffExtractFnMap
     )
-    target.snapshot = newSnapshot
+
+    if (updateSnapshot === true) {
+      target.snapshot = newSnapshot
+    }
 
     if (snapshot === null) {
       return true
@@ -228,6 +260,44 @@ export class AppDevserver extends AppTool {
     }
 
     return false
+  }
+
+  async queue(diffName, fn) {
+    // we don't do anything if the same diffName is already in the queue
+    if (this.#watcherQueue.some(item => item.diffName === diffName)) {
+      return
+    }
+
+    this.#watcherQueue.push({ diffName, fn })
+    // if a watcher queue executor is already running,
+    // it will pick up this new task when it finishes the current one
+    if (this.#watcherQueue.length !== 1) {
+      return
+    }
+
+    while (this.#watcherQueue.length !== 0) {
+      // wait for any pending task to settle before
+      // running the next queued one
+      if (this.#pendingTask !== null) {
+        await this.#pendingTask.catch(() => {})
+        // a sibling executor may have run (and drained)
+        // the queue in the meantime, so re-check everything
+        continue
+      }
+
+      const task = this.#watcherQueue.shift()
+      if (!this.#diff(task.diffName, false)) {
+        // a failed task must not stop the executor,
+        // otherwise the still queued tasks would never run
+        // (and neither would any future ones)
+        try {
+          await this.#runTask(task.fn(this.#latestQuasarConf, task.diffName))
+        } catch (err) {
+          console.error(err)
+          warn(`The queued task for "${task.diffName}" failed`)
+        }
+      }
+    }
   }
 
   reloadClient() {
@@ -253,7 +323,7 @@ export class AppDevserver extends AppTool {
     return Promise.all(watcherList.map(watcher => watcher.close()))
   }
 
-  async installVueDevtools(quasarConf) {
+  async #installVueDevtools(quasarConf) {
     if (
       quasarConf.metaConf.vueDevtoolsOptions &&
       quasarConf.ctx.pkg.appPkg.devDependencies?.[
@@ -271,5 +341,15 @@ export class AppDevserver extends AppTool {
 
   printBanner(quasarConf, opts) {
     printDevRunningBanner(quasarConf, opts)
+  }
+
+  openBrowser(quasarConf) {
+    if (quasarConf.metaConf.openBrowser) {
+      const { metaConf } = quasarConf
+      openBrowser({
+        url: metaConf.APP_URL,
+        opts: metaConf.openBrowser !== true ? metaConf.openBrowser : false
+      })
+    }
   }
 }

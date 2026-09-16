@@ -1,7 +1,7 @@
 ---
-title: Touch Pan Directive
+title: v-touch-pan directive
 desc: Vue directive which triggers an event when the user drags the finger or mouse on a component or element.
-keys: touch-pan
+keys: touch-pan,v-touch-pan
 examples: TouchPan
 related:
   - /vue-directives/touch-swipe
@@ -22,9 +22,8 @@ We will be describing `v-touch-pan` on the lines below.
 Click then pan in a direction with your mouse on the area below to see it in action.
 Page scrolling is prevented, but you can opt out if you wish.
 
-::: tip
-If your content also has images, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
-:::
+> [!TIP]
+> If your content also has images, you might want to add `draggable="false"` to them, otherwise the native browser behavior might interfere in a negative way.
 
 <DocExample title="All directions" file="Basic" />
 
@@ -88,7 +87,3 @@ However, if you are using `capture` or `mouseCapture` modifiers then events will
 Below is a nice example on using TouchPan on a QFab. You can drag it across the screen.
 
 <DocExample title="Draggable" file="Draggable" />
-
-## Note on HMR
-
-Due to performance reasons, not all of the modifiers are reactive. Some require a window/page/component refresh to get updated. Please check the API card for the modifiers which are not marked as reactive.

@@ -4,11 +4,11 @@
   >
     <q-card-section class="q-pa-none">
       <q-icon size="xl" :name="props.icon" />
-      <div
-        class="why-quasar-card__title text-uppercase heading--medium q-py-md"
+      <h3
+        class="why-quasar-card__title text-uppercase heading--medium q-py-md q-ma-none"
       >
         {{ props.title }}
-      </div>
+      </h3>
       <div
         class="text-dark text-size-16 text-weight-medium q-pb-md letter-spacing-300 primary-line-height"
       >
@@ -39,7 +39,7 @@ const props = defineProps({
 </script>
 
 <style lang="sass">
-$card-side--large: 400px
+$card-side--large: 320px
 $card-side--small: 280px
 
 .why-quasar-card
@@ -49,7 +49,7 @@ $card-side--small: 280px
 
   @media (min-width: $breakpoint-xs-max)
     width: $card-side--large
-    height: $card-side--large
+    min-height: $card-side--large
     &__title
       letter-spacing: 0.4px
 </style>

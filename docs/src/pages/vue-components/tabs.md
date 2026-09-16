@@ -12,11 +12,10 @@ related:
 
 Tabs are a way of displaying more information using less window real estate. This page describes the tab selection part through QTabs, QTab and QRouteTab.
 
-One common use case for this component is in Layout’s header/footer. Please refer to [Layouts](/layout/layout) and [Header & Footer](/layout/header-and-footer#example--playing-with-qtabs) for references.
+One common use case for this component is in Layout’s header/footer. Please refer to [Layouts](/layout/layout) and [Header & Footer](/layout/header-and-footer#example--tabs--playing-with-qtabs) for references.
 
-::: tip
-Works great along with [QTabPanels](/vue-components/tab-panels), a component which refers strictly to the panels (tab content) themselves.
-:::
+> [!TIP]
+> Works great along with [QTabPanels](/vue-components/tab-panels), a component which refers strictly to the panels (tab content) themselves.
 
 <DocApi file="QTabs" />
 
@@ -26,28 +25,32 @@ Works great along with [QTabPanels](/vue-components/tab-panels), a component whi
 
 ## Usage
 
-::: tip TIPS
+> [!TIP]
+> **TIPS**
+>
+> - QTabs can be scrolled horizontally when the width is longer than the container width. Adjust your browser accordingly to see this in action.
+> - On a desktop you will see chevrons on either side that can be clicked. The tabs also follow a scroll gesture along their axis, like a horizontal trackpad swipe or a tilt of the mouse wheel.
+> - On a mobile, you can pan the tabs with your finger.
+> - If you want to force arrows to be visible on mobile use `mobile-arrows` prop.
 
-- QTabs can be scrolled horizontally when the width is longer than the container width. Adjust your browser accordingly to see this in action.
-- On a desktop you will see chevrons on either side that can be clicked.
-- On a mobile, you can pan the tabs with your finger.
-- If you want to force arrows to be visible on mobile use `mobile-arrows` prop.
-
-:::
-
-::: warning
-QRouteTab won't and cannot work with the UMD version if you don't also install Vue Router.
-:::
+> [!WARNING]
+> QRouteTab won't and cannot work with the UMD version if you don't also install Vue Router.
 
 ### Basic
 
 <DocExample title="Basic" file="Basic" />
 
-### Keyboard navigation
+### Accessibility <q-badge label="v2.25+" />
+
+QTabs renders with the `tablist` role, its `aria-orientation` matching the horizontal or vertical layout, and each QTab / QRouteTab exposes itself as a `tab` whose `aria-selected` reflects the current selection (plus `aria-disabled` when disabled). Together with the keyboard behavior below — where moving focus does not change the selection — this is the manual activation flavor of the [WAI-ARIA tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/).
+
+#### Keyboard navigation
 
 Use the arrow keys to move focus between tabs. Horizontal tabs use <kbd>Arrow Left</kbd> and <kbd>Arrow Right</kbd>; vertical tabs use <kbd>Arrow Up</kbd> and <kbd>Arrow Down</kbd>. Navigation wraps at either end, and <kbd>Home</kbd> or <kbd>End</kbd> moves focus to the first or last tab. Press <kbd>Space</kbd> or <kbd>Enter</kbd> to activate the focused tab.
 
 Following the [WAI-ARIA tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/), the tab list is a single Tab stop: pressing <kbd>Tab</kbd> moves focus into the tab list (onto the active tab, or the first enabled one when no tab is active) and out of it, rather than walking through each tab. Moving focus with the arrow keys does not change the selection.
+
+You can prevent a tab's own handling of a key by preventing its `keydown` event; for example, `@keydown.enter.prevent` keeps <kbd>Enter</kbd> from activating the tab. Should you take over the arrow keys this way, reimplement their behavior — otherwise the tab list no longer follows the pattern above.
 
 See [QTabPanels' accessibility section](/vue-components/tab-panels#accessibility) for how to link the tabs to their panels through ARIA attributes.
 
@@ -107,9 +110,8 @@ Notice we need to specify the `shrink` prop. By default, QTabs tries to expand t
 
 ### Along with QTabsPanel
 
-::: tip
-QTabPanels can be used as standalone too. They do not depend on the presence of a QTabs. Also, they can be placed anywhere within a page, not just near a QTabs.
-:::
+> [!TIP]
+> QTabPanels can be used as standalone too. They do not depend on the presence of a QTabs. Also, they can be placed anywhere within a page, not just near a QTabs.
 
 <DocExample title="Tabs with tab panels" file="TabsWithTabpanels" />
 
@@ -127,11 +129,10 @@ This component inherits everything from QTab, however it also has `router-link` 
 </q-tabs>
 ```
 
-::: warning
-When using QTabs with QRouteTab, it is not recommended to also use a v-model (though you still can), because the source of truth for the current active tab is determined by the current route instead of the v-model. Each QRouteTab becomes "active" depending on your app's route and not due to the v-model. So the initial value of v-model or changing the v-model directly will not also change the route of your app.
-:::
+> [!WARNING]
+> When using QTabs with QRouteTab, it is not recommended to also use a v-model (though you still can), because the source of truth for the current active tab is determined by the current route instead of the v-model. Each QRouteTab becomes "active" depending on your app's route and not due to the v-model. So the initial value of v-model or changing the v-model directly will not also change the route of your app.
 
-### Matching QRouteTab to current route <q-badge label="updated for v2.9+" />
+### Matching QRouteTab to current route
 
 - If it is set to `exact` matching:
   1. The route that it points to must be considered "exact-active" by Vue Router (exactly matches route, disregards hash & query).
@@ -147,11 +148,10 @@ When using QTabs with QRouteTab, it is not recommended to also use a v-model (th
 
 The `exact` configured QRouteTabs always win over loose-matching (non-exact) ones.
 
-### Handling custom navigation <q-badge label="updated for v2.9+" />
+### Handling custom navigation
 
-::: tip
-Please refer to the QRouteTab API card at the top of the page for a more in-depth description of the `@click` event being used below.
-:::
+> [!TIP]
+> Please refer to the QRouteTab API card at the top of the page for a more in-depth description of the `@click` event being used below.
 
 ```html
 <template>

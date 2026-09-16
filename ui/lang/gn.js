@@ -15,6 +15,11 @@ export default {
     search: 'Heka',
     filter: 'Mbogua',
     refresh: 'Actualisa',
+    minimum: 'Mínimo',
+    maximum: 'Máximo',
+    range: 'Rango',
+    noValue: 'Ndaipóri repykue',
+    resize: 'Redimensiona',
     expand: label => (label ? `Oñembotuichave "${label}"` : 'Myasãi'),
     collapse: label => (label ? `Omboguejy "${label}"` : 'Ñembyaipa')
   },
@@ -35,7 +40,11 @@ export default {
     nextYear: 'Año oúvo',
     today: "Ko'ẽ",
     prevRangeYears: range => `Opa uvicha ${range} ary`,
-    nextRangeYears: range => `Yvypóra ${range} ary`
+    nextRangeYears: range => `Yvypóra ${range} ary`,
+    hour: 'Aravo',
+    minute: "Aravo'i",
+    second: "Aravo'ive",
+    now: 'Aravo ag̃agua'
   },
   table: {
     noData: "Ni peteĨ mba'e",
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Fila por páhina:',
     allRows: 'Entero',
     pagination: (start, end, total) => start + '-' + end + ' de ' + total,
-    columns: 'Columnakuéra'
+    columns: 'Columnakuéra',
+    selectAllRows: 'Eiporavo opa tysýi',
+    selectRow: 'Eiporavo tysýi'
   },
   pagination: {
+    label: 'Kuatiarogue papapy',
     first: 'Aña kuatia',
     prev: 'Kuatia ohasáva',
-    next: 'Kuatia ohasáva',
+    next: 'Kuatia oúva',
     last: 'Kuatia última'
   },
+  carousel: {
+    prevSlide: 'Diapositiva anterior',
+    nextSlide: 'Diapositiva siguiente'
+  },
+  colorPicker: {
+    spectrum: "Sa'y aty",
+    tune: 'Ñemboja',
+    palette: "Sa'y renda",
+    value: "Sa'y repykue",
+    hue: "Sa'y",
+    alpha: 'Hesakãỹ',
+    saturation: "Sa'y mbarete",
+    brightness: "Sa'y hesakã"
+  },
+  uploader: {
+    addFiles: 'Eiporavo marandurenda',
+    upload: 'Emyanyhẽ marandurenda',
+    abort: 'Ejoko ñemyanyhẽ',
+    removeQueued: "Emboguete marandurenda oha'arõva",
+    removeUploaded: 'Emboguete marandurenda oñemyanyhẽva',
+    removeFile: 'Emboguete marandurenda'
+  },
   editor: {
+    toolbar: 'Barra de herramientas del editor',
     url: 'URL',
     bold: 'Negrita',
     italic: 'Kursíva',

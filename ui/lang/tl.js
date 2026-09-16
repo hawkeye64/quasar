@@ -15,6 +15,11 @@ export default {
     search: 'Maghanap',
     filter: 'Salain',
     refresh: 'Refresh',
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Saklaw',
+    noValue: 'Walang halaga',
+    resize: 'Baguhin ang laki',
     expand: label => (label ? `Palawakin "${label}"` : 'Palawakin'),
     collapse: label => (label ? `Pagbagsak "${label}"` : 'Pagbagsak')
   },
@@ -35,7 +40,11 @@ export default {
     nextYear: 'Susunod na taon',
     today: 'Ngayon',
     prevRangeYears: range => `Nakaraang ${range} taon`,
-    nextRangeYears: range => `Susunod na ${range} taon`
+    nextRangeYears: range => `Susunod na ${range} taon`,
+    hour: 'Oras',
+    minute: 'Minuto',
+    second: 'Segundo',
+    now: 'Kasalukuyang oras'
   },
   table: {
     noData: 'Walang available na data',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Mga tala sa bawat pahina:',
     allRows: 'Lahat',
     pagination: (start, end, total) => start + '-' + end + ' ng ' + total,
-    columns: 'Mga hanay'
+    columns: 'Mga hanay',
+    selectAllRows: 'Piliin ang lahat ng hilera',
+    selectRow: 'Piliin ang hilera'
   },
   pagination: {
+    label: 'Pagbibilang ng pahina',
     first: 'Unang pahina',
     prev: 'Nakaraang pahina',
     next: 'Susunod na pahina',
     last: 'Huling pahina'
   },
+  carousel: {
+    prevSlide: 'Nakaraang slide',
+    nextSlide: 'Susunod na slide'
+  },
+  colorPicker: {
+    spectrum: 'Espektro',
+    tune: 'Pag-aayos',
+    palette: 'Paleta',
+    value: 'Halaga ng kulay',
+    hue: 'Kulay',
+    alpha: 'Kapal ng kulay',
+    saturation: 'Katingkaran ng kulay',
+    brightness: 'Liwanag'
+  },
+  uploader: {
+    addFiles: 'Pumili ng mga file',
+    upload: 'I-upload ang mga file',
+    abort: 'Ihinto ang pag-upload',
+    removeQueued: 'Alisin ang mga nakapilang file',
+    removeUploaded: 'Alisin ang mga na-upload na file',
+    removeFile: 'Alisin ang file'
+  },
   editor: {
+    toolbar: 'Toolbar ng editor',
     url: 'URL',
     bold: 'Matapang',
     italic: 'Italic',

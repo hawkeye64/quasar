@@ -4,7 +4,10 @@
       <q-toolbar class="bg-primary text-white rounded-borders">
         <q-btn round dense flat icon="menu" class="q-mr-xs" />
         <q-avatar class="gt-xs">
-          <img src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg" />
+          <img
+            alt="Quasar logo"
+            src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg"
+          />
         </q-avatar>
 
         <q-space />
@@ -16,7 +19,7 @@
           input-class="text-right"
           class="q-ml-md"
         >
-          <template v-slot:append>
+          <template #append>
             <q-icon v-if="text === ''" name="search" />
             <q-icon
               v-else

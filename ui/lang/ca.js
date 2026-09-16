@@ -15,6 +15,11 @@ export default {
     search: 'Cercar',
     filter: 'Filtrar',
     refresh: 'Refrescar',
+    minimum: 'Mínim',
+    maximum: 'Màxim',
+    range: 'Interval',
+    noValue: 'Sense valor',
+    resize: 'Redimensiona',
     expand: label => (label ? `Amplia "${label}"` : 'Expandir'),
     collapse: label => (label ? `Col·lapse "${label}"` : 'Col·lapse')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Any anterior',
     nextYear: "L'any vinent",
     today: 'Avui',
-    prevRangeYears: range => `Anterior ${range} anys`,
-    nextRangeYears: range => `A continuació ${range} anys`
+    prevRangeYears: range => `${range} anys anteriors`,
+    nextRangeYears: range => `${range} anys següents`,
+    hour: 'Hora',
+    minute: 'Minut',
+    second: 'Segon',
+    now: 'Hora actual'
   },
   table: {
     noData: 'No hi ha dades disponibles',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Files per pàgina:',
     allRows: 'Totes',
     pagination: (start, end, total) => start + '-' + end + ' de ' + total,
-    columns: 'Columnes'
+    columns: 'Columnes',
+    selectAllRows: 'Selecciona totes les files',
+    selectRow: 'Selecciona la fila'
   },
   pagination: {
+    label: 'Paginació',
     first: 'Primera pàgina',
     prev: 'Pàgina anterior',
     next: 'Pàgina següent',
     last: 'Última pàgina'
   },
+  carousel: {
+    prevSlide: 'Diapositiva anterior',
+    nextSlide: 'Diapositiva següent'
+  },
+  colorPicker: {
+    spectrum: 'Espectre',
+    tune: 'Ajust',
+    palette: 'Paleta',
+    value: 'Valor del color',
+    hue: 'To',
+    alpha: 'Opacitat',
+    saturation: 'Saturació',
+    brightness: 'Brillantor'
+  },
+  uploader: {
+    addFiles: 'Tria fitxers',
+    upload: 'Puja els fitxers',
+    abort: 'Cancel·la la pujada',
+    removeQueued: 'Elimina els fitxers en cua',
+    removeUploaded: 'Elimina els fitxers pujats',
+    removeFile: 'Elimina el fitxer'
+  },
   editor: {
+    toolbar: "Barra d'eines de l'editor",
     url: 'URL',
     bold: 'Negreta',
     italic: 'Cursiva',

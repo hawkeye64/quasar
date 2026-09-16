@@ -80,11 +80,10 @@ Loading.hide()
 
 <DocExample title="With unsafe message, but sanitized" file="WithMessageSanitized" />
 
-### Multiple groups in parallel <q-badge label="v2.8+" />
+### Multiple groups in parallel
 
-::: tip
-When you have multiple processes that occur in parallel then you can group Loading instances so that you can manage the Loading state per group (individually).
-:::
+> [!TIP]
+> When you have multiple processes that occur in parallel then you can group Loading instances so that you can manage the Loading state per group (individually).
 
 Specify the `group` property when spawning each of your Loading instances and you can update or hide them by using the returned function.
 
@@ -133,10 +132,23 @@ Loading.show({
 Loading.hide('my-group')
 ```
 
-::: warning
-Please remember that calling `Loading.hide()` with no parameters will hide all the groups. So if you use groups, you may want to always call the hide() method with a group name.
-:::
+> [!WARNING]
+> Please remember that calling `Loading.hide()` with no parameters will hide all the groups. So if you use groups, you may want to always call the hide() method with a group name.
 
 ### Setting Up Defaults
 
 Should you wish to set up some defaults, rather than specifying them each time, you can do so by using quasar.config file > framework > config > loading: {...} or by calling `Loading.setDefaults({...})` or `$q.loading.setDefaults({...})`.
+
+```js
+// quasar.config file
+framework: {
+  config: {
+    loading: {
+      // the config file cannot import components,
+      // so a spinner is referred to by its name
+      spinner: 'QSpinnerGears'
+      // ...other Loading options
+    }
+  }
+}
+```

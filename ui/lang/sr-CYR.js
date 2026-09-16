@@ -1,5 +1,5 @@
 export default {
-  isoName: 'sr-CYR',
+  isoName: 'sr-Cyrl',
   nativeName: 'српски језик',
   label: {
     clear: 'Обриши',
@@ -15,6 +15,11 @@ export default {
     search: 'Тражи',
     filter: 'Филтер',
     refresh: 'Освежи',
+    minimum: 'Минимум',
+    maximum: 'Максимум',
+    range: 'Опсег',
+    noValue: 'Без вредности',
+    resize: 'Промени величину',
     expand: label => (label ? `Прошири "${label}"` : 'Проширити'),
     collapse: label => (label ? `Скупи "${label}"` : 'Колапс')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Претходне године',
     nextYear: 'Следеће године',
     today: 'данас',
-    prevRangeYears: range => `Претходне ${range} Година`,
-    nextRangeYears: range => `Следежи ${range} Година`
+    prevRangeYears: range => `Претходних ${range} година`,
+    nextRangeYears: range => `Следећих ${range} година`,
+    hour: 'Сат',
+    minute: 'Минут',
+    second: 'Секунда',
+    now: 'Тренутно време'
   },
   table: {
     noData: 'Нема података',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Редова по страници:',
     allRows: 'Све',
     pagination: (start, end, total) => start + '-' + end + ' од ' + total,
-    columns: 'Колоне'
+    columns: 'Колоне',
+    selectAllRows: 'Изабери све редове',
+    selectRow: 'Изабери ред'
   },
   pagination: {
+    label: 'Пагинација',
     first: 'Прва страница',
     prev: 'Претходна страница',
     next: 'Следећа страница',
     last: 'Последња страна'
   },
+  carousel: {
+    prevSlide: 'Претходни слајд',
+    nextSlide: 'Следећи слајд'
+  },
+  colorPicker: {
+    spectrum: 'Спектар',
+    tune: 'Подешавање',
+    palette: 'Палета',
+    value: 'Вредност боје',
+    hue: 'Нијанса',
+    alpha: 'Непрозирност',
+    saturation: 'Засићеност',
+    brightness: 'Осветљеност'
+  },
+  uploader: {
+    addFiles: 'Изабери датотеке',
+    upload: 'Отпреми датотеке',
+    abort: 'Прекини отпремање',
+    removeQueued: 'Уклони датотеке на чекању',
+    removeUploaded: 'Уклони отпремљене датотеке',
+    removeFile: 'Уклони датотеку'
+  },
   editor: {
+    toolbar: 'Трака са алаткама уређивача',
     url: 'УРЛ',
     bold: 'Подебљано',
     italic: 'Накошено',

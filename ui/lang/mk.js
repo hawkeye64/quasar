@@ -15,6 +15,11 @@ export default {
     search: 'Пребарувај',
     filter: 'Филтрирај',
     refresh: 'Освежи',
+    minimum: 'Минимум',
+    maximum: 'Максимум',
+    range: 'Опсег',
+    noValue: 'Нема вредност',
+    resize: 'Промени големина',
     expand: label => (label ? `Прошири "${label}"` : 'Прошири'),
     collapse: label => (label ? `Собери на "${label}"` : 'Собери')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Претходна година',
     nextYear: 'Следната година',
     today: 'Денес',
-    prevRangeYears: range => `Претходно ${range} години`,
-    nextRangeYears: range => `Следно ${range} години`
+    prevRangeYears: range => `Претходните ${range} години`,
+    nextRangeYears: range => `Следните ${range} години`,
+    hour: 'Час',
+    minute: 'Минута',
+    second: 'Секунда',
+    now: 'Тековно време'
   },
   table: {
     noData: 'Нема достапни податоци',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Записи по страница:',
     allRows: 'Сите',
     pagination: (start, end, total) => start + '-' + end + ' од ' + total,
-    columns: 'Колони'
+    columns: 'Колони',
+    selectAllRows: 'Избери ги сите редови',
+    selectRow: 'Избери ред'
   },
   pagination: {
+    label: 'Пагинација',
     first: 'Прва страница',
     prev: 'Претходна страница',
     next: 'Следната страница',
     last: 'Последна страница'
   },
+  carousel: {
+    prevSlide: 'Претходен слајд',
+    nextSlide: 'Следен слајд'
+  },
+  colorPicker: {
+    spectrum: 'Спектар',
+    tune: 'Дотерување',
+    palette: 'Палета',
+    value: 'Вредност на бојата',
+    hue: 'Нијанса',
+    alpha: 'Непроѕирност',
+    saturation: 'Заситеност',
+    brightness: 'Осветленост'
+  },
+  uploader: {
+    addFiles: 'Избери датотеки',
+    upload: 'Подигни датотеки',
+    abort: 'Прекини го подигањето',
+    removeQueued: 'Отстрани ги датотеките на чекање',
+    removeUploaded: 'Отстрани ги подигнатите датотеки',
+    removeFile: 'Отстрани ја датотеката'
+  },
   editor: {
+    toolbar: 'Лента со алатки на уредувачот',
     url: 'URL',
     bold: 'Задебелено',
     italic: 'Курзив',

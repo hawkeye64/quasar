@@ -12,9 +12,8 @@ related:
 
 The QToggle component is another basic element for user input. You can use this for turning settings, features or true/false inputs on and off.
 
-::: tip
-Please also refer to the [QOptionGroup](/vue-components/option-group) on other possibilities for creating groups of Checkboxes.
-:::
+> [!TIP]
+> Please also refer to the [QOptionGroup](/vue-components/option-group) on other possibilities for creating groups of Checkboxes.
 
 <DocApi file="QToggle" />
 
@@ -83,9 +82,8 @@ Apart from the standard sizes below, you can define your own through the `size` 
 
 ### With QOptionGroup
 
-::: tip
-You can also use [QOptionGroup](/vue-components/option-group), which simplifies the usage when you have groups of toggles, like in example below.
-:::
+> [!TIP]
+> You can also use [QOptionGroup](/vue-components/option-group), which simplifies the usage when you have groups of toggles, like in example below.
 
 <DocExample title="Usage with QOptionGroup" file="OptionGroup" />
 
@@ -98,3 +96,9 @@ You can also use [QOptionGroup](/vue-components/option-group), which simplifies 
 When dealing with a native form which has an `action` and a `method` (eg. when using Quasar with ASP.NET controllers), you need to specify the `name` property on QToggle, otherwise formData will not contain it (if it should) - all value are converted to string (native behaviour, so do not use Object values):
 
 <DocExample title="Native form" file="NativeForm" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QToggle implements the [WAI-ARIA switch pattern](https://www.w3.org/WAI/ARIA/apg/patterns/switch/): it exposes `role="switch"` with `aria-checked` reflecting the model. The `label` prop provides the accessible name (`aria-label`), a disabled toggle exposes `aria-disabled="true"`, and the keyboard/focus behavior is the same as [QCheckbox](/vue-components/checkbox#accessibility): a Tab stop that toggles on <kbd>Enter</kbd> or <kbd>Space</kbd>.
+
+Note that switch semantics only know on/off, so the indeterminate state is not announced — screen readers treat an indeterminate QToggle as off. When the mixed state matters to assistive technology users, prefer a [QCheckbox](/vue-components/checkbox#accessibility), whose role does announce `aria-checked="mixed"`.

@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
-import date, { __splitDate, getWeekOfYear } from './date.js'
+import date, { __splitDate, getISOWeekYear, getWeekOfYear } from './date.js'
 
 // The browser's timezone cannot be changed at runtime (there is no
 // process.env.TZ equivalent), so mock the global Date class with one
@@ -153,6 +153,19 @@ describe('[date API]', () => {
       })
     })
 
+    describe('[(function)getISOWeekYear]', () => {
+      test.each([
+        [new Date(2020, 11, 31, 12), 2020], // week 53 of 2020
+        [new Date(2021, 0, 1, 12), 2020], // week 53 of 2020
+        [new Date(2021, 0, 4, 12), 2021], // week 1 of 2021
+        [new Date(2022, 0, 2, 12), 2021], // week 52 of 2021
+        [new Date(2024, 11, 30, 12), 2025], // week 1 of 2025
+        [new Date(2024, 3, 8, 12), 2024] // mid-year matches calendar year
+      ])('has correct return value', (value, expected) => {
+        expect(getISOWeekYear(value)).toBe(expected)
+      })
+    })
+
     describe('[(function)isValid]', () => {
       test.each([
         [0, true],
@@ -206,6 +219,101 @@ describe('[date API]', () => {
         ).toBe(Date.UTC(2024, 1, 29, 13, 5))
       })
 
+      test('resolves an ISO week date into a calendar date', () => {
+        const value = new Date(2020, 9, 4)
+
+        expect(
+          date.extractDate(
+            date.formatDate(value, 'GGGG-[W]ww-E'),
+            'GGGG-[W]ww-E'
+          )
+        ).toStrictEqual(value)
+      })
+
+      test.each(['E', 'd', 'do', 'dd', 'ddd', 'dddd'])(
+        'resolves the weekday of an ISO week date from the %s token',
+        token => {
+          const value = new Date(2020, 9, 4),
+            mask = 'GGGG-[W]ww-' + token
+
+          expect(
+            date.extractDate(date.formatDate(value, mask), mask)
+          ).toStrictEqual(value)
+        }
+      )
+
+      test('resolves to Monday when the mask carries no weekday', () => {
+        const value = new Date(2020, 9, 4),
+          result = date.extractDate(
+            date.formatDate(value, 'GGGG-[W]ww'),
+            'GGGG-[W]ww'
+          )
+
+        expect([
+          date.getDayOfWeek(result),
+          date.getWeekOfYear(result),
+          date.getISOWeekYear(result)
+        ]).toStrictEqual([
+          1,
+          date.getWeekOfYear(value),
+          date.getISOWeekYear(value)
+        ])
+      })
+
+      test('accepts a calendar year in place of the ISO week year', () => {
+        const value = new Date(2020, 9, 4)
+
+        expect(
+          date.extractDate(date.formatDate(value, 'YY-ww-E'), 'YY-ww-E')
+        ).toStrictEqual(value)
+      })
+
+      test('round-trips every day of a year through an ISO week date', () => {
+        const mask = 'GGGG-[W]ww-E',
+          failed = []
+
+        let day = new Date(2020, 0, 1)
+
+        while (day.getFullYear() === 2020) {
+          const result = date.extractDate(date.formatDate(day, mask), mask)
+
+          if (result.getTime() !== day.getTime()) {
+            failed.push(date.formatDate(day, 'YYYY-MM-DD'))
+          }
+
+          day = date.addToDate(day, { days: 1 })
+        }
+
+        expect(failed).toStrictEqual([])
+      })
+
+      test('ignores the dd token when a locale shortens every day alike', async () => {
+        const { default: enUS } = await import('quasar/lang/en-US.js')
+        const locale = {
+          ...enUS.date,
+          days: enUS.date.days.map(day => 'XX' + day)
+        }
+
+        const value = new Date(2020, 9, 4),
+          mask = 'GGGG-[W]ww-dd',
+          result = date.extractDate(
+            date.formatDate(value, mask, locale),
+            mask,
+            locale
+          )
+
+        expect([
+          date.getDayOfWeek(result),
+          date.getWeekOfYear(result)
+        ]).toStrictEqual([1, date.getWeekOfYear(value)])
+      })
+
+      test('lets an explicit calendar date win over ISO week tokens', () => {
+        expect(
+          date.extractDate('2021-W52 2022-01-01', 'GGGG-[W]ww YYYY-MM-DD')
+        ).toStrictEqual(new Date(2022, 0, 1))
+      })
+
       test.each([
         [void 0, 'YYYY-MM-DD'],
         [null, 'YYYY-MM-DD'],
@@ -217,7 +325,12 @@ describe('[date API]', () => {
         ['2024-02-29 13:60', 'YYYY-MM-DD HH:mm'],
         ['2024-02-29 13:05:60', 'YYYY-MM-DD HH:mm:ss'],
         ['2024-02-29 00:05 PM', 'YYYY-MM-DD hh:mm A'],
-        ['2024-02-29 13:05 +2460', 'YYYY-MM-DD HH:mm ZZ']
+        ['2024-02-29 13:05 +2460', 'YYYY-MM-DD HH:mm ZZ'],
+        ['2020-W00', 'GGGG-[W]ww'],
+        ['2020-W54', 'GGGG-[W]ww'],
+        ['2021-W53', 'GGGG-[W]ww'],
+        ['2020-W40-8', 'GGGG-[W]ww-E'],
+        ['40', 'ww']
       ])('returns Invalid Date for %o with mask %s', (value, mask) => {
         const result = date.extractDate(value, mask)
 
@@ -297,6 +410,107 @@ describe('[date API]', () => {
           ).toStrictEqual(new Date(2024, 0, 1))
         }
       )
+
+      // the parser is not anchored at the end, so these masks put the name
+      // last: with a trailing literal, backtracking would hide the bug
+      test.each([
+        ['months', 'YYYY MMMM', '2024 AlphaBeta', new Date(2024, 1, 1)],
+        ['monthsShort', 'YYYY MMM', '2024 AlphaBeta', new Date(2024, 1, 1)],
+        ['days', 'GGGG-[W]ww-dddd', '2024-W01-AlphaBeta', new Date(2024, 0, 1)],
+        [
+          'daysShort',
+          'GGGG-[W]ww-ddd',
+          '2024-W01-AlphaBeta',
+          new Date(2024, 0, 1)
+        ]
+      ])(
+        'does not let a shorter custom %s name shadow the longer one it prefixes',
+        async (localeField, mask, value, expected) => {
+          const { default: enUS } = await import('quasar/lang/en-US.js')
+          const localeNames = [...enUS.date[localeField]]
+          localeNames[0] = 'Alpha'
+          localeNames[1] = 'AlphaBeta'
+
+          expect(
+            date.extractDate(value, mask, {
+              ...enUS.date,
+              [localeField]: localeNames
+            })
+          ).toStrictEqual(expected)
+        }
+      )
+
+      test('does not let a shorter "dd" name shadow the longer one it prefixes', async () => {
+        const { default: enUS } = await import('quasar/lang/en-US.js')
+        // "dd" shortens each day to two characters, so a one-character day
+        // name is the only way to get a prefix pair there
+        const days = [...enUS.date.days]
+        days[0] = 'A'
+        days[1] = 'Ab'
+
+        expect(
+          date.extractDate('2024-W01-Ab', 'GGGG-[W]ww-dd', {
+            ...enUS.date,
+            days
+          })
+        ).toStrictEqual(new Date(2024, 0, 1))
+      })
+
+      // shipped packs carrying a prefix pair, which is what makes the
+      // ordering observable: vi "Tháng Mười"/"Tháng Mười Hai" and "Th1"/"Th12",
+      // tr "Pazar"/"Pazartesi", az-Latn "Ç"/"Ç.E"
+      test.each(['YYYY MMMM', 'YYYY MMM'])(
+        'round-trips every vi month name through the %s mask',
+        async mask => {
+          const { default: lang } = await import('quasar/lang/vi.js')
+
+          for (let month = 0; month < 12; month++) {
+            const value = new Date(2023, month, 1)
+
+            expect(
+              date.extractDate(
+                date.formatDate(value, mask, lang.date),
+                mask,
+                lang.date
+              )
+            ).toStrictEqual(value)
+          }
+        }
+      )
+
+      test('round-trips every tr day name through a dddd mask', async () => {
+        const { default: lang } = await import('quasar/lang/tr.js')
+        const mask = 'GGGG-[W]ww-dddd'
+
+        for (let day = 2; day <= 8; day++) {
+          const value = new Date(2023, 0, day)
+
+          expect(
+            date.extractDate(
+              date.formatDate(value, mask, lang.date),
+              mask,
+              lang.date
+            )
+          ).toStrictEqual(value)
+        }
+      })
+
+      test('round-trips every az-Latn day name through a ddd mask', async () => {
+        const { default: lang } = await import('quasar/lang/az-Latn.js')
+        const mask = 'GGGG-[W]ww-ddd'
+
+        for (let day = 2; day <= 8; day++) {
+          const value = new Date(2023, 0, day)
+
+          expect(
+            date.extractDate(
+              date.formatDate(value, mask, lang.date),
+              mask,
+              lang.date
+            )
+          ).toStrictEqual(value)
+        }
+      })
     })
 
     describe('[(function)buildDate]', () => {
@@ -698,6 +912,21 @@ describe('[date API]', () => {
         expect(date.formatDate(value, 'YYYY YY X x', dateLocale, 42)).toBe(
           `42 42 ${Math.floor(value.getTime() / 1000)} ${value.getTime()}`
         )
+      })
+
+      test.each([
+        [new Date(2022, 0, 1), '2021-W52', '21'], // calendar year differs
+        [new Date(2024, 11, 30), '2025-W01', '25'], // next ISO year
+        [new Date(2024, 3, 8), '2024-W15', '24'] // mid-year
+      ])('formats the ISO week year of %o', (value, expected, expectedGG) => {
+        expect(date.formatDate(value, 'GGGG-[W]ww')).toBe(expected)
+        expect(date.formatDate(value, 'GG')).toBe(expectedGG)
+      })
+
+      test('applies a forced year to the ISO week year tokens', () => {
+        const value = new Date(2022, 0, 1)
+
+        expect(date.formatDate(value, 'GGGG GG', dateLocale, 42)).toBe('42 42')
       })
 
       test.each([

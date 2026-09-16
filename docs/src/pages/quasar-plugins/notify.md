@@ -39,9 +39,8 @@ setup () {
 
 <DocExample title="Basic" file="Basic" />
 
-::: tip
-If you define any actions, the notification will automatically be dismissed when the user picks it.
-:::
+> [!TIP]
+> If you define any actions, the notification will automatically be dismissed when the user picks it.
 
 ### With caption
 
@@ -67,9 +66,8 @@ If you define any actions, the notification will automatically be dismissed when
 
 <DocExample title="Positioning & different options" file="Positioning" />
 
-::: tip
-For a full list of options, check the API section.
-:::
+> [!TIP]
+> For a full list of options, check the API section.
 
 ### Grouping
 
@@ -166,6 +164,20 @@ dismiss()
 
 There are two ways of setting default configuration that will apply to all Notifications: through quasar.config file > framework > config > notify Object (see Installation section) or programmatically (see below).
 
+```js
+// quasar.config file
+framework: {
+  config: {
+    notify: {
+      // the config file cannot import components,
+      // so a spinner is referred to by its name
+      spinner: 'QSpinnerHourglass'
+      // ...other Notify options
+    }
+  }
+}
+```
+
 We'll describe setting the defaults through a [@quasar/app-vite Boot File](/quasar-cli-vite/boot-files) (works the same anywhere in your code, but a boot file ensures this is run before your app starts):
 
 First we create the boot file. Let's name it "notify-defaults.js".
@@ -201,9 +213,8 @@ Notify.setDefaults({
 })
 ```
 
-::: warning
-You can only set default `actions` through this method. Specifying `actions` with handlers in the `/quasar.config` file cannot and will NOT work.
-:::
+> [!WARNING]
+> You can only set default `actions` through this method. Specifying `actions` with handlers in the `/quasar.config` file cannot and will NOT work.
 
 We could also set the defaults in some Vue file:
 

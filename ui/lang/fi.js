@@ -15,6 +15,11 @@ export default {
     search: 'Etsi',
     filter: 'Suodata',
     refresh: 'Päivitä',
+    minimum: 'Minimi',
+    maximum: 'Maksimi',
+    range: 'Vaihteluväli',
+    noValue: 'Ei arvoa',
+    resize: 'Muuta kokoa',
     expand: label => (label ? `Laajenna "${label}"` : 'Laajentaa'),
     collapse: label => (label ? `Tiivistä "${label}"` : 'Romahdus')
   },
@@ -39,8 +44,12 @@ export default {
     prevYear: 'Edellinen vuosi',
     nextYear: 'Ensi vuonna',
     today: 'Tänään',
-    prevRangeYears: range => `Edellinen ${range} vuotta`,
-    nextRangeYears: range => `Seuraava ${range} vuotta`
+    prevRangeYears: range => `Edelliset ${range} vuotta`,
+    nextRangeYears: range => `Seuraavat ${range} vuotta`,
+    hour: 'Tunti',
+    minute: 'Minuutti',
+    second: 'Sekunti',
+    now: 'Nykyinen aika'
   },
   table: {
     noData: 'Ei tietoja',
@@ -51,15 +60,41 @@ export default {
     recordsPerPage: 'Rivejä sivulla:',
     allRows: 'Kaikki',
     pagination: (start, end, total) => start + '-' + end + ' / ' + total,
-    columns: 'Sarakkeet'
+    columns: 'Sarakkeet',
+    selectAllRows: 'Valitse kaikki rivit',
+    selectRow: 'Valitse rivi'
   },
   pagination: {
+    label: 'Sivutus',
     first: 'Ensimmäinen sivu',
     prev: 'Edellinen sivu',
     next: 'Seuraava sivu',
     last: 'Viimeinen sivu'
   },
+  carousel: {
+    prevSlide: 'Edellinen dia',
+    nextSlide: 'Seuraava dia'
+  },
+  colorPicker: {
+    spectrum: 'Spektri',
+    tune: 'Hienosäätö',
+    palette: 'Paletti',
+    value: 'Värin arvo',
+    hue: 'Sävy',
+    alpha: 'Peittävyys',
+    saturation: 'Kylläisyys',
+    brightness: 'Kirkkaus'
+  },
+  uploader: {
+    addFiles: 'Valitse tiedostot',
+    upload: 'Lähetä tiedostot',
+    abort: 'Keskeytä lähetys',
+    removeQueued: 'Poista jonossa olevat tiedostot',
+    removeUploaded: 'Poista lähetetyt tiedostot',
+    removeFile: 'Poista tiedosto'
+  },
   editor: {
+    toolbar: 'Editorin työkalupalkki',
     url: 'URL',
     bold: 'Lihavoitu',
     italic: 'Kursivoitu',

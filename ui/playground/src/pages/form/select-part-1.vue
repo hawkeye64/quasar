@@ -83,6 +83,56 @@
         multiple
       />
 
+      <div class="text-h6">Hover</div>
+
+      <q-select
+        v-bind="props"
+        v-model="stringSingle"
+        :options="stringOptions"
+        hover
+        label="Hover to open"
+      />
+
+      <q-select
+        v-bind="props"
+        v-model="stringSingle"
+        :options="stringOptions"
+        hover
+        :hover-delay="300"
+        :hover-hide-delay="600"
+        label="Hover with delays (300/600)"
+      />
+
+      <q-select
+        v-bind="props"
+        v-model="hoverFilterModel"
+        use-input
+        input-debounce="0"
+        :options="hoverFilterOptions"
+        hover
+        label="Hover with filter"
+        @filter="hoverFilterFn"
+      />
+
+      <q-select
+        v-bind="props"
+        v-model="stringSingle"
+        :options="stringOptions"
+        hover
+        :rules="[val => val === 'Oracle' || 'Pick Oracle']"
+        lazy-rules
+        label="Hover with lazy rules (no validation on hover-past)"
+      />
+
+      <q-select
+        v-bind="props"
+        v-model="stringSingle"
+        :options="stringOptions"
+        hover
+        behavior="dialog"
+        label="Hover with dialog behavior (no effect)"
+      />
+
       <div class="text-h6">
         Null model
         <q-btn outline color="negative" label="Reset" @click="resetNull" />
@@ -398,7 +448,7 @@
 
         <q-input
           class="col-2"
-          v-bind="props"
+          v-bind="inputProps"
           :model-value="stringSingle"
           @update:model-value="val => (stringSingle = val === null ? '' : val)"
           label="Input"
@@ -415,7 +465,7 @@
         />
 
         <q-input
-          v-bind="props"
+          v-bind="inputProps"
           :model-value="stringSingle"
           @update:model-value="val => (stringSingle = val === null ? '' : val)"
           label="Input"
@@ -466,7 +516,7 @@
         />
 
         <q-input
-          v-bind="props"
+          v-bind="inputProps"
           :model-value="stringSingle"
           @update:model-value="val => (stringSingle = val === null ? '' : val)"
           prefix="A"
@@ -551,6 +601,19 @@ const optionsCover = ref(false)
 const stringSingle = ref('Facebook')
 const stringMultiple = ref(['Facebook', 'Twitter'])
 const stringOptions = ref(['Google', 'Facebook', 'Twitter', 'Apple', 'Oracle'])
+
+const hoverFilterModel = ref(null)
+const hoverFilterOptions = ref(stringOptions.value)
+
+function hoverFilterFn(val, update) {
+  update(() => {
+    const needle = val.toLowerCase()
+    hoverFilterOptions.value =
+      val === ''
+        ? stringOptions.value
+        : stringOptions.value.filter(v => v.toLowerCase().includes(needle))
+  })
+}
 
 const objectSingle = ref({
   label: 'Facebook',
@@ -683,6 +746,17 @@ const props = computed(() => ({
   optionsCover: optionsCover.value,
   clearable: true
 }))
+
+// the q-inputs on this page share the design knobs, but the options-*
+// ones belong to QSelect alone and would end up as DOM attributes
+const inputProps = computed(() =>
+  Object.fromEntries(
+    Object.entries(props.value).filter(
+      ([key]) =>
+        ['optionsDense', 'optionsDark', 'optionsCover'].includes(key) === false
+    )
+  )
+)
 
 const dispVal = computed(() => {
   if (dispValSelection.value.length === 1) {

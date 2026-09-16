@@ -9,9 +9,10 @@
       icon="folder"
       label="Dropdown Button"
       @click="onMainClick"
+      toggle-aria-haspopup="menu"
     >
-      <q-list>
-        <q-item clickable v-close-popup @click="onItemClick">
+      <q-list role="menu">
+        <q-item v-close-popup @click="onItemClick">
           <q-item-section avatar>
             <q-avatar icon="folder" color="primary" text-color="white" />
           </q-item-section>
@@ -24,7 +25,7 @@
           </q-item-section>
         </q-item>
 
-        <q-item clickable v-close-popup @click="onItemClick">
+        <q-item v-close-popup @click="onItemClick">
           <q-item-section avatar>
             <q-avatar icon="assignment" color="secondary" text-color="white" />
           </q-item-section>

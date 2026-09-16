@@ -15,6 +15,11 @@ export default {
     search: "Sā'ili",
     filter: "Fa'amamā",
     refresh: "Fa'afou",
+    minimum: 'Minimum',
+    maximum: 'Maximum',
+    range: 'Range',
+    noValue: 'Leai se tau',
+    resize: "Suia le lapo'a",
     expand: label => (label ? `Fa'alautele "${label}"` : 'Faalautele'),
     collapse: label => (label ? `Pa'u "${label}"` : "Pa'u")
   },
@@ -37,7 +42,11 @@ export default {
     nextYear: 'I Le Vafuapalo',
     today: 'Le asō',
     prevRangeYears: range => `Talu ai ${range} tausaga`,
-    nextRangeYears: range => `Le isi ${range} tausaga`
+    nextRangeYears: range => `Le isi ${range} tausaga`,
+    hour: 'Itula',
+    minute: 'Minute',
+    second: 'Sekone',
+    now: 'Taimi nei'
   },
   table: {
     noData: "Lēai ni fa'amatalaga o maua",
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: "Laina 'i le ītūlau:",
     allRows: "Laina 'uma",
     pagination: (start, end, total) => start + '-' + end + ' o ' + total,
-    columns: 'Poutū'
+    columns: 'Poutū',
+    selectAllRows: 'Filifili laina uma',
+    selectRow: 'Filifili le laina'
   },
   pagination: {
+    label: 'Faasologa o itulau',
     first: 'Itulau muamua',
     prev: 'Itulau muamua',
     next: 'Isi Itulau',
     last: 'Itulau mulimuli'
   },
+  carousel: {
+    prevSlide: "Fa'aaliga muamua",
+    nextSlide: "Isi fa'aaliga"
+  },
+  colorPicker: {
+    spectrum: 'Vaega lanu',
+    tune: 'Fetuutuunai',
+    palette: 'Laulau lanu',
+    value: 'Tau o le lanu',
+    hue: 'Lanu',
+    alpha: 'Mafiafia o le lanu',
+    saturation: 'Malosi o le lanu',
+    brightness: 'Susulu o le lanu'
+  },
+  uploader: {
+    addFiles: 'Filifili faila',
+    upload: 'Lafo faila',
+    abort: 'Faalēaogāina le lafoina',
+    removeQueued: 'Aveese faila o faatali',
+    removeUploaded: 'Aveese faila ua lafo',
+    removeFile: 'Aveese le faila'
+  },
   editor: {
+    toolbar: 'Laina meafaigaluega',
     url: 'Tuātusi initaneti',
     bold: "Fa'aolaola",
     italic: "Fa'api'o",

@@ -15,6 +15,11 @@ export default {
     search: 'Buscar',
     filter: 'Filtrar',
     refresh: 'Recarregar',
+    minimum: 'Mínimo',
+    maximum: 'Máximo',
+    range: 'Intervalo',
+    noValue: 'Sem valor',
+    resize: 'Redimensionar',
     expand: label => (label ? `Expandir "${label}"` : 'Expandir'),
     collapse: label => (label ? `Recolher "${label}"` : 'Colapso')
   },
@@ -36,8 +41,12 @@ export default {
     prevYear: 'Ano passado',
     nextYear: 'Ano que vem',
     today: 'Hoje',
-    prevRangeYears: range => `Anterior ${range}  Anos`,
-    nextRangeYears: range => `Próximo ${range} Anos`
+    prevRangeYears: range => `${range} anos anteriores`,
+    nextRangeYears: range => `${range} anos seguintes`,
+    hour: 'Hora',
+    minute: 'Minuto',
+    second: 'Segundo',
+    now: 'Hora atual'
   },
   table: {
     noData: 'Sem dados disponíveis',
@@ -53,15 +62,41 @@ export default {
     recordsPerPage: 'Registros por página:',
     allRows: 'Todos',
     pagination: (start, end, total) => start + '-' + end + ' de ' + total,
-    columns: 'Colunas'
+    columns: 'Colunas',
+    selectAllRows: 'Selecionar todas as linhas',
+    selectRow: 'Selecionar linha'
   },
   pagination: {
+    label: 'Paginação',
     first: 'Primeira página',
     prev: 'Página anterior',
     next: 'Próxima página',
     last: 'Última página'
   },
+  carousel: {
+    prevSlide: 'Slide anterior',
+    nextSlide: 'Próximo slide'
+  },
+  colorPicker: {
+    spectrum: 'Espectro',
+    tune: 'Ajuste',
+    palette: 'Paleta',
+    value: 'Valor da cor',
+    hue: 'Matiz',
+    alpha: 'Opacidade',
+    saturation: 'Saturação',
+    brightness: 'Brilho'
+  },
+  uploader: {
+    addFiles: 'Escolher arquivos',
+    upload: 'Enviar arquivos',
+    abort: 'Cancelar o envio',
+    removeQueued: 'Remover arquivos na fila',
+    removeUploaded: 'Remover arquivos enviados',
+    removeFile: 'Remover arquivo'
+  },
   editor: {
+    toolbar: 'Barra de ferramentas do editor',
     url: 'URL',
     bold: 'Negrito',
     italic: 'Itálico',

@@ -7,6 +7,8 @@ import {
   mdiFormTextbox,
   mdiHumanMaleBoard,
   mdiImageSizeSelectSmall,
+  mdiPalette,
+  mdiRobotOutline,
   mdiTable
 } from '@quasar/extras/mdi-v7'
 
@@ -55,9 +57,19 @@ export const pagesToDiscover = [
     path: '/quasar-cli-vite/boot-files'
   },
   {
+    name: 'AI Agents',
+    icon: mdiRobotOutline,
+    path: '/start/ai-agents'
+  },
+  {
     name: 'Date Utils',
     icon: mdiCalendar,
     path: '/quasar-utils/date-utils'
+  },
+  {
+    name: 'Color Utils',
+    icon: mdiPalette,
+    path: '/quasar-utils/color-utils'
   },
   {
     name: 'Other Utils',

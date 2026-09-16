@@ -167,7 +167,10 @@ const rows = [
     highlight the sticky column on any browser window */
   max-width: 600px
 
-  td:first-child
+  /* the tbody:not() part keeps the td rules off the hidden
+    q-virtual-scroll__padding filler rows, should you also
+    enable virtual-scroll; styling those breaks scrolling */
+  tbody:not(.q-virtual-scroll__padding) td:first-child
     /* bg color is important for td; just specify one */
     background-color: #00b4ff
 
@@ -177,6 +180,8 @@ const rows = [
     z-index: 2
     /* bg color is important; just specify one */
     background: #00b4ff
+    /* covers any sub-pixel gap between sticky cells */
+    box-shadow: -1px 0 0 #00b4ff
 
   /* this will be the loading indicator */
   thead tr:last-child th
@@ -191,10 +196,12 @@ const rows = [
     /* highest z-index */
     z-index: 3
 
-  td:first-child
+  tbody:not(.q-virtual-scroll__padding) td:first-child
     z-index: 1
+    /* covers any sub-pixel gap between sticky cells */
+    box-shadow: 0 -1px 0 #00b4ff
 
-  td:first-child, th:first-child
+  tbody:not(.q-virtual-scroll__padding) td:first-child, th:first-child
     position: sticky
     left: 0
 

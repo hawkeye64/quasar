@@ -26,9 +26,8 @@ Scaffold your layout(s) by clicking on the button below.
 
 ## Usage
 
-::: tip
-Since the header and footer needs a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QHeader or QFooter.
-:::
+> [!TIP]
+> Since the header and footer needs a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QHeader or QFooter.
 
 <DocExample title="Basic" file="Basic" />
 
@@ -61,3 +60,9 @@ In the example below, you could use Ionicons icons (v4) with `ion-ios-` prefix f
 The example below is especially useful if you build an Electron app and you hide the default app frame.
 
 <DocExample title="Desktop app-like" file="AppLike" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QHeader and QFooter render real `<header>` and `<footer>` elements, so they are exposed to assistive technology as the banner and footer landmarks of your [QLayout](/layout/layout#accessibility) with no extra work. A header or footer hidden through its `v-model` also leaves the Tab order and the accessibility tree entirely, so nothing invisible stays reachable.
+
+One hidden by the `reveal` behavior is only translated off-screen instead; should keyboard focus land inside it (e.g. by tabbing), it reveals itself again, so focus never sits in an invisible bar.

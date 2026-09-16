@@ -3,6 +3,7 @@
     <img
       class="transition-list-box__ensure-img-loaded no-pointer-events absolute-bottom-left"
       src="/img/parallax1.jpg"
+      alt=""
     />
 
     <q-btn
@@ -18,13 +19,18 @@
         v-for="transition in transitions"
         :key="transition.name"
         class="transition-list-box relative-position overflow-hidden rounded-borders shadow-2 cursor-pointer non-selectable"
+        role="button"
+        tabindex="0"
+        :aria-label="`Play ${transition.name} transition`"
         @click="transition.trigger"
+        @keydown.enter.space.prevent="transition.trigger"
       >
         <transition :name="transition.css">
           <img
             class="transition-list-box__img absolute-full"
             :key="transition.name + '|' + transition.url"
             :src="transition.url"
+            :alt="`${transition.name} transition preview`"
           />
         </transition>
 
@@ -41,27 +47,13 @@
 <script setup>
 import { ref } from 'vue'
 
+import { transitionNames } from './transition-names.js'
+
 const urlFirst = '/img/parallax2.jpg'
 const urlSecond = '/img/parallax1.jpg'
 
 const transitions = ref(
-  [
-    'slide-right',
-    'slide-left',
-    'slide-up',
-    'slide-down',
-    'fade',
-    'scale',
-    'rotate',
-    'flip-right',
-    'flip-left',
-    'flip-up',
-    'flip-down',
-    'jump-right',
-    'jump-left',
-    'jump-up',
-    'jump-down'
-  ].map((name, index) => ({
+  transitionNames.map((name, index) => ({
     name,
     css: `q-transition--${name}`,
     url: urlFirst,

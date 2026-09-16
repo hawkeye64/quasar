@@ -19,16 +19,13 @@ Essentially QPageScroller is very similar to QPageSticky. Whereas a QPageSticky 
 
 ## Usage
 
-::: tip
-Since QPageScroller needs a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QPageScroller.
-:::
+> [!TIP]
+> Since QPageScroller needs a layout and QLayout by default manages the entire window, then for demoing purposes we are going to use containerized QLayouts. But remember that by no means you are required to use containerized QLayouts for QPageScroller.
 
-::: warning
-
-- In order for QPageScroller to work, it must be placed within a QLayout component.
-- QPageScroller must be the last child element within its parent, so it can display on top of other content
-
-:::
+> [!WARNING]
+>
+> - In order for QPageScroller to work, it must be placed within a QLayout component.
+> - QPageScroller must be the last child element within its parent, so it can display on top of other content
 
 ### Basic
 
@@ -41,3 +38,7 @@ Since QPageScroller needs a layout and QLayout by default manages the entire win
 ### Reverse
 
 <DocExample title="Reverse" file="Reverse" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QPageScroller itself is a plain clickable container with no role or keyboard handling of its own — keyboard operability comes entirely from what you put in its slot. Use a real button ([QBtn](/vue-components/button)) as the slot content, like the examples on this page do, so keyboard users can reach and activate it too.

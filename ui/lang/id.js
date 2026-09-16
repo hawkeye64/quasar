@@ -15,6 +15,11 @@ export default {
     search: 'Cari',
     filter: 'Saring',
     refresh: 'Segarkan',
+    minimum: 'Minimum',
+    maximum: 'Maksimum',
+    range: 'Rentang',
+    noValue: 'Tidak ada nilai',
+    resize: 'Ubah ukuran',
     expand: label => (label ? `Perluas "${label}"` : 'Mengembangkan'),
     collapse: label => (label ? `Ciutkan "${label}"` : 'Jatuh')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Tahun sebelumnya',
     nextYear: 'Tahun berikutnya',
     today: 'Hari ini',
-    prevRangeYears: range => `Sebelumnya ${range} tahun`,
-    nextRangeYears: range => `Berikutnya ${range} tahun`
+    prevRangeYears: range => `${range} tahun sebelumnya`,
+    nextRangeYears: range => `${range} tahun berikutnya`,
+    hour: 'Jam',
+    minute: 'Menit',
+    second: 'Detik',
+    now: 'Waktu saat ini'
   },
   table: {
     noData: 'Tidak ada data tersedia',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Baris per halaman:',
     allRows: 'Semua',
     pagination: (start, end, total) => start + '-' + end + ' dari ' + total,
-    columns: 'Kolom'
+    columns: 'Kolom',
+    selectAllRows: 'Pilih semua baris',
+    selectRow: 'Pilih baris'
   },
   pagination: {
+    label: 'Penomoran halaman',
     first: 'Halaman pertama',
     prev: 'Halaman sebelumnya',
     next: 'Halaman berikutnya',
     last: 'Halaman terakhir'
   },
+  carousel: {
+    prevSlide: 'Slide sebelumnya',
+    nextSlide: 'Slide berikutnya'
+  },
+  colorPicker: {
+    spectrum: 'Spektrum',
+    tune: 'Penyetelan',
+    palette: 'Palet',
+    value: 'Nilai warna',
+    hue: 'Rona',
+    alpha: 'Keburaman',
+    saturation: 'Saturasi',
+    brightness: 'Kecerahan'
+  },
+  uploader: {
+    addFiles: 'Pilih berkas',
+    upload: 'Unggah berkas',
+    abort: 'Batalkan unggahan',
+    removeQueued: 'Hapus berkas dalam antrean',
+    removeUploaded: 'Hapus berkas terunggah',
+    removeFile: 'Hapus berkas'
+  },
   editor: {
+    toolbar: 'Bilah alat penyunting',
     url: 'URL',
     bold: 'Tebal',
     italic: 'Miring',
@@ -64,8 +99,8 @@ export default {
     underline: 'Garis Bawah',
     unorderedList: 'Daftar tak Tersusun',
     orderedList: 'Daftar Tersusun',
-    subscript: 'Subscript',
-    superscript: 'Superscript',
+    subscript: 'Subskrip',
+    superscript: 'Superskrip',
     hyperlink: 'Hyperlink',
     toggleFullscreen: 'Alihkan Layar Penuh',
     quote: 'Kutip',
@@ -83,12 +118,12 @@ export default {
     hr: 'Masukkan Aturan Horizontal',
     undo: 'Urungkan',
     redo: 'Ulangi',
-    heading1: 'Heading 1',
-    heading2: 'Heading 2',
-    heading3: 'Heading 3',
-    heading4: 'Heading 4',
-    heading5: 'Heading 5',
-    heading6: 'Heading 6',
+    heading1: 'Tajuk 1',
+    heading2: 'Tajuk 2',
+    heading3: 'Tajuk 3',
+    heading4: 'Tajuk 4',
+    heading5: 'Tajuk 5',
+    heading6: 'Tajuk 6',
     paragraph: 'Paragraf',
     code: 'Kode',
     size1: 'Sangat Kecil',

@@ -7,6 +7,8 @@ import {
   ref
 } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
+
 import { createComponent } from '../../utils/private.create/create.js'
 import { between } from '../../utils/format/format.js'
 
@@ -29,7 +31,7 @@ function translate({ p, pos, active, horiz, reverse, dir }) {
       y = -1
     }
     return {
-      transform: `translate3d(${x * (p - 100)}%,${active ? 0 : y * -200}%,0)`
+      transform: `translate(${x * (p - 100)}%,${active ? 0 : y * -200}%)`
     }
   }
 
@@ -40,7 +42,7 @@ function translate({ p, pos, active, horiz, reverse, dir }) {
     x = -1
   }
   return {
-    transform: `translate3d(${active ? 0 : dir * x * -200}%,${y * (p - 100)}%,0)`
+    transform: `translate(${active ? 0 : dir * x * -200}%,${y * (p - 100)}%)`
   }
 }
 
@@ -133,6 +135,7 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { emit }) {
     const { proxy } = getCurrentInstance()
+    const $q = useQuasar()
 
     const progress = ref(0)
     const onScreen = ref(false)
@@ -163,10 +166,10 @@ export default /*#__PURE__*/ createComponent({
         active,
         horiz: horizontal.value,
         reverse:
-          proxy.$q.lang.rtl && ['top', 'bottom'].includes(props.position)
+          $q.lang.rtl && ['top', 'bottom'].includes(props.position)
             ? !props.reverse
             : props.reverse,
-        dir: proxy.$q.lang.rtl ? -1 : 1
+        dir: $q.lang.rtl ? -1 : 1
       })
 
       obj[sizeProp.value] = props.size

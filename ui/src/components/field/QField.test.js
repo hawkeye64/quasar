@@ -270,6 +270,24 @@ describe('[QField API]', () => {
 
         expect(wrapper.get('.q-field__messages').text()).toBe(propVal)
       })
+
+      test('animates a message swap but not the initial render', async () => {
+        const wrapper = mountField({ hint: 'Some hint' })
+        const getMessages = () => wrapper.get('.q-field__messages')
+
+        expect(getMessages().classes()).not.toContain(
+          'q-field__messages--animated'
+        )
+
+        await wrapper.setProps({ hint: 'Another hint' })
+
+        expect(getMessages().classes()).toContain('q-field__messages--animated')
+
+        await wrapper.setProps({ error: true, errorMessage: 'Some error' })
+
+        expect(getMessages().text()).toBe('Some error')
+        expect(getMessages().classes()).toContain('q-field__messages--animated')
+      })
     })
 
     describe('[(prop)hide-hint]', () => {
@@ -492,6 +510,13 @@ describe('[QField API]', () => {
 
         expect(wrapper.classes()).not.toContain('q-field--with-bottom')
         expect(getBottom(wrapper).classes()).toContain('q-field__bottom--stale')
+
+        // no message animation either
+        await wrapper.setProps({ hint: 'Another hint' })
+
+        expect(wrapper.get('.q-field__messages').classes()).not.toContain(
+          'q-field__messages--animated'
+        )
       })
     })
 
@@ -568,8 +593,41 @@ describe('[QField API]', () => {
         await flushPromises()
 
         expect(getNative(wrapper).attributes('data-autofocus')).toBe('true')
-        // the native wrapper is what carries the tabindex, so it takes focus
+        // the focus lands on the slotted control, not on its wrapper
+        expect(wrapper.get('.my-control').element).toBe(document.activeElement)
+      })
+
+      test('focuses the control bound to the slot id', async () => {
+        const wrapper = mountControlField({ autofocus: true }, ({ id }) => [
+          h('button', { class: 'decoy' }),
+          h('input', { id, class: 'my-input' })
+        ])
+        await flushPromises()
+
+        expect(wrapper.get('.my-input').element).toBe(document.activeElement)
+      })
+
+      test('falls back to the first focusable element of the slot', async () => {
+        const wrapper = mountControlField({ autofocus: true }, () => [
+          h('span', 'Decoration'),
+          h('input', { type: 'hidden' }),
+          h('input', { disabled: true }),
+          h('input', { style: 'display: none' }),
+          h('input', { class: 'my-input' })
+        ])
+        await flushPromises()
+
+        expect(wrapper.get('.my-input').element).toBe(document.activeElement)
+      })
+
+      test('keeps the focus on the wrapper when nothing is focusable', async () => {
+        const wrapper = mountControlField({ autofocus: true }, () =>
+          h('span', 'Decoration')
+        )
+        await flushPromises()
+
         expect(getNative(wrapper).element).toBe(document.activeElement)
+        expect(wrapper.classes()).toContain('q-field--focused')
       })
     })
 
@@ -780,6 +838,21 @@ describe('[QField API]', () => {
         // the field element is resolved on access, so it points at the root
         expect(slotScope.field).toBe(wrapper.element)
       })
+
+      test('forwards native focus on the wrapper to the control', async () => {
+        // this is the path taken by QForm/QDialog/QMenu autofocus and by
+        // clicking the field around the control
+        const wrapper = mountControlField({}, ({ id }) =>
+          h('input', { id, class: 'my-input' })
+        )
+
+        getNative(wrapper).element.focus()
+        await flushPromises()
+
+        expect(wrapper.get('.my-input').element).toBe(document.activeElement)
+        expect(wrapper.classes()).toContain('q-field--focused')
+        expect(wrapper.emitted('focus')).toHaveLength(1)
+      })
     })
   })
 
@@ -905,7 +978,7 @@ describe('[QField API]', () => {
         expect(wrapper.vm.focus()).toBeUndefined()
         await flushPromises()
 
-        expect(getNative(wrapper).element).toBe(document.activeElement)
+        expect(wrapper.get('.my-control').element).toBe(document.activeElement)
       })
     })
 
@@ -915,12 +988,12 @@ describe('[QField API]', () => {
 
         wrapper.vm.focus()
         await flushPromises()
-        expect(getNative(wrapper).element).toBe(document.activeElement)
+        expect(wrapper.get('.my-control').element).toBe(document.activeElement)
 
         expect(wrapper.vm.blur()).toBeUndefined()
         await flushPromises()
 
-        expect(getNative(wrapper).element).not.toBe(document.activeElement)
+        expect(wrapper.element.contains(document.activeElement)).toBe(false)
       })
     })
   })
@@ -967,6 +1040,28 @@ describe('[QField API]', () => {
       expect(slotScope.ariaInvalid).toBe('true')
       expect(slotScope.ariaDescribedby).toBe(messageId)
       expect(slotScope.ariaErrormessage).toBe(messageId)
+    })
+
+    test('reflects focus inside a readonly field, never inside a disabled one', async () => {
+      const readonly = mountControlField({ readonly: true })
+
+      readonly.get('.my-control').element.focus()
+      await flushPromises()
+
+      expect(readonly.classes()).toContain('q-field--focused')
+      expect(readonly.emitted('focus')).toHaveLength(1)
+
+      // a disabled field's own native control refuses focus; a custom
+      // control that still takes it must not light the field up
+      const disabled = mountControlField({ disable: true })
+      const control = disabled.get('.my-control').element
+
+      control.focus()
+      await flushPromises()
+
+      expect(document.activeElement).toBe(control)
+      expect(disabled.classes()).not.toContain('q-field--focused')
+      expect(disabled.emitted('focus')).toBeUndefined()
     })
   })
 })

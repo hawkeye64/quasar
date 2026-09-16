@@ -1,15 +1,22 @@
 <template>
   <div class="q-pa-md">
-    <q-btn-dropdown split color="cyan" push no-caps @click="onMainClick">
-      <template v-slot:label>
+    <q-btn-dropdown
+      split
+      color="cyan"
+      push
+      no-caps
+      @click="onMainClick"
+      toggle-aria-haspopup="menu"
+    >
+      <template #label>
         <div class="row items-center no-wrap">
           <q-icon left name="map" />
           <div class="text-center"> Custom<br />Content </div>
         </div>
       </template>
 
-      <q-list>
-        <q-item clickable v-close-popup @click="onItemClick">
+      <q-list role="menu">
+        <q-item v-close-popup @click="onItemClick">
           <q-item-section avatar>
             <q-avatar icon="folder" color="primary" text-color="white" />
           </q-item-section>
@@ -22,7 +29,7 @@
           </q-item-section>
         </q-item>
 
-        <q-item clickable v-close-popup @click="onItemClick">
+        <q-item v-close-popup @click="onItemClick">
           <q-item-section avatar>
             <q-avatar icon="assignment" color="secondary" text-color="white" />
           </q-item-section>

@@ -1,5 +1,6 @@
-import { computed, getCurrentInstance, h } from 'vue'
+import { computed, h } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -29,14 +30,14 @@ export default /*#__PURE__*/ createComponent({
   },
 
   setup(props, { slots }) {
-    const vm = getCurrentInstance()
-    const isDark = useDark(props, vm.proxy.$q)
+    const $q = useQuasar()
+    const isDark = useDark(props, $q)
 
     const classes = computed(
       () =>
         'q-markup-table q-table__container q-table__card' +
         ` q-table--${props.separator}-separator` +
-        (isDark.value ? ' q-table--dark q-table__card--dark q-dark' : '') +
+        (isDark() ? ' q-table--dark q-table__card--dark q-dark' : '') +
         (props.dense ? ' q-table--dense' : '') +
         (props.flat ? ' q-table--flat' : '') +
         (props.bordered ? ' q-table--bordered' : '') +
@@ -48,7 +49,10 @@ export default /*#__PURE__*/ createComponent({
       h(
         'div',
         {
-          class: classes.value
+          class: classes.value,
+          // horizontally scrollable region: keyboard users need a way in
+          // (WCAG 2.1.1)
+          tabindex: 0
         },
         [h('table', { class: 'q-table' }, hSlot(slots.default))]
       )

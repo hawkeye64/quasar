@@ -1,24 +1,44 @@
 <template>
-  <q-list class="doc-page__toc">
-    <q-item
+  <div ref="rootRef" class="doc-page__toc">
+    <a
       v-for="tocItem in docStore.state.value.toc"
       :key="tocItem.id"
       :id="`toc--${tocItem.id}`"
-      clickable
-      class="doc-layout__item"
-      active-class="doc-layout__item--active"
-      v-ripple
-      :active="docStore.state.value.activeToc === tocItem.id"
-      @click="tocItem.onClick"
+      :href="`#${tocItem.id}`"
+      class="doc-item"
+      @click.prevent="tocItem.onClick"
     >
-      <q-item-section v-if="tocItem.sub === true" side />
-      <q-item-section>{{ tocItem.title }}</q-item-section>
-    </q-item>
-  </q-list>
+      {{ tocItem.title }}
+    </a>
+  </div>
 </template>
 
 <script setup>
+import { onMounted, useTemplateRef, watch } from 'vue'
 import { useDocStore } from './store/index.js'
 
 const docStore = useDocStore()
+const rootRef = useTemplateRef('rootRef')
+
+// the active entry is marked on the DOM, not in the template: the server
+// cannot know the hash the page opens on, so a rendered class would
+// mismatch on hydration, and a scroll would re-render the whole list
+if (import.meta.env.QUASAR_CLIENT) {
+  let activeEl = null
+
+  onMounted(() => {
+    watch(
+      [() => docStore.state.value.toc, () => docStore.state.value.activeToc],
+      ([, id]) => {
+        activeEl?.classList.remove('doc-item--active')
+        activeEl =
+          id !== null ? rootRef.value.querySelector(`[id="toc--${id}"]`) : null
+        activeEl?.classList.add('doc-item--active')
+        // a long TOC scrolls on its own: keep the active entry in its view
+        activeEl?.scrollIntoView({ block: 'nearest' })
+      },
+      { immediate: true, flush: 'post' }
+    )
+  })
+}
 </script>

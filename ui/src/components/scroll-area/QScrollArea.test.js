@@ -687,4 +687,50 @@ describe('[QScrollArea API]', () => {
       })
     })
   })
+
+  describe('[Accessibility]', () => {
+    test('overflowing content gets a tab stop, non-overflowing does not', async () => {
+      // WCAG 2.1.1 wants the scrollable region keyboard-operable, but a tab
+      // stop on a region with nothing to scroll is only noise
+      const wrapper = mountScrollableArea()
+
+      expect(getContainer(wrapper).attributes('tabindex')).toBeUndefined()
+
+      await setupScrollableArea(wrapper)
+
+      expect(getContainer(wrapper).attributes('tabindex')).toBe('0')
+    })
+
+    test('an explicit tabindex still wins over the automatic one', async () => {
+      const wrapper = mountScrollableArea()
+      await setupScrollableArea(wrapper)
+
+      await wrapper.setProps({ tabindex: -1 })
+
+      expect(getContainer(wrapper).attributes('tabindex')).toBe('-1')
+    })
+  })
+
+  describe('[Generic]', () => {
+    test('vertical thumb sits on the left side in RTL', async () => {
+      // the RTL stylesheet flips the class-based bar to the left edge, so
+      // the thumb's inline side inset must flip with it (#17943)
+      const wrapper = mountScrollArea({
+        visible: true,
+        horizontalOffset: [10, 20]
+      })
+      await setupScrollableArea(wrapper)
+
+      wrapper.vm.$q.lang.rtl = true
+
+      try {
+        await nextTick()
+
+        expect(getVerticalThumb(wrapper).$style('left')).toBe('10px')
+        expect(getVerticalThumb(wrapper).$style('right')).toBe('')
+      } finally {
+        wrapper.vm.$q.lang.rtl = false
+      }
+    })
+  })
 })

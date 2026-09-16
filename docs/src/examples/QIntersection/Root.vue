@@ -10,7 +10,10 @@
           class="example-item"
         >
           <q-card flat bordered class="q-ma-sm">
-            <img src="https://cdn.quasar.dev/img/mountains.jpg" />
+            <img
+              alt="Mountains"
+              src="https://cdn.quasar.dev/img/mountains.jpg"
+            />
 
             <q-card-section>
               <div class="text-h6">Card #{{ index }}</div>
@@ -24,9 +27,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { useTemplateRef } from 'vue'
 
-const myListRef = ref(null)
+const myListRef = useTemplateRef('myListRef')
 </script>
 
 <style lang="sass" scoped>

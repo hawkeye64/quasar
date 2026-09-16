@@ -257,6 +257,61 @@ describe('[useValidate API]', () => {
         expect(innerLoading.value).toBe(false)
       })
 
+      test('a newer validation supersedes an older pending async one', async () => {
+        const resolvers = []
+        const { result, innerLoading } = mountValidate({
+          modelValue: 'x',
+          rules: [
+            () =>
+              new Promise(resolve => {
+                resolvers.push(resolve)
+              })
+          ]
+        })
+
+        const first = result.validate()
+        const second = result.validate()
+
+        // the newer one resolves first...
+        resolvers[1](true)
+        await expect(second).resolves.toBe(true)
+
+        expect(result.hasError.value).toBe(false)
+        expect(innerLoading.value).toBe(false)
+
+        // ...then the stale one fails; its verdict must not win
+        resolvers[0]('Stale failure')
+        await expect(first).resolves.toBe(false)
+
+        expect(result.hasError.value).toBe(false)
+        expect(result.errorMessage.value).toBeNull()
+      })
+
+      test('reports the first failing result among multiple async rules', async () => {
+        const { result } = mountValidate({
+          modelValue: 'x',
+          rules: [
+            () => Promise.resolve(true),
+            () => Promise.resolve('Second failed')
+          ]
+        })
+
+        await expect(result.validate()).resolves.toBe(false)
+
+        expect(result.errorMessage.value).toBe('Second failed')
+      })
+
+      test('a failing sync rule wins immediately over an earlier async one', () => {
+        const { result, innerLoading } = mountValidate({
+          modelValue: 'x',
+          rules: [() => new Promise(() => {}), () => 'Sync nope']
+        })
+
+        expect(result.validate()).toBe(false)
+        expect(result.errorMessage.value).toBe('Sync nope')
+        expect(innerLoading.value).toBe(false)
+      })
+
       test('clears everything on reset', () => {
         const { result, innerLoading } = mountValidate({
           modelValue: '',
@@ -354,6 +409,104 @@ describe('[useValidate API]', () => {
         expect(result.hasError.value).toBe(true)
       })
 
+      test('re-validates a lazy field on model change while an error is displayed (issue #17456)', async () => {
+        vi.useFakeTimers()
+        const { result, focused } = mountValidate({
+          modelValue: '',
+          rules: [requiredRule],
+          lazyRules: true
+        })
+
+        focused.value = true
+        await flushDebounce()
+        focused.value = false
+        await flushDebounce()
+
+        expect(result.hasError.value).toBe(true)
+
+        await wrapper.setProps({ modelValue: 'fixed' })
+        await flushDebounce()
+
+        expect(result.hasError.value).toBe(false)
+
+        // with the error cleared, the field is lazy again until the next blur
+        await wrapper.setProps({ modelValue: '' })
+        await flushDebounce()
+
+        expect(result.hasError.value).toBe(false)
+      })
+
+      test('clears an error produced by a QForm submit while typing (issue #17456)', async () => {
+        vi.useFakeTimers()
+        const { result } = mountValidate({
+          modelValue: '',
+          rules: [requiredRule],
+          lazyRules: true
+        })
+
+        // QForm's submit() calls validate() directly, without any blur
+        expect(result.validate()).toBe(false)
+        expect(result.hasError.value).toBe(true)
+
+        await wrapper.setProps({ modelValue: 'fixed' })
+        await flushDebounce()
+
+        expect(result.hasError.value).toBe(false)
+      })
+
+      test('the error prop alone does not make a lazy field validate on change', async () => {
+        vi.useFakeTimers()
+        const rule = vi.fn(() => true)
+        const { result } = mountValidate({
+          modelValue: '',
+          rules: [rule],
+          lazyRules: true,
+          error: true
+        })
+
+        await wrapper.setProps({ modelValue: 'typed' })
+        await flushDebounce()
+
+        expect(rule).not.toHaveBeenCalled()
+        expect(result.hasError.value).toBe(true)
+      })
+
+      test('enabling reactive-rules re-validates a dirty field immediately', async () => {
+        vi.useFakeTimers()
+        const { result } = mountValidate({
+          modelValue: 'x',
+          rules: [requiredRule],
+          lazyRules: true
+        })
+
+        // dirty the model without triggering the lazy field
+        await wrapper.setProps({ modelValue: '' })
+        await flushDebounce()
+        expect(result.hasError.value).toBe(false)
+
+        await wrapper.setProps({ reactiveRules: true })
+        await flushDebounce()
+
+        expect(result.hasError.value).toBe(true)
+      })
+
+      test('keeps on-demand rules manual even while an error is displayed', async () => {
+        vi.useFakeTimers()
+        const { result } = mountValidate({
+          modelValue: '',
+          rules: [requiredRule],
+          lazyRules: 'ondemand'
+        })
+
+        expect(result.validate()).toBe(false)
+        expect(result.hasError.value).toBe(true)
+
+        await wrapper.setProps({ modelValue: 'fixed' })
+        await flushDebounce()
+
+        expect(result.hasError.value).toBe(true)
+      })
+
       test('never auto-validates on-demand rules', async () => {
         vi.useFakeTimers()
         const { result, focused } = mountValidate({
@@ -383,6 +536,206 @@ describe('[useValidate API]', () => {
         await flushDebounce()
 
         expect(result.hasError.value).toBe(false)
+      })
+
+      test('reset cancels a pending debounced validation', async () => {
+        vi.useFakeTimers()
+        const rule = vi.fn(() => false)
+        const { result } = mountValidate({ modelValue: 'x', rules: [rule] })
+
+        await wrapper.setProps({ modelValue: 'y' })
+        result.resetValidation()
+        await flushDebounce()
+
+        expect(rule).not.toHaveBeenCalled()
+        expect(result.hasError.value).toBe(false)
+      })
+
+      test('unmounting cancels a pending debounced validation', async () => {
+        vi.useFakeTimers()
+        const rule = vi.fn(() => false)
+        mountValidate({ modelValue: 'x', rules: [rule] })
+
+        await wrapper.setProps({ modelValue: 'y' })
+        wrapper.unmount()
+        wrapper = void 0
+        await flushDebounce()
+
+        expect(rule).not.toHaveBeenCalled()
+      })
+
+      test('a disabled field ignores model changes', async () => {
+        vi.useFakeTimers()
+        const rule = vi.fn(() => false)
+        const { result } = mountValidate({
+          modelValue: 'x',
+          rules: [rule],
+          disable: true
+        })
+
+        await wrapper.setProps({ modelValue: 'y' })
+        await flushDebounce()
+
+        expect(rule).not.toHaveBeenCalled()
+        expect(result.hasError.value).toBe(false)
+      })
+
+      test('re-validates when the model changed during a pending async validation', async () => {
+        vi.useFakeTimers()
+        const resolvers = []
+        const rule = vi.fn(
+          val =>
+            new Promise(resolve => {
+              resolvers.push({ val, resolve })
+            })
+        )
+        const { result } = mountValidate({ modelValue: 'a', rules: [rule] })
+
+        await wrapper.setProps({ modelValue: 'bad' })
+        await flushDebounce()
+        expect(rule).toHaveBeenCalledTimes(1)
+
+        // the user keeps typing while the validation is in flight
+        await wrapper.setProps({ modelValue: 'good' })
+        await flushDebounce()
+        expect(rule).toHaveBeenCalledTimes(1)
+
+        // once it settles, the missed change gets validated too
+        resolvers[0].resolve('Invalid')
+        await flushDebounce()
+        await flushDebounce()
+
+        expect(rule).toHaveBeenCalledTimes(2)
+        expect(resolvers[1].val).toBe('good')
+
+        resolvers[1].resolve(true)
+        await flushDebounce()
+
+        expect(result.hasError.value).toBe(false)
+      })
+
+      test('honors a blur that happened during a pending async validation', async () => {
+        vi.useFakeTimers()
+        const resolvers = []
+        const rule = vi.fn(
+          val =>
+            new Promise(resolve => {
+              resolvers.push({ val, resolve })
+            })
+        )
+        const { result, focused } = mountValidate({
+          modelValue: 'ok',
+          rules: [rule],
+          lazyRules: true
+        })
+
+        focused.value = true
+        await flushDebounce()
+
+        // a QForm-style validation starts while the user is editing
+        result.validate()
+        await wrapper.setProps({ modelValue: '' })
+        focused.value = false
+        await flushDebounce()
+        expect(rule).toHaveBeenCalledTimes(1)
+
+        // the old value was valid, but the blurred one must still be checked
+        resolvers[0].resolve(true)
+        await flushDebounce()
+        await flushDebounce()
+
+        expect(rule).toHaveBeenCalledTimes(2)
+        expect(resolvers[1].val).toBe('')
+
+        resolvers[1].resolve('Required')
+        await flushDebounce()
+
+        expect(result.hasError.value).toBe(true)
+        expect(result.errorMessage.value).toBe('Required')
+      })
+
+      test('does not re-validate when the async settle arrives after unmount', async () => {
+        vi.useFakeTimers()
+        const resolvers = []
+        const rule = vi.fn(
+          () =>
+            new Promise(resolve => {
+              resolvers.push(resolve)
+            })
+        )
+        mountValidate({ modelValue: 'a', rules: [rule] })
+
+        await wrapper.setProps({ modelValue: 'bad' })
+        await flushDebounce()
+        await wrapper.setProps({ modelValue: 'good' })
+        await flushDebounce()
+
+        wrapper.unmount()
+        wrapper = void 0
+
+        resolvers[0]('Invalid')
+        await flushDebounce()
+        await flushDebounce()
+
+        expect(rule).toHaveBeenCalledTimes(1)
+      })
+
+      test('a lazy field without an error or blur stays lazy across an async settle', async () => {
+        vi.useFakeTimers()
+        const resolvers = []
+        const rule = vi.fn(
+          () =>
+            new Promise(resolve => {
+              resolvers.push(resolve)
+            })
+        )
+        const { result } = mountValidate({
+          modelValue: 'ok',
+          rules: [rule],
+          lazyRules: true
+        })
+
+        result.validate()
+        await wrapper.setProps({ modelValue: 'changed' })
+        await flushDebounce()
+
+        resolvers[0](true)
+        await flushDebounce()
+        await flushDebounce()
+
+        // clean verdict, no blur: the changed model waits for the next blur
+        expect(rule).toHaveBeenCalledTimes(1)
+        expect(result.hasError.value).toBe(false)
+      })
+
+      test('on-demand rules never revalidate after an async settle', async () => {
+        vi.useFakeTimers()
+        const resolvers = []
+        const rule = vi.fn(
+          () =>
+            new Promise(resolve => {
+              resolvers.push(resolve)
+            })
+        )
+        const { result, focused } = mountValidate({
+          modelValue: 'ok',
+          rules: [rule],
+          lazyRules: 'ondemand'
+        })
+
+        result.validate()
+        await wrapper.setProps({ modelValue: 'changed' })
+        focused.value = true
+        await flushDebounce()
+        focused.value = false
+        await flushDebounce()
+
+        resolvers[0]('Invalid')
+        await flushDebounce()
+        await flushDebounce()
+
+        expect(rule).toHaveBeenCalledTimes(1)
+        expect(result.hasError.value).toBe(true)
       })
 
       test('re-validates a dirty field when the rules change reactively', async () => {

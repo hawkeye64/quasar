@@ -111,15 +111,79 @@ describe('[StepHeader API]', () => {
         expect(getIconName()).toBe('circle')
       })
 
-      test('renders the prefix instead of a disabled icon', () => {
-        mountStepHeader({
-          stepper: { modelValue: 'first', activeIcon: 'none' },
-          step: { prefix: '1' }
-        })
+      test.each([
+        [
+          'stepper-level active',
+          { modelValue: 'first', activeIcon: 'none' },
+          {}
+        ],
+        ['step-level active', { modelValue: 'first' }, { activeIcon: 'none' }],
+        [
+          'stepper-level error',
+          { modelValue: 'other', errorIcon: 'none' },
+          { error: true }
+        ],
+        [
+          'step-level error',
+          { modelValue: 'other' },
+          { error: true, errorIcon: 'none' }
+        ],
+        [
+          'stepper-level done',
+          { modelValue: 'other', doneIcon: 'none' },
+          { done: true }
+        ],
+        [
+          'step-level done',
+          { modelValue: 'other' },
+          { done: true, doneIcon: 'none' }
+        ],
+        [
+          'active erroring',
+          { modelValue: 'first', activeIcon: 'none' },
+          { error: true }
+        ],
+        [
+          'active done',
+          { modelValue: 'first', activeIcon: 'none' },
+          { done: true }
+        ],
+        [
+          'erroring done',
+          { modelValue: 'other', errorIcon: 'none' },
+          { error: true, done: true }
+        ]
+      ])(
+        'renders the prefix instead of a disabled %s icon',
+        (_, stepper, step) => {
+          mountStepHeader({ stepper, step: { prefix: '1', ...step } })
 
-        expect(wrapper.findComponent(QIcon).exists()).toBe(false)
-        expect(wrapper.get('.q-stepper__dot').text()).toBe('1')
-      })
+          expect(wrapper.findComponent(QIcon).exists()).toBe(false)
+          expect(wrapper.get('.q-stepper__dot').text()).toBe('1')
+        }
+      )
+
+      test.each([
+        [
+          'error',
+          { modelValue: 'first', errorIcon: 'none' },
+          { error: true },
+          'edit'
+        ],
+        [
+          'done',
+          { modelValue: 'other', doneIcon: 'none' },
+          { error: true, done: true },
+          'warning'
+        ]
+      ])(
+        'ignores a disabled %s icon when a higher priority state wins',
+        (_, stepper, step, expected) => {
+          mountStepHeader({ stepper, step: { prefix: '1', ...step } })
+
+          expect(getIconName()).toBe(expected)
+        }
+      )
 
       test('prefers the icon over the prefix', () => {
         mountStepHeader({ step: { prefix: '1' } })
@@ -154,16 +218,30 @@ describe('[StepHeader API]', () => {
       })
 
       test.each([
-        ['icon', {}, 'q-stepper__tab--error-with-icon'],
-        ['prefix', { prefix: '1' }, 'q-stepper__tab--error-with-prefix']
-      ])('marks an erroring step rendered with an %s', (_, step, className) => {
-        mountStepHeader({
-          stepper: { modelValue: 'other', errorIcon: 'none' },
-          step: { error: true, ...step }
-        })
+        ['icon', {}, {}, 'q-stepper__tab--error-with-icon'],
+        [
+          'prefix',
+          { errorIcon: 'none' },
+          { prefix: '1' },
+          'q-stepper__tab--error-with-prefix'
+        ],
+        [
+          'prefix while active',
+          { modelValue: 'first', activeIcon: 'none' },
+          { prefix: '1' },
+          'q-stepper__tab--error-with-prefix'
+        ]
+      ])(
+        'marks an erroring step rendered with an %s',
+        (_, stepper, step, className) => {
+          mountStepHeader({
+            stepper: { modelValue: 'other', ...stepper },
+            step: { error: true, ...step }
+          })
 
-        expect(wrapper.classes()).toContain(className)
-      })
+          expect(wrapper.classes()).toContain(className)
+        }
+      )
 
       test('does not consider a disabled step as done', () => {
         mountStepHeader({
@@ -350,6 +428,39 @@ describe('[StepHeader API]', () => {
         expect(focus).toHaveBeenCalledExactlyOnceWith({ preventScroll: true })
         expect(goToPanel).toHaveBeenCalledOnce()
       })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('announces a disabled header as an unavailable button', async () => {
+      const { goToPanel } = mountStepHeader({
+        stepper: { modelValue: 'other', headerNav: true },
+        step: { name: 'second', disable: true }
+      })
+
+      // same shape as QBtn/QChip: still perceivable as a control, just not
+      // operable - dropping the role would leave it as plain text
+      expect(wrapper.attributes('role')).toBe('button')
+      expect(wrapper.attributes('aria-disabled')).toBe('true')
+      expect(wrapper.attributes('tabindex')).toBe('-1')
+
+      await wrapper.trigger('click')
+      await wrapper.trigger('keyup', { keyCode: 13 })
+
+      expect(goToPanel).not.toHaveBeenCalled()
+    })
+
+    test.each([
+      ['the stepper offers no header navigation', {}, {}],
+      ['the step opts out of it', { headerNav: true }, { headerNav: false }]
+    ])('claims no role when %s', (_, stepper, step) => {
+      mountStepHeader({
+        stepper: { modelValue: 'other', ...stepper },
+        step: { name: 'second', ...step }
+      })
+
+      expect(wrapper.attributes('role')).toBeUndefined()
+      expect(wrapper.attributes('aria-disabled')).toBeUndefined()
     })
   })
 })

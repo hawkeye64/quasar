@@ -1,7 +1,7 @@
 ---
-title: Touch Repeat Directive
+title: v-touch-repeat directive
 desc: Vue directive which triggers an event at specified intervals of time while the user touches and holds on a component or element.
-keys: touch-repeat
+keys: touch-repeat,v-touch-repeat
 examples: TouchRepeat
 related:
   - /vue-directives/touch-swipe
@@ -72,6 +72,16 @@ When you want to inhibit TouchRepeat, you can do so by stopping propagation of t
 
 However, if you are using `capture`, `mouseCapture` or `keyCapture` modifiers then events will first reach the TouchRepeat directive then the inner content, so TouchRepeat will still trigger.
 
-## Note on HMR
+### Events after TouchRepeat triggers
 
-Due to performance reasons, not all of the modifiers are reactive. Some require a window/page/component refresh to get updated. Please check the API card for the modifiers which are not marked as reactive.
+Once at least one repetition has fired, the directive consumes the event that ends the gesture, so that a press and hold does not also count as a tap, as a click or as a key press, be it on the element itself or on any of its parents. For touch events this is `touchend`, for mouse events it is `click` and for key events it is `keyup`.
+
+This means that a `@touchend` listener on the element will not be called after TouchRepeat has started repeating. It is still called when the user lifts the finger before the first repetition. Should you need it in both cases, listen for it in the capture phase:
+
+```html
+<div v-touch-repeat="myHandler" @touchend.capture="userHasLifted">
+  <!-- ...content -->
+</div>
+```
+
+The `click` and `keyup` events are stopped at the document level, before they can reach your element, so the capture phase does not help there. Mouse events are otherwise unaffected: `@mousedown` and `@mouseup` are always called, only the subsequent `@click` is suppressed.

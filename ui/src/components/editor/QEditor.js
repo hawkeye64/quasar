@@ -6,12 +6,19 @@ import {
   onBeforeUnmount,
   onMounted,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
 import Caret from './editor-caret.js'
-import { getFonts, getLinkEditor, getToolbar } from './editor-utils.js'
+import {
+  dropdownContentClass,
+  getFonts,
+  getLinkEditor,
+  getToolbar
+} from './editor-utils.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
@@ -31,6 +38,8 @@ import { addFocusFn } from '../../utils/private.focus/focus-manager.js'
 
 export default /*#__PURE__*/ createComponent({
   name: 'QEditor',
+
+  inheritAttrs: false,
 
   props: {
     ...useDarkProps,
@@ -70,6 +79,10 @@ export default /*#__PURE__*/ createComponent({
     toolbarPush: Boolean,
     toolbarRounded: Boolean,
 
+    dropdownHover: Boolean,
+    dropdownHoverDelay: Number,
+    dropdownHoverHideDelay: Number,
+
     paragraphTag: {
       type: String,
       validator: v => ['div', 'p'].includes(v),
@@ -99,19 +112,24 @@ export default /*#__PURE__*/ createComponent({
     'linkHide'
   ],
 
-  setup(props, { slots, emit }) {
+  setup(props, { slots, emit, attrs }) {
     const { proxy } = getCurrentInstance()
-    const { $q } = proxy
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
     const { inFullscreen, toggleFullscreen } = useFullscreen()
     const splitAttrs = useSplitAttrs()
 
-    const rootRef = ref(null)
-    const contentRef = ref(null)
+    const rootRef = shallowRef(null)
+    const contentRef = shallowRef(null)
 
     const editLinkUrl = ref(null)
     const isViewingSource = ref(false)
+
+    // flat index of the toolbar's roving Tab stop; the effective stop is
+    // resolved at render time (see getToolbar()), so a stale index -- the
+    // control got disabled or filtered out -- heals itself
+    const toolbarTabStop = ref(null)
 
     const editable = computed(() => !props.readonly && !props.disable)
 
@@ -405,43 +423,46 @@ export default /*#__PURE__*/ createComponent({
           : buttonDef.value
 
       return props.toolbar.map(group =>
-        group.map(token => {
-          if (token.options) {
-            return {
-              type: 'dropdown',
-              icon: token.icon,
-              label: token.label,
-              size: 'sm',
-              dense: true,
-              fixedLabel: token.fixedLabel,
-              fixedIcon: token.fixedIcon,
-              highlight: token.highlight,
-              list: token.list,
-              // an unknown option is ignored, the same way that
-              // an unknown plain token is
-              options: token.options
-                .map(item => def[item])
-                .filter(item => item !== void 0)
+        // drop holes/undefined tokens (stray comma in the definition) #16940
+        group
+          .filter(token => token !== void 0)
+          .map(token => {
+            if (token.options) {
+              return {
+                type: 'dropdown',
+                icon: token.icon,
+                label: token.label,
+                size: 'sm',
+                dense: true,
+                fixedLabel: token.fixedLabel,
+                fixedIcon: token.fixedIcon,
+                highlight: token.highlight,
+                list: token.list,
+                // an unknown option is ignored, the same way that
+                // an unknown plain token is
+                options: token.options
+                  .map(item => def[item])
+                  .filter(item => item !== void 0)
+              }
             }
-          }
 
-          const obj = def[token]
+            const obj = def[token]
 
-          if (obj) {
-            return obj.type === 'no-state' ||
-              (userDef[token] &&
-                (obj.cmd === void 0 ||
-                  (buttonDef.value[obj.cmd] &&
-                    buttonDef.value[obj.cmd].type === 'no-state')))
-              ? obj
-              : { type: 'toggle', ...obj }
-          }
+            if (obj) {
+              return obj.type === 'no-state' ||
+                (userDef[token] &&
+                  (obj.cmd === void 0 ||
+                    (buttonDef.value[obj.cmd] &&
+                      buttonDef.value[obj.cmd].type === 'no-state')))
+                ? obj
+                : { type: 'toggle', ...obj }
+            }
 
-          return {
-            type: 'slot',
-            slot: token
-          }
-        })
+            return {
+              type: 'slot',
+              slot: token
+            }
+          })
       )
     })
 
@@ -456,6 +477,7 @@ export default /*#__PURE__*/ createComponent({
       runCmd,
       isViewingSource,
       editLinkUrl,
+      toolbarTabStop,
       toolbarBackgroundClass,
       buttonProps,
       contentRef,
@@ -520,12 +542,12 @@ export default /*#__PURE__*/ createComponent({
     const classes = computed(
       () =>
         `q-editor q-editor--${isViewingSource.value ? 'source' : 'default'}` +
-        (props.disable ? ' disabled' : '') +
+        (props.disable ? ' q-editor--disabled' : '') +
         (inFullscreen.value ? ' fullscreen column' : '') +
         (props.square ? ' q-editor--square no-border-radius' : '') +
         (props.flat ? ' q-editor--flat' : '') +
         (props.dense ? ' q-editor--dense' : '') +
-        (isDark.value ? ' q-editor--dark q-dark' : '')
+        (isDark() ? ' q-editor--dark q-dark' : '')
     )
 
     const innerClass = computed(() => [
@@ -533,13 +555,32 @@ export default /*#__PURE__*/ createComponent({
       'q-editor__content',
       {
         col: inFullscreen.value,
-        'overflow-auto': inFullscreen.value || props.maxHeight
+        'overflow-auto': inFullscreen.value || props.maxHeight,
+        disabled: props.disable
       }
     ])
 
-    const attributes = computed(() =>
-      props.disable ? { 'aria-disabled': 'true' } : {}
-    )
+    const contentAttributes = computed(() => {
+      const acc = {
+        role: 'textbox',
+        'aria-multiline': 'true'
+      }
+
+      if (props.placeholder !== void 0) {
+        acc['aria-placeholder'] = props.placeholder
+      }
+
+      if (props.readonly) {
+        acc['aria-readonly'] = 'true'
+      }
+
+      if (props.disable) {
+        acc['aria-disabled'] = 'true'
+      }
+
+      // consumer-supplied attributes (aria-label, id, ...) win
+      return Object.assign(acc, splitAttrs.attributes.value)
+    })
 
     function onInput() {
       if (contentRef.value !== null) {
@@ -556,7 +597,7 @@ export default /*#__PURE__*/ createComponent({
     function onKeydown(e) {
       emit('keydown', e)
 
-      if (!e.ctrlKey || shouldIgnoreKey(e)) {
+      if (!e.ctrlKey || e.defaultPrevented || shouldIgnoreKey(e)) {
         refreshToolbar()
         return
       }
@@ -594,13 +635,27 @@ export default /*#__PURE__*/ createComponent({
       emit('focus', e)
     }
 
+    /**
+     * Tells a real focus change apart from focus merely travelling between
+     * the editor and one of its own toolbar dropdowns: those render their
+     * menu through a portal, so the DOM alone reports them as elsewhere.
+     */
+    function movedOutside(el) {
+      const root = rootRef.value
+
+      return (
+        el === null ||
+        (!root.contains(el) && !el.closest?.(`.${dropdownContentClass}`))
+      )
+    }
+
     function onFocusin(e) {
       const root = rootRef.value
 
       if (
         root !== null &&
         root.contains(e.target) &&
-        (e.relatedTarget === null || !root.contains(e.relatedTarget))
+        movedOutside(e.relatedTarget)
       ) {
         const prop = `inner${isViewingSource.value ? 'Text' : 'HTML'}`
         eVm.caret.restorePosition(contentRef.value[prop].length)
@@ -614,7 +669,7 @@ export default /*#__PURE__*/ createComponent({
       if (
         root !== null &&
         root.contains(e.target) &&
-        (e.relatedTarget === null || !root.contains(e.relatedTarget))
+        movedOutside(e.relatedTarget)
       ) {
         eVm.caret.savePosition()
         refreshToolbar()
@@ -623,6 +678,57 @@ export default /*#__PURE__*/ createComponent({
 
     function onPointerStart() {
       offsetBottom = void 0
+    }
+
+    function onToolbarFocusin(e) {
+      const control = e.target.closest?.('[data-tbi]')
+
+      if (control) {
+        const index = Number(control.dataset.tbi)
+        if (toolbarTabStop.value !== index) {
+          toolbarTabStop.value = index
+        }
+      }
+    }
+
+    // WAI-ARIA toolbar pattern: Left/Right arrows (mirrored in RTL) move
+    // between the toolbar's controls, Home/End jump to its edges
+    function onToolbarKeydown(e) {
+      const { keyCode } = e
+
+      if (keyCode < 35 || keyCode > 39 || keyCode === 38 || keyCode === 40) {
+        return
+      }
+
+      // leave slot-provided content alone
+      if (!e.target.closest?.('[data-tbi]')) return
+
+      const controls = Array.prototype.filter.call(
+        e.currentTarget.querySelectorAll('[data-tbi]'),
+        el => !el.matches('[aria-disabled="true"], [disabled]')
+      )
+
+      const len = controls.length
+      if (len === 0) return
+
+      let control
+
+      if (keyCode === 36) {
+        // HOME key
+        control = controls[0]
+      } else if (keyCode === 35) {
+        // END key
+        control = controls[len - 1]
+      } else {
+        const dir =
+          (keyCode === 37 /* ARROW LEFT */ ? -1 : 1) * ($q.lang.rtl ? -1 : 1)
+        const index =
+          (controls.indexOf(e.target.closest('[data-tbi]')) + dir + len) % len
+        control = controls[index]
+      }
+
+      stopAndPrevent(e)
+      control.focus({ preventScroll: true })
     }
 
     function onSelectionchange() {
@@ -714,7 +820,11 @@ export default /*#__PURE__*/ createComponent({
               key: 'qedt_top',
               class:
                 'q-editor__toolbar row no-wrap scroll-x' +
-                toolbarBackgroundClass.value
+                toolbarBackgroundClass.value,
+              role: 'toolbar',
+              'aria-label': $q.lang.editor.toolbar,
+              onFocusin: onToolbarFocusin,
+              onKeydown: onToolbarKeydown
             },
             getToolbar(eVm)
           )
@@ -739,7 +849,9 @@ export default /*#__PURE__*/ createComponent({
           'div',
           {
             key: 'toolbar_ctainer',
-            class: 'q-editor__toolbars-container'
+            class:
+              'q-editor__toolbars-container' +
+              (props.disable ? ' disabled' : '')
           },
           bars
         )
@@ -749,9 +861,8 @@ export default /*#__PURE__*/ createComponent({
         'div',
         {
           ref: rootRef,
-          class: classes.value,
-          style: { height: inFullscreen.value ? '100%' : null },
-          ...attributes.value,
+          class: [classes.value, attrs.class],
+          style: [{ height: inFullscreen.value ? '100%' : null }, attrs.style],
           onFocusin,
           onFocusout
         },
@@ -763,7 +874,7 @@ export default /*#__PURE__*/ createComponent({
             style: innerStyle.value,
             class: innerClass.value,
             contenteditable: editable.value,
-            placeholder: props.placeholder,
+            ...contentAttributes.value,
             ...(renderInitialContent ? { innerHTML: props.modelValue } : {}),
             ...splitAttrs.listeners.value,
             onInput,

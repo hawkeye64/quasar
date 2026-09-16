@@ -11,6 +11,7 @@ import {
   withDirectives
 } from 'vue'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useHistory from '../../composables/private.use-history/use-history.js'
 import useModelToggle, {
   useModelToggleEmits,
@@ -26,7 +27,11 @@ import TouchPan from '../../directives/touch-pan/TouchPan.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { between } from '../../utils/format/format.js'
-import { hDir, hSlot } from '../../utils/private.render/render.js'
+import {
+  addEscapeKey,
+  removeEscapeKey
+} from '../../utils/private.keyboard/escape-key.js'
+import { hSlot } from '../../utils/private.render/render.js'
 import {
   emptyRenderFn,
   layoutKey
@@ -90,13 +95,11 @@ export default /*#__PURE__*/ createComponent({
     noSwipeBackdrop: Boolean
   },
 
-  emits: [...useModelToggleEmits, 'onLayout', 'miniState'],
+  emits: [...useModelToggleEmits, 'onLayout', 'miniState', 'escapeKey', 'pan'],
 
   setup(props, { slots, emit, attrs }) {
     const vm = getCurrentInstance()
-    const {
-      proxy: { $q }
-    } = vm
+    const $q = useQuasar()
 
     const isDark = useDark(props, $q)
     const { preventBodyScroll } = usePreventScroll()
@@ -153,7 +156,8 @@ export default /*#__PURE__*/ createComponent({
 
       if (belowBreakpoint.value) {
         const otherInstance = $layout.instances[otherSide.value]
-        if (otherInstance?.belowBreakpoint === true) {
+        // the layout holds the raw instance, so this is the ref itself
+        if (otherInstance?.belowBreakpoint.value) {
           otherInstance.hide(false)
         }
 
@@ -201,6 +205,28 @@ export default /*#__PURE__*/ createComponent({
       hide,
       hideOnRouteChange
     )
+
+    // In its modal state (below breakpoint or shown overlay) the drawer is
+    // dismissed through pointer-only paths (backdrop click, swipe); WCAG
+    // asks for a keyboard path as well, so ESCAPE closes it -- under the
+    // same conditions, non-persistent only (mobile keeps the back button
+    // through the History plugin)
+    const escapeState = computed(() => showing.value && hideOnRouteChange.value)
+
+    function onEscapeKey(evt) {
+      emit('escapeKey')
+      hide(evt)
+    }
+
+    function applyEscapeKey(val) {
+      // a watcher only fires on value changes, so add/remove
+      // strictly alternate and can never double-register
+      if (val) {
+        addEscapeKey(onEscapeKey)
+      } else {
+        removeEscapeKey(onEscapeKey)
+      }
+    }
 
     const instance = {
       belowBreakpoint,
@@ -276,7 +302,7 @@ export default /*#__PURE__*/ createComponent({
 
     const style = computed(() => {
       const acc = {
-        width: `${size.value}px`,
+        '--q-drawer-width': `${size.value}px`,
         transform: `translateX(${flagContentPosition.value}px)`
       }
 
@@ -294,7 +320,7 @@ export default /*#__PURE__*/ createComponent({
         `q-drawer q-drawer--${props.side}` +
         (flagMiniAnimate.value ? ' q-drawer--mini-animate' : '') +
         (props.bordered ? ' q-drawer--bordered' : '') +
-        (isDark.value ? ' q-drawer--dark q-dark' : '') +
+        (isDark() ? ' q-drawer--dark q-dark' : '') +
         (flagPanning.value
           ? ' no-transition'
           : showing.value
@@ -319,20 +345,27 @@ export default /*#__PURE__*/ createComponent({
           void 0,
           {
             [dir]: true,
-            mouse: true
+            mouse: true,
+            // the strip sits on the screen edge, where iOS Safari runs
+            // its back/forward navigation swipe; cancelling the detected
+            // pan's touchmove is what keeps the browser out of it
+            prevent: true
           }
         ]
       ]
     })
 
     const contentCloseDirective = computed(() => {
-      // if belowBreakpoint.value === true && props.noSwipeClose !== true
       const dir = $q.lang.rtl ? otherSide.value : props.side
 
       return [
         [
           TouchPan,
-          onClosePan,
+          // TouchPan only acquires gestures while its value is a function,
+          // so above the breakpoint or with no-swipe-close it gets disabled
+          // in place; keying the directive on either would remount the whole
+          // drawer content on every change (#17099, #12668)
+          belowBreakpoint.value && !props.noSwipeClose ? onClosePan : void 0,
           void 0,
           {
             [dir]: true,
@@ -343,18 +376,23 @@ export default /*#__PURE__*/ createComponent({
     })
 
     const backdropCloseDirective = computed(() => {
-      // if showing.value === true && props.noSwipeBackdrop !== true
       const dir = $q.lang.rtl ? otherSide.value : props.side
 
       return [
         [
           TouchPan,
-          onClosePan,
+          // disarmed in place while hidden or with no-swipe-backdrop, so the
+          // backdrop element persists across open/close instead of being
+          // re-created on every toggle
+          showing.value && !props.noSwipeBackdrop ? onClosePan : void 0,
           void 0,
           {
             [dir]: true,
             mouse: true,
-            mouseAllDir: true
+            mouseAllDir: true,
+            // the backdrop reaches the opposite screen edge, see the
+            // opener directive
+            prevent: true
           }
         ]
       ]
@@ -374,19 +412,19 @@ export default /*#__PURE__*/ createComponent({
         // from lg to xs
         lastDesktopState = showing.value
         if (showing.value) hide(false)
+      } else if (showing.value) {
+        // from xs to lg; a drawer opened below the breakpoint holds the
+        // body scroll lock and the backdrop, both of which must go
+        // regardless of how it was left on desktop (#16651)
+        applyPosition(0)
+        applyBackdrop(0)
+        cleanup()
       } else if (
         !props.overlay &&
         props.behavior !== 'mobile' &&
         lastDesktopState !== false
       ) {
-        // from xs to lg
-        if (showing.value) {
-          applyPosition(0)
-          applyBackdrop(0)
-          cleanup()
-        } else {
-          show(false)
-        }
+        show(false)
       }
     })
 
@@ -531,10 +569,12 @@ export default /*#__PURE__*/ createComponent({
 
         if (opened) {
           show()
+          emit('pan', { type: 'open', stage: 'end' })
         } else {
           $layout.animate()
           applyBackdrop(0)
           applyPosition(stateDirection.value * width)
+          emit('pan', { type: 'open', stage: 'cancel' })
         }
 
         flagPanning.value = false
@@ -548,7 +588,10 @@ export default /*#__PURE__*/ createComponent({
       )
       applyBackdrop(between(position / width, 0, 1))
 
-      if (evt.isFirst) flagPanning.value = true
+      if (evt.isFirst) {
+        flagPanning.value = true
+        emit('pan', { type: 'open', stage: 'start' })
+      }
     }
 
     function onClosePan(evt) {
@@ -569,8 +612,10 @@ export default /*#__PURE__*/ createComponent({
           $layout.animate()
           applyBackdrop(1)
           applyPosition(0)
+          emit('pan', { type: 'close', stage: 'cancel' })
         } else {
           hide()
+          emit('pan', { type: 'close', stage: 'end' })
         }
 
         flagPanning.value = false
@@ -580,7 +625,10 @@ export default /*#__PURE__*/ createComponent({
       applyPosition(stateDirection.value * position)
       applyBackdrop(between(1 - position / width, 0, 1))
 
-      if (evt.isFirst) flagPanning.value = true
+      if (evt.isFirst) {
+        flagPanning.value = true
+        emit('pan', { type: 'close', stage: 'start' })
+      }
     }
 
     function cleanup() {
@@ -614,6 +662,10 @@ export default /*#__PURE__*/ createComponent({
       emit('onLayout', onLayout.value)
       emit('miniState', isMini.value)
 
+      // registered on mount so that it stays a client-only concern
+      // (a drawer can start out already shown below its breakpoint)
+      watch(escapeState, applyEscapeKey, { immediate: true })
+
       lastDesktopState = props.showIfAbove
 
       const fn = () => {
@@ -642,6 +694,7 @@ export default /*#__PURE__*/ createComponent({
 
     onBeforeUnmount(() => {
       layoutTotalWidthWatcher?.()
+      removeEscapeKey(onEscapeKey)
 
       if (timerMini !== null) {
         clearTimeout(timerMini)
@@ -676,21 +729,30 @@ export default /*#__PURE__*/ createComponent({
         }
 
         child.push(
-          hDir(
-            'div',
-            {
+          withDirectives(
+            h('div', {
               ref: 'backdrop',
               class: backdropClass.value,
               style: backdropStyle.value,
               'aria-hidden': 'true',
               onClick: hide
-            },
-            void 0,
-            'backdrop',
-            !props.noSwipeBackdrop && showing.value,
-            () => backdropCloseDirective.value
+            }),
+            backdropCloseDirective.value
           )
         )
+      }
+
+      // the aside is the exposed landmark, so role and aria-* describe
+      // it and must land on it; everything else (id, data-*, listeners)
+      // keeps targeting the scrolling content element
+      const asideAttrs = {}
+      const contentAttrs = {}
+      for (const key in attrs) {
+        if (key === 'role' || key.startsWith('aria-')) {
+          asideAttrs[key] = attrs[key]
+        } else {
+          contentAttrs[key] = attrs[key]
+        }
       }
 
       const mini = isMini.value && slots.mini !== void 0
@@ -698,7 +760,7 @@ export default /*#__PURE__*/ createComponent({
         h(
           'div',
           {
-            ...attrs,
+            ...contentAttrs,
             key: String(mini), // required otherwise Vue will not diff correctly
             class: [contentClass.value, attrs.class]
           },
@@ -716,13 +778,18 @@ export default /*#__PURE__*/ createComponent({
       }
 
       child.push(
-        hDir(
-          'aside',
-          { ref: 'content', class: classes.value, style: style.value },
-          content,
-          'contentclose',
-          !props.noSwipeClose && belowBreakpoint.value,
-          () => contentCloseDirective.value
+        withDirectives(
+          h(
+            'aside',
+            {
+              ref: 'content',
+              class: classes.value,
+              style: style.value,
+              ...asideAttrs
+            },
+            content
+          ),
+          contentCloseDirective.value
         )
       )
 

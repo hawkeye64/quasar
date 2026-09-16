@@ -11,7 +11,6 @@
     "definition": {
       "noHtmlAttrs": {
         "type": "Boolean",
-        "addedIn": "v2.11.3",
         "desc": "Whether to disable 'dir' and 'lang' HTML attributes getting added to the '<html>' tag. The 'dir' attribute is crucial when using RTL support. Disable this only if you need to handle these yourself for some reason."
       }
     }
@@ -36,6 +35,25 @@
           "type": "Boolean",
           "desc": "Whether the language is RTL (right-to-left)",
           "examples": ["false"]
+        },
+        "formatNumber": {
+          "type": "Function",
+          "desc": "Renders a number displayed by a Quasar component (QDate, QTime, QPagination) in the locale's digits; receives the ASCII digit string, zero-padded where the component pads it",
+          "params": {
+            "value": {
+              "type": "String",
+              "desc": "The ASCII digit string the component would display",
+              "examples": ["'05'", "'1403'"]
+            }
+          },
+          "returns": {
+            "type": "String",
+            "desc": "The localized digit string",
+            "examples": ["'۰۵'", "'۱۴۰۳'"]
+          },
+          "examples": [
+            "value => value.replace(/\\d/g, digit => '۰۱۲۳۴۵۶۷۸۹'[digit])"
+          ]
         },
         "label": {
           "type": "Object",
@@ -106,6 +124,31 @@
               "desc": "Label",
               "examples": ["'Refresh'"]
             },
+            "minimum": {
+              "type": "String",
+              "desc": "Aria-label for the QRange minimum-value thumb",
+              "examples": ["'Minimum'"]
+            },
+            "maximum": {
+              "type": "String",
+              "desc": "Aria-label for the QRange maximum-value thumb",
+              "examples": ["'Maximum'"]
+            },
+            "range": {
+              "type": "String",
+              "desc": "Aria-label for the QRange track when it drags the whole selected window (drag-range/drag-only-range)",
+              "examples": ["'Range'"]
+            },
+            "noValue": {
+              "type": "String",
+              "desc": "Aria-valuetext for a QSlider/QRange thumb whose model side is null",
+              "examples": ["'No value'"]
+            },
+            "resize": {
+              "type": "String",
+              "desc": "Aria-label for the QSplitter separator",
+              "examples": ["'Resize'"]
+            },
             "expand": {
               "type": "Function",
               "desc": "Label function",
@@ -146,7 +189,7 @@
         },
         "date": {
           "type": "Object",
-          "desc": "QDate labels",
+          "desc": "QDate/QTime labels",
           "definition": {
             "days": {
               "type": "Array",
@@ -187,6 +230,83 @@
               "type": "String",
               "desc": "Label",
               "examples": ["'days'"]
+            },
+            "prevMonth": {
+              "type": "String",
+              "desc": "Aria-label for the QDate previous month button",
+              "examples": ["'Previous month'"]
+            },
+            "nextMonth": {
+              "type": "String",
+              "desc": "Aria-label for the QDate next month button",
+              "examples": ["'Next month'"]
+            },
+            "prevYear": {
+              "type": "String",
+              "desc": "Aria-label for the QDate previous year button",
+              "examples": ["'Previous year'"]
+            },
+            "nextYear": {
+              "type": "String",
+              "desc": "Aria-label for the QDate next year button",
+              "examples": ["'Next year'"]
+            },
+            "today": {
+              "type": "String",
+              "desc": "Aria-label for the QDate today button",
+              "examples": ["'Today'"]
+            },
+            "prevRangeYears": {
+              "type": "Function",
+              "desc": "Aria-label for the QDate previous years range button",
+              "params": {
+                "range": {
+                  "type": "Number",
+                  "desc": "Number of years in the range",
+                  "examples": ["20"]
+                }
+              },
+              "returns": {
+                "type": "String",
+                "desc": "The label"
+              },
+              "examples": ["range => `Previous ${ range } years`"]
+            },
+            "nextRangeYears": {
+              "type": "Function",
+              "desc": "Aria-label for the QDate next years range button",
+              "params": {
+                "range": {
+                  "type": "Number",
+                  "desc": "Number of years in the range",
+                  "examples": ["20"]
+                }
+              },
+              "returns": {
+                "type": "String",
+                "desc": "The label"
+              },
+              "examples": ["range => `Next ${ range } years`"]
+            },
+            "hour": {
+              "type": "String",
+              "desc": "Aria-label for the QTime hour control",
+              "examples": ["'Hour'"]
+            },
+            "minute": {
+              "type": "String",
+              "desc": "Aria-label for the QTime minute control",
+              "examples": ["'Minute'"]
+            },
+            "second": {
+              "type": "String",
+              "desc": "Aria-label for the QTime second control",
+              "examples": ["'Second'"]
+            },
+            "now": {
+              "type": "String",
+              "desc": "Aria-label for the QTime 'now' button",
+              "examples": ["'Current time'"]
             }
           }
         },
@@ -273,6 +393,114 @@
               "type": "String",
               "desc": "Label",
               "examples": ["'Columns'"]
+            },
+            "selectAllRows": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the select-all-rows checkbox",
+              "examples": ["'Select all rows'"]
+            },
+            "selectRow": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of a row selection checkbox",
+              "examples": ["'Select row'"]
+            }
+          }
+        },
+        "carousel": {
+          "type": "Object",
+          "desc": "QCarousel labels",
+          "definition": {
+            "prevSlide": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the previous-slide arrow",
+              "examples": ["'Previous slide'"]
+            },
+            "nextSlide": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the next-slide arrow",
+              "examples": ["'Next slide'"]
+            }
+          }
+        },
+        "colorPicker": {
+          "type": "Object",
+          "desc": "QColor labels",
+          "definition": {
+            "spectrum": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the spectrum tab",
+              "examples": ["'Spectrum'"]
+            },
+            "tune": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the tune tab",
+              "examples": ["'Tune'"]
+            },
+            "palette": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the palette tab",
+              "examples": ["'Palette'"]
+            },
+            "value": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the color value input",
+              "examples": ["'Color value'"]
+            },
+            "hue": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the hue slider",
+              "examples": ["'Hue'"]
+            },
+            "alpha": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the opacity slider",
+              "examples": ["'Opacity'"]
+            },
+            "saturation": {
+              "type": "String",
+              "desc": "Label of the saturation axis in the spectrum panel's accessible value (aria-valuetext)",
+              "examples": ["'Saturation'"]
+            },
+            "brightness": {
+              "type": "String",
+              "desc": "Label of the brightness axis in the spectrum panel's accessible value (aria-valuetext)",
+              "examples": ["'Brightness'"]
+            }
+          }
+        },
+        "uploader": {
+          "type": "Object",
+          "desc": "QUploader labels",
+          "definition": {
+            "addFiles": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the pick-files button",
+              "examples": ["'Pick files'"]
+            },
+            "upload": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the upload button",
+              "examples": ["'Upload files'"]
+            },
+            "abort": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the abort-upload button",
+              "examples": ["'Abort upload'"]
+            },
+            "removeQueued": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the remove-queued-files button",
+              "examples": ["'Remove queued files'"]
+            },
+            "removeUploaded": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the remove-uploaded-files button",
+              "examples": ["'Remove uploaded files'"]
+            },
+            "removeFile": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of a single file removal button",
+              "examples": ["'Remove file'"]
             }
           }
         },
@@ -280,6 +508,11 @@
           "type": "Object",
           "desc": "QEditor labels",
           "definition": {
+            "toolbar": {
+              "type": "String",
+              "desc": "Accessible name (aria-label) of the toolbar",
+              "examples": ["'Editor toolbar'"]
+            },
             "url": {
               "type": "String",
               "desc": "Label",
@@ -544,6 +777,25 @@
               "desc": "Whether the language is RTL (right-to-left)",
               "examples": ["false"]
             },
+            "formatNumber": {
+              "type": "Function",
+              "desc": "Renders a number displayed by a Quasar component (QDate, QTime, QPagination) in the locale's digits; receives the ASCII digit string, zero-padded where the component pads it",
+              "params": {
+                "value": {
+                  "type": "String",
+                  "desc": "The ASCII digit string the component would display",
+                  "examples": ["'05'", "'1403'"]
+                }
+              },
+              "returns": {
+                "type": "String",
+                "desc": "The localized digit string",
+                "examples": ["'۰۵'", "'۱۴۰۳'"]
+              },
+              "examples": [
+                "value => value.replace(/\\d/g, digit => '۰۱۲۳۴۵۶۷۸۹'[digit])"
+              ]
+            },
             "label": {
               "type": "Object",
               "desc": "Generic labels",
@@ -627,6 +879,31 @@
                   "required": true,
                   "examples": ["'Refresh'"]
                 },
+                "minimum": {
+                  "type": "String",
+                  "desc": "Aria-label for the QRange minimum-value thumb",
+                  "examples": ["'Minimum'"]
+                },
+                "maximum": {
+                  "type": "String",
+                  "desc": "Aria-label for the QRange maximum-value thumb",
+                  "examples": ["'Maximum'"]
+                },
+                "range": {
+                  "type": "String",
+                  "desc": "Aria-label for the QRange track when it drags the whole selected window (drag-range/drag-only-range)",
+                  "examples": ["'Range'"]
+                },
+                "noValue": {
+                  "type": "String",
+                  "desc": "Aria-valuetext for a QSlider/QRange thumb whose model side is null",
+                  "examples": ["'No value'"]
+                },
+                "resize": {
+                  "type": "String",
+                  "desc": "Aria-label for the QSplitter separator",
+                  "examples": ["'Resize'"]
+                },
                 "expand": {
                   "type": "Function",
                   "desc": "Label function",
@@ -669,7 +946,7 @@
             },
             "date": {
               "type": "Object",
-              "desc": "QDate labels",
+              "desc": "QDate/QTime labels",
               "required": true,
               "definition": {
                 "days": {
@@ -720,6 +997,83 @@
                   "desc": "Label",
                   "required": true,
                   "examples": ["'days'"]
+                },
+                "prevMonth": {
+                  "type": "String",
+                  "desc": "Aria-label for the QDate previous month button",
+                  "examples": ["'Previous month'"]
+                },
+                "nextMonth": {
+                  "type": "String",
+                  "desc": "Aria-label for the QDate next month button",
+                  "examples": ["'Next month'"]
+                },
+                "prevYear": {
+                  "type": "String",
+                  "desc": "Aria-label for the QDate previous year button",
+                  "examples": ["'Previous year'"]
+                },
+                "nextYear": {
+                  "type": "String",
+                  "desc": "Aria-label for the QDate next year button",
+                  "examples": ["'Next year'"]
+                },
+                "today": {
+                  "type": "String",
+                  "desc": "Aria-label for the QDate today button",
+                  "examples": ["'Today'"]
+                },
+                "prevRangeYears": {
+                  "type": "Function",
+                  "desc": "Aria-label for the QDate previous years range button",
+                  "params": {
+                    "range": {
+                      "type": "Number",
+                      "desc": "Number of years in the range",
+                      "examples": ["20"]
+                    }
+                  },
+                  "returns": {
+                    "type": "String",
+                    "desc": "The label"
+                  },
+                  "examples": ["range => `Previous ${ range } years`"]
+                },
+                "nextRangeYears": {
+                  "type": "Function",
+                  "desc": "Aria-label for the QDate next years range button",
+                  "params": {
+                    "range": {
+                      "type": "Number",
+                      "desc": "Number of years in the range",
+                      "examples": ["20"]
+                    }
+                  },
+                  "returns": {
+                    "type": "String",
+                    "desc": "The label"
+                  },
+                  "examples": ["range => `Next ${ range } years`"]
+                },
+                "hour": {
+                  "type": "String",
+                  "desc": "Aria-label for the QTime hour control",
+                  "examples": ["'Hour'"]
+                },
+                "minute": {
+                  "type": "String",
+                  "desc": "Aria-label for the QTime minute control",
+                  "examples": ["'Minute'"]
+                },
+                "second": {
+                  "type": "String",
+                  "desc": "Aria-label for the QTime second control",
+                  "examples": ["'Second'"]
+                },
+                "now": {
+                  "type": "String",
+                  "desc": "Aria-label for the QTime 'now' button",
+                  "examples": ["'Current time'"]
                 }
               }
             },
@@ -815,6 +1169,130 @@
                   "desc": "Label",
                   "required": true,
                   "examples": ["'Columns'"]
+                },
+                "selectAllRows": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the select-all-rows checkbox",
+                  "required": true,
+                  "examples": ["'Select all rows'"]
+                },
+                "selectRow": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of a row selection checkbox",
+                  "required": true,
+                  "examples": ["'Select row'"]
+                }
+              }
+            },
+            "carousel": {
+              "type": "Object",
+              "desc": "QCarousel labels",
+              "definition": {
+                "prevSlide": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the previous-slide arrow",
+                  "examples": ["'Previous slide'"]
+                },
+                "nextSlide": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the next-slide arrow",
+                  "examples": ["'Next slide'"]
+                }
+              }
+            },
+            "colorPicker": {
+              "type": "Object",
+              "desc": "QColor labels",
+              "definition": {
+                "spectrum": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the spectrum tab",
+                  "required": true,
+                  "examples": ["'Spectrum'"]
+                },
+                "tune": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the tune tab",
+                  "required": true,
+                  "examples": ["'Tune'"]
+                },
+                "palette": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the palette tab",
+                  "required": true,
+                  "examples": ["'Palette'"]
+                },
+                "value": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the color value input",
+                  "required": true,
+                  "examples": ["'Color value'"]
+                },
+                "hue": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the hue slider",
+                  "required": true,
+                  "examples": ["'Hue'"]
+                },
+                "alpha": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the opacity slider",
+                  "required": true,
+                  "examples": ["'Opacity'"]
+                },
+                "saturation": {
+                  "type": "String",
+                  "desc": "Label of the saturation axis in the spectrum panel's accessible value (aria-valuetext)",
+                  "required": true,
+                  "examples": ["'Saturation'"]
+                },
+                "brightness": {
+                  "type": "String",
+                  "desc": "Label of the brightness axis in the spectrum panel's accessible value (aria-valuetext)",
+                  "required": true,
+                  "examples": ["'Brightness'"]
+                }
+              }
+            },
+            "uploader": {
+              "type": "Object",
+              "desc": "QUploader labels",
+              "definition": {
+                "addFiles": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the pick-files button",
+                  "required": true,
+                  "examples": ["'Pick files'"]
+                },
+                "upload": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the upload button",
+                  "required": true,
+                  "examples": ["'Upload files'"]
+                },
+                "abort": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the abort-upload button",
+                  "required": true,
+                  "examples": ["'Abort upload'"]
+                },
+                "removeQueued": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the remove-queued-files button",
+                  "required": true,
+                  "examples": ["'Remove queued files'"]
+                },
+                "removeUploaded": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the remove-uploaded-files button",
+                  "required": true,
+                  "examples": ["'Remove uploaded files'"]
+                },
+                "removeFile": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of a single file removal button",
+                  "required": true,
+                  "examples": ["'Remove file'"]
                 }
               }
             },
@@ -823,6 +1301,11 @@
               "desc": "QEditor labels",
               "required": true,
               "definition": {
+                "toolbar": {
+                  "type": "String",
+                  "desc": "Accessible name (aria-label) of the toolbar",
+                  "examples": ["'Editor toolbar'"]
+                },
                 "url": {
                   "type": "String",
                   "desc": "Label",
@@ -1120,6 +1603,31 @@
         "type": ["String", "undefined"],
         "desc": "Browser locale ISO name",
         "examples": ["'en-US'"]
+      }
+    },
+
+    "getClosestIsoName": {
+      "addedIn": "v2.29",
+      "tsType": "LangGetClosestIsoNameMethodType",
+      "desc": "Pick, from a list of language pack names, the one that best matches a locale: an exact match, then progressively less specific tags (the script outranks the region), then the pack whose likely script and region agree best; use it to map a browser or user locale to one of the packs your app ships",
+      "params": {
+        "locale": {
+          "type": ["String", "undefined"],
+          "desc": "BCP 47 language tag (an underscore separator is accepted too); undefined yields undefined, so the result of getLocale() can be passed directly",
+          "required": true,
+          "examples": ["'es-MX'", "'sr-Cyrl-RS'", "void 0"]
+        },
+        "isoNames": {
+          "type": "Array",
+          "desc": "Language pack names (their isoName) to choose from; the entries are returned as given",
+          "required": true,
+          "examples": ["['de', 'en-US', 'es']"]
+        }
+      },
+      "returns": {
+        "type": ["String", "undefined"],
+        "desc": "The best matching entry of the list; undefined when no entry shares the locale's language",
+        "examples": ["'es'"]
       }
     }
   }

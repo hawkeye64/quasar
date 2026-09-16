@@ -19,9 +19,21 @@
 
           <q-space />
 
-          <q-btn dense flat icon="minimize" @click="minimize" />
-          <q-btn dense flat icon="crop_square" @click="toggleMaximize" />
-          <q-btn dense flat icon="close" @click="closeApp" />
+          <q-btn
+            aria-label="Minimize"
+            dense
+            flat
+            icon="minimize"
+            @click="minimize"
+          />
+          <q-btn
+            aria-label="Maximize"
+            dense
+            flat
+            icon="crop_square"
+            @click="toggleMaximize"
+          />
+          <q-btn aria-label="Close" dense flat icon="close" @click="closeApp" />
         </q-bar>
 
         <div class="q-pa-sm q-pl-md row items-center">
@@ -65,7 +77,7 @@
 
                 <q-separator />
 
-                <q-item clickable v-close-popup @click="closeApp">
+                <q-item v-close-popup @click="closeApp">
                   <q-item-section>Quit</q-item-section>
                 </q-item>
               </q-list>

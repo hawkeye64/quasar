@@ -1,7 +1,7 @@
-import { computed, h, ref } from 'vue'
+import { computed, h, shallowRef } from 'vue'
 
 export default function useRefocusTarget(props, rootRef) {
-  const refocusRef = ref(null)
+  const refocusRef = shallowRef(null)
 
   const refocusTargetEl = computed(() => {
     if (props.disable) return null
@@ -17,6 +17,10 @@ export default function useRefocusTarget(props, rootRef) {
     const root = rootRef.value
 
     if (e?.qAvoidFocus === true) return
+
+    // never move focus into an aria-hidden control -- browsers
+    // refuse to hide a focused element from AT and warn about it
+    if (root?.getAttribute('aria-hidden') === 'true') return
 
     if (e?.type.indexOf('key') === 0) {
       if (

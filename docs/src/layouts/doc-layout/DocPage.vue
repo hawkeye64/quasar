@@ -4,30 +4,45 @@
       props.overline
     }}</div>
 
-    <div class="doc-heading doc-h1" id="introduction" v-if="props.heading">
-      <div class="row items-center q-gutter-sm">
-        <div>{{ props.title }}</div>
+    <div class="doc-page__title" v-if="props.heading">
+      <h1 class="doc-heading doc-h1" id="introduction">
+        {{ props.title }}
         <q-badge v-if="props.badge" :label="props.badge" />
+      </h1>
+
+      <div class="doc-page__title-actions row no-wrap">
+        <q-btn
+          :href="mdHref"
+          target="_blank"
+          rel="noopener noreferrer"
+          flat
+          round
+          color="brand-primary"
+          :icon="mdiLanguageMarkdown"
+          aria-label="View this page as Markdown"
+        >
+          <q-tooltip
+            >View this page as Markdown (for LLMs and AI agents)</q-tooltip
+          >
+        </q-btn>
+
+        <q-btn
+          v-if="props.editLink"
+          :href="editHref"
+          target="_blank"
+          rel="noopener noreferrer"
+          flat
+          round
+          color="brand-primary"
+          :icon="mdiPencil"
+          aria-label="Edit this page in browser"
+        >
+          <q-tooltip class="row no-wrap items-center">
+            <span>Caught a mistake? Edit page in browser</span>
+            <q-icon class="q-ml-xs" :name="mdiFlash" size="2em" />
+          </q-tooltip>
+        </q-btn>
       </div>
-
-      <q-space />
-
-      <q-btn
-        v-if="props.editLink"
-        class="self-start q-ml-sm"
-        :href="editHref"
-        target="_blank"
-        rel="noopener noreferrer"
-        flat
-        round
-        color="brand-primary"
-        :icon="mdiPencil"
-      >
-        <q-tooltip class="row no-wrap items-center">
-          <span>Caught a mistake? Edit page in browser</span>
-          <q-icon class="q-ml-xs" :name="mdiFlash" size="2em" />
-        </q-tooltip>
-      </q-btn>
     </div>
 
     <div class="doc-page__nav" v-if="props.related">
@@ -66,36 +81,31 @@
         </router-link>
       </div>
     </div>
-
-    <div class="doc-page__content-footer" v-if="props.editLink">
-      <q-separator class="q-mb-sm" />
-
-      <div class="q-mb-md">
-        <span>Caught a mistake?</span>
-        <DocLink class="q-ml-xs" :to="editHref"
-          >Edit this page in browser</DocLink
-        >
-      </div>
-    </div>
   </div>
 
-  <div
+  <nav
     class="doc-page__toc-container col-grow row justify-center gt-sm"
     :class="tocClass"
+    aria-label="Table of contents"
   >
     <q-scroll-area class="doc-page__toc-area">
       <DocPageToc />
     </q-scroll-area>
-  </div>
+  </nav>
 </template>
 
 <script setup>
-import { useMeta } from 'quasar'
-import { computed } from 'vue'
+import { Notify, useMeta } from 'quasar'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 
-import { mdiFlash, mdiLaunch, mdiPencil } from '@quasar/extras/mdi-v7'
+import {
+  mdiFlash,
+  mdiLanguageMarkdown,
+  mdiLaunch,
+  mdiPencil
+} from '@quasar/extras/mdi-v7'
 
-import DocLink from '@/components/DocLink.vue'
 import DocPageToc from './DocPageToc.vue'
 
 import getMeta from '@/assets/get-meta.js'
@@ -112,17 +122,71 @@ const props = defineProps({
 
   toc: Array,
   related: Array,
-  nav: Array
+  nav: Array,
+
+  // dev only, from the markdown pipeline - see the reporting below
+  idIssues: Array
 })
 
-useMeta(
-  props.desc !== void 0
-    ? {
-        title: props.title,
-        meta: getMeta(props.title + ' | Quasar Framework', props.desc)
-      }
-    : { title: props.title }
-)
+/**
+ * The ids this page renders twice. Nothing is drawn into the page for them:
+ * the article has to stay the one production serves, or every sweep reading
+ * it in dev - axe, the SSR hydration run, a screenshot - is reading markup no
+ * reader will ever get. So the list goes to the console, and one toast points
+ * at the console, from outside the article.
+ *
+ * The prop only exists in a dev build, and this whole block goes with it.
+ */
+if (import.meta.env.QUASAR_DEV) {
+  let dismiss = null
+
+  onMounted(() => {
+    if (props.idIssues === void 0) return
+
+    // same tag and same shape as the dev server's terminal lines, with the
+    // route standing in for the file, so one grep finds either
+    for (const issue of props.idIssues) {
+      console.error(`[page-ids] ${location.pathname} - ${issue}`)
+    }
+
+    const count = props.idIssues.length
+
+    dismiss = Notify.create({
+      message: `${count} colliding DOM id${count === 1 ? '' : 's'} on this page`,
+      caption:
+        'Anchors, search results and the browser hash for the second one all' +
+        ' land on the first. The list is in the console.',
+      multiline: true,
+      color: 'negative',
+      position: 'bottom-right',
+      timeout: 0,
+      // this component owns the toast for as long as the page is on screen,
+      // so grouping is not what keeps it to one - unmounting is
+      group: false,
+      actions: [{ label: 'Dismiss', color: 'white' }]
+    })
+  })
+
+  // leaving the page, or saving it and having it reload, takes the toast with
+  // it: the next mount is what puts up the next one
+  onUnmounted(() => {
+    dismiss?.()
+    dismiss = null
+  })
+}
+
+// the page's markdown sibling from the docs generator (build/mcp),
+// served next to it
+const mdHref = `${useRoute().path}.md`
+
+useMeta({
+  title: props.title,
+  ...(props.desc !== void 0
+    ? { meta: getMeta(props.title + ' | Quasar Framework', props.desc) }
+    : {}),
+  // agents read <head>, not buttons
+  link: { markdown: { rel: 'alternate', type: 'text/markdown', href: mdHref } }
+})
 
 const docStore = useDocStore()
 docStore.setToc(props.toc)
@@ -177,16 +241,37 @@ const tocClass = computed(
 
   &__toc
     font-size: ($font-size - 2px)
+    &--sub
+      padding-left: 16px !important
 
-  &__content-footer
-    margin-top: 64px
+  // The page title and its action links (markdown sibling, edit on GitHub)
+  // share one line. The links have to stay outside the <h1>, because a
+  // heading is named by what it contains and their labels were ending up in
+  // every page's title. Sizing the title here rather than on the heading
+  // keeps the two facts that follow from each other together: the space
+  // below the title is 1em of it, and the heading is free of margins that
+  // would otherwise make it the tallest thing on the line and knock it off
+  // centre.
+  &__title
+    display: flex
+    align-items: center
+    flex-wrap: nowrap
+    font-size: $doc-title-font-size
+    // beats the 22px every other div of page content gets: this block is
+    // the title, and its spacing scales with the title
+    margin-bottom: 1em !important
+
+    @media (max-width: 850px)
+      font-size: $doc-title-font-size--narrow
+
+  &__title-actions
+    align-self: flex-start
+    margin-left: auto
+    padding-left: 8px
 
   &__overline
     letter-spacing: $letter-spacing-brand
     margin-bottom: 0 !important
-    & + .doc-h1
-      margin-top: 0 !important
-      padding-top: 0 !important
 
   &__related
     transition: color $header-transition
@@ -233,9 +318,6 @@ body.body--light .doc-page
     background: $void-suit
     border: 1px solid $void-suit // match dark to avoid page reflow
 
-  &__toc-container .q-item
-    color: $header-btn-color--light
-
 body.body--dark .doc-page
   &__related
     color: $dark-text
@@ -244,7 +326,4 @@ body.body--dark .doc-page
 
   &__nav-name
     color: $brand-primary
-
-  &__toc-container .q-item
-    color: $header-btn-color--dark
 </style>

@@ -9,7 +9,7 @@
         label-slot
         clearable
       >
-        <template v-slot:label>
+        <template #label>
           <div class="row items-center all-pointer-events">
             <q-icon
               class="q-mr-xs"
@@ -31,13 +31,16 @@
       </q-input>
 
       <q-input outlined v-model="number" prefix="$" label-slot clearable>
-        <template v-slot:prepend>
+        <template #prepend>
           <q-avatar>
-            <img src="https://cdn.quasar.dev/logo-v2/svg/logo.svg" />
+            <img
+              alt="Quasar logo"
+              src="https://cdn.quasar.dev/logo-v2/svg/logo.svg"
+            />
           </q-avatar>
         </template>
 
-        <template v-slot:label>
+        <template #label>
           <span class="text-weight-bold text-deep-orange">You</span>
           can customize the
           <span

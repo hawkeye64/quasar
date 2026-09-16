@@ -1,17 +1,26 @@
-import { computed, getCurrentInstance, h, onMounted, ref, watch } from 'vue'
+import {
+  computed,
+  getCurrentInstance,
+  h,
+  onMounted,
+  ref,
+  shallowRef,
+  watch
+} from 'vue'
 
 import QIcon from '../icon/QIcon.js'
 import QBtn from '../btn/QBtn.js'
 import QBtnGroup from '../btn-group/QBtnGroup.js'
 import QMenu from '../menu/QMenu.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import { getBtnDesignAttr, nonRoundBtnProps } from '../btn/use-btn.js'
 import useId from '../../composables/use-id/use-id.js'
 import { useTransitionProps } from '../../composables/private.use-transition/use-transition.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
 import { stop } from '../../utils/event/event.js'
-import { hSlot } from '../../utils/private.render/render.js'
+import { hMergeSlot, hSlot } from '../../utils/private.render/render.js'
 
 const btnPropsList = Object.keys(nonRoundBtnProps)
 
@@ -40,6 +49,9 @@ export default /*#__PURE__*/ createComponent({
     contentStyle: [Array, String, Object],
 
     cover: Boolean,
+    hover: Boolean,
+    hoverDelay: Number,
+    hoverHideDelay: Number,
     persistent: Boolean,
     noEscDismiss: Boolean,
     noRouteDismiss: Boolean,
@@ -62,7 +74,8 @@ export default /*#__PURE__*/ createComponent({
 
     noIconAnimation: Boolean,
 
-    toggleAriaLabel: String
+    toggleAriaLabel: String,
+    toggleAriaHaspopup: String
   },
 
   emits: [
@@ -76,21 +89,33 @@ export default /*#__PURE__*/ createComponent({
 
   setup(props, { slots, emit }) {
     const { proxy } = getCurrentInstance()
+    const $q = useQuasar()
 
     const showing = ref(props.modelValue)
-    const menuRef = ref(null)
+    const menuRef = shallowRef(null)
     const targetUid = useId()
 
     const ariaAttrs = computed(() => {
+      // aria-haspopup has to name the popup's own ARIA role and the
+      // dropdown hosts arbitrary content, so it is opt-in: the devland
+      // declares it once the content has a matching role. In split mode
+      // fall-through attrs land on the QBtnGroup instead of the toggle
+      // button, which is why this needs a prop of its own
       const acc = {
         'aria-expanded': showing.value ? 'true' : 'false',
-        'aria-haspopup': 'true',
-        'aria-controls': targetUid.value,
         'aria-label':
           props.toggleAriaLabel ||
-          proxy.$q.lang.label[showing.value ? 'collapse' : 'expand'](
-            props.label
-          )
+          $q.lang.label[showing.value ? 'collapse' : 'expand'](props.label)
+      }
+
+      if (props.toggleAriaHaspopup !== void 0) {
+        acc['aria-haspopup'] = props.toggleAriaHaspopup
+      }
+
+      // the portal-based menu only exists in the DOM while shown,
+      // and aria-controls must not reference a missing id
+      if (showing.value && !props.disableDropdown) {
+        acc['aria-controls'] = targetUid.value
       }
 
       if (
@@ -177,16 +202,20 @@ export default /*#__PURE__*/ createComponent({
     })
 
     return () => {
-      const Arrow = [
+      // toggle slot content rides along with the arrow icon so it lands
+      // inside the toggle button in split mode (the only button otherwise) -
+      // the sole way to reach that button (e.g. with a QTooltip), since
+      // fall-through attrs land on the QBtnGroup
+      const Arrow = hMergeSlot(slots.toggle, [
         h(QIcon, {
           class: iconClass.value,
-          name: props.dropdownIcon || proxy.$q.iconSet.arrow.dropdown
+          name: props.dropdownIcon || $q.iconSet.arrow.dropdown
         })
-      ]
+      ])
 
-      if (!props.disableDropdown) {
-        Arrow.push(
-          h(
+      const Menu = props.disableDropdown
+        ? null
+        : h(
             QMenu,
             {
               ref: menuRef,
@@ -194,6 +223,9 @@ export default /*#__PURE__*/ createComponent({
               class: props.contentClass,
               style: props.contentStyle,
               cover: props.cover,
+              hover: props.hover,
+              hoverDelay: props.hoverDelay,
+              hoverHideDelay: props.hoverHideDelay,
               fit: true,
               persistent: props.persistent,
               noEscDismiss: props.noEscDismiss,
@@ -215,8 +247,6 @@ export default /*#__PURE__*/ createComponent({
             },
             slots.default
           )
-        )
-      }
 
       if (!props.split) {
         return h(
@@ -231,8 +261,7 @@ export default /*#__PURE__*/ createComponent({
             onClick
           },
           {
-            // oxlint-disable-next-line unicorn/prefer-spread
-            default: () => hSlot(slots.label, []).concat(Arrow),
+            default: () => [...hSlot(slots.label, []), ...Arrow, Menu],
             loading: slots.loading
           }
         )
@@ -268,7 +297,7 @@ export default /*#__PURE__*/ createComponent({
           h(
             QBtn,
             {
-              class: 'q-btn-dropdown__arrow-container q-anchor--skip',
+              class: 'q-btn-dropdown__arrow-container',
               ...ariaAttrs.value,
               ...btnDesignAttr.value,
               disable: props.disable || props.disableDropdown,
@@ -281,7 +310,16 @@ export default /*#__PURE__*/ createComponent({
               ripple: props.ripple
             },
             () => Arrow
-          )
+          ),
+
+          // sibling of the two buttons rather than a child of the toggle
+          // one: its default parent anchoring thus resolves to the whole
+          // group without a q-anchor--skip class on the toggle button,
+          // which would also hijack anchor-based toggle slot content
+          // (e.g. QTooltip) onto the whole group; being portal-based it
+          // contributes only a placeholder comment to the group's DOM,
+          // so the child CSS (border radius etc) is unaffected
+          Menu
         ]
       )
     }

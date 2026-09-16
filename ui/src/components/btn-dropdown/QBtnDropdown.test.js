@@ -5,6 +5,7 @@ import { h } from 'vue'
 import { alignMap } from 'quasar/src/composables/private.use-align/use-align.js'
 import { getRouter } from 'testing/runtime/router.js'
 import QBtnDropdown from './QBtnDropdown.js'
+import QTooltip from '../tooltip/QTooltip.js'
 
 let activeWrapper
 
@@ -745,6 +746,16 @@ describe('[QBtnDropdown API]', () => {
 
         expect(getMenu()).not.toBeNull()
       })
+
+      test('keeps the menu anchored to the whole component', async () => {
+        await mountPositionedBtnDropdown({ split: true, label: 'Split' })
+
+        // "fit" sizes the menu to its anchor: the full 100px wide
+        // component, not the narrower toggle button hosting it
+        const rect = getMenu().getBoundingClientRect()
+        expect(rect.width).toBe(100)
+        expect(rect.top).toBe(150)
+      })
     })
 
     describe('[(prop)dropdown-icon]', () => {
@@ -873,8 +884,8 @@ describe('[QBtnDropdown API]', () => {
       test('type Boolean has effect', async () => {
         await mountPositionedBtnDropdown()
 
-        expect(getMenu().style.top).toBe('150px')
-        expect(getMenu().style.minHeight).toBe('')
+        expect(getMenu().getBoundingClientRect().top).toBe(150)
+        expect(getMenu().getBoundingClientRect().height).toBe(20)
 
         activeWrapper.unmount()
         await vi.runAllTimersAsync()
@@ -882,8 +893,8 @@ describe('[QBtnDropdown API]', () => {
         await mountPositionedBtnDropdown({ cover: true })
 
         // the menu now sits on top of the button
-        expect(getMenu().style.top).toBe('100px')
-        expect(getMenu().style.minHeight).toBe('50px')
+        expect(getMenu().getBoundingClientRect().top).toBe(100)
+        expect(getMenu().getBoundingClientRect().height).toBe(50)
       })
     })
 
@@ -898,6 +909,67 @@ describe('[QBtnDropdown API]', () => {
         await settle()
 
         expect(getMenu()).not.toBeNull()
+      })
+    })
+
+    describe('[(prop)hover]', () => {
+      test('type Boolean has effect', async () => {
+        const wrapper = mountBtnDropdown({ hover: true })
+
+        await getRoot(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await flushPromises()
+
+        expect(getMenu()).not.toBeNull()
+
+        await getRoot(wrapper).trigger('pointerleave', {
+          pointerType: 'mouse'
+        })
+        await settle()
+
+        expect(getMenu()).toBeNull()
+      })
+    })
+
+    describe('[(prop)hover-delay]', () => {
+      test('type Number has effect', async () => {
+        const wrapper = mountBtnDropdown({ hover: true, hoverDelay: 500 })
+
+        await getRoot(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await vi.advanceTimersByTimeAsync(499)
+
+        expect(getMenu()).toBeNull()
+
+        await vi.advanceTimersByTimeAsync(1)
+        await flushPromises()
+
+        expect(getMenu()).not.toBeNull()
+      })
+    })
+
+    describe('[(prop)hover-hide-delay]', () => {
+      test('type Number has effect', async () => {
+        const wrapper = mountBtnDropdown({ hover: true, hoverHideDelay: 500 })
+
+        await getRoot(wrapper).trigger('pointerenter', {
+          pointerType: 'mouse'
+        })
+        await settle()
+        expect(getMenu()).not.toBeNull()
+
+        await getRoot(wrapper).trigger('pointerleave', {
+          pointerType: 'mouse'
+        })
+        await vi.advanceTimersByTimeAsync(499)
+
+        expect(getMenu()).not.toBeNull()
+
+        await settle()
+
+        expect(getMenu()).toBeNull()
       })
     })
 
@@ -1047,8 +1119,9 @@ describe('[QBtnDropdown API]', () => {
 
         await mountPositionedBtnDropdown({ menuAnchor: propVal })
 
-        expect(getMenu().style.top).toBe(top)
-        expect(getMenu().style.left).toBe(left)
+        const rect = getMenu().getBoundingClientRect()
+        expect(rect.top).toBe(Number.parseInt(top, 10))
+        expect(rect.left).toBe(Number.parseInt(left, 10))
       }
 
       test('value "top left" has effect', async () => {
@@ -1142,8 +1215,9 @@ describe('[QBtnDropdown API]', () => {
 
         await mountPositionedBtnDropdown({ menuSelf: propVal })
 
-        expect(getMenu().style.top).toBe(top)
-        expect(getMenu().style.left).toBe(left)
+        const rect = getMenu().getBoundingClientRect()
+        expect(rect.top).toBe(Number.parseInt(top, 10))
+        expect(rect.left).toBe(Number.parseInt(left, 10))
       }
 
       test('value "top left" has effect', async () => {
@@ -1211,10 +1285,13 @@ describe('[QBtnDropdown API]', () => {
       test('type Array has effect', async () => {
         await mountPositionedBtnDropdown({ menuOffset: [20, 30] })
 
-        // the button is inflated by the offset, so the default
-        // "bottom end" attaching point moves accordingly
-        expect(getMenu().style.top).toBe('180px')
-        expect(getMenu().style.minWidth).toBe('120px')
+        // the anchor box is inflated by the offset, so the default
+        // "bottom end" attaching point moves accordingly, while "fit"
+        // keeps the menu as wide as the button itself
+        const rect = getMenu().getBoundingClientRect()
+        expect(rect.top).toBe(180)
+        expect(rect.right).toBe(220)
+        expect(rect.width).toBe(100)
       })
     })
 
@@ -1230,6 +1307,19 @@ describe('[QBtnDropdown API]', () => {
         await wrapper.setProps({ toggleAriaLabel: propVal })
 
         expect(getRoot(wrapper).attributes('aria-label')).toBe(propVal)
+      })
+    })
+
+    describe('[(prop)toggle-aria-haspopup]', () => {
+      test('type String has effect', async () => {
+        const propVal = 'menu'
+        const wrapper = mountBtnDropdown({ label: 'Actions' })
+
+        expect(getRoot(wrapper).attributes('aria-haspopup')).toBeUndefined()
+
+        await wrapper.setProps({ toggleAriaHaspopup: propVal })
+
+        expect(getRoot(wrapper).attributes('aria-haspopup')).toBe(propVal)
       })
     })
   })
@@ -1266,6 +1356,45 @@ describe('[QBtnDropdown API]', () => {
         expect(wrapper.text()).toContain(slotContent)
         // it replaces the default spinner
         expect(wrapper.find('.q-spinner').exists()).toBe(false)
+      })
+    })
+
+    describe('[(slot)toggle]', () => {
+      test('renders the content', () => {
+        const slotContent = 'some-slot-content'
+        const wrapper = mountBtnDropdown({}, { toggle: () => slotContent })
+
+        // rendered next to the arrow icon, which it does not replace
+        expect(getContent(wrapper).text()).toContain(slotContent)
+        expect(getArrowIcon(wrapper).exists()).toBe(true)
+      })
+
+      test('renders the content inside the toggle button when split', () => {
+        const slotContent = 'some-slot-content'
+        const wrapper = mountBtnDropdown(
+          { split: true },
+          { toggle: () => slotContent }
+        )
+
+        expect(getArrowBtn(wrapper).text()).toContain(slotContent)
+        expect(getMainBtn(wrapper).text()).not.toContain(slotContent)
+      })
+
+      test('anchors slotted QTooltip to the toggle button alone when split', async () => {
+        const wrapper = mountBtnDropdown(
+          { split: true, label: 'Main' },
+          { toggle: () => h(QTooltip, () => 'toggle help') }
+        )
+
+        await getMainBtn(wrapper).trigger('pointerenter')
+        await settle()
+
+        expect(document.querySelector('.q-tooltip')).toBeNull()
+
+        await getArrowBtn(wrapper).trigger('pointerenter')
+        await settle()
+
+        expect(document.querySelector('.q-tooltip')).not.toBeNull()
       })
     })
   })
@@ -1420,6 +1549,45 @@ describe('[QBtnDropdown API]', () => {
 
         expect(getMenu()).toBeNull()
       })
+    })
+  })
+
+  describe('[Accessibility]', () => {
+    test('exposes the popup through the disclosure pattern', async () => {
+      const wrapper = mountBtnDropdown()
+      const toggle = getRoot(wrapper)
+
+      // the popup holds arbitrary content without a default ARIA role,
+      // so aria-haspopup (whose value names the popup's role; 'true'
+      // means role="menu") must not be claimed by default
+      expect(toggle.attributes('aria-haspopup')).toBeUndefined()
+      expect(toggle.attributes('aria-expanded')).toBe('false')
+      // the menu does not exist in the DOM while hidden, and
+      // aria-controls must not reference a missing id
+      expect(toggle.attributes('aria-controls')).toBeUndefined()
+
+      await showMenu(wrapper)
+
+      expect(toggle.attributes('aria-expanded')).toBe('true')
+      expect(toggle.attributes('aria-controls')).toBe(getMenu().id)
+
+      await hideMenu(wrapper)
+
+      expect(toggle.attributes('aria-controls')).toBeUndefined()
+    })
+
+    test('carries the declared popup role on the toggle button in split mode', () => {
+      const wrapper = mountBtnDropdown({
+        label: 'Actions',
+        split: true,
+        toggleAriaHaspopup: 'menu'
+      })
+
+      // fall-through attrs land on the QBtnGroup in split mode, which is
+      // why the popup role needs a prop that reaches the toggle button
+      expect(getArrowBtn(wrapper).attributes('aria-haspopup')).toBe('menu')
+      expect(getRoot(wrapper).attributes('aria-haspopup')).toBeUndefined()
+      expect(getMainBtn(wrapper).attributes('aria-haspopup')).toBeUndefined()
     })
   })
 })

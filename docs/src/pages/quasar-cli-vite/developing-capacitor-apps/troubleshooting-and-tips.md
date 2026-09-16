@@ -23,7 +23,7 @@ Inspect the native WebView console for the exact connection or certificate error
 
 ## Android
 
-### Remote debugging
+### Android Remote debugging
 
 Use Chrome's [WebView remote debugging](https://developer.chrome.com/docs/devtools/remote-debugging/webviews) to inspect the app running on an Android device or emulator. Open `chrome://inspect` on the development machine after enabling USB debugging and connecting the device.
 
@@ -47,7 +47,7 @@ If Android Studio reports stale indexing or synchronization errors, first run th
 
 ## iOS
 
-### Remote debugging
+### iOS Remote debugging
 
 Use Safari Web Inspector to inspect an app running on an iOS device or simulator. Enable Web Inspector on the device and the Develop menu in Safari, then select the app's WebView from the connected device or simulator.
 
@@ -57,7 +57,7 @@ If Capacitor reports that CocoaPods is unavailable or Xcode cannot load a Pods c
 
 ## Status bar and safe areas
 
-Devices can reserve space for status bars, rounded corners, camera cutouts, and home indicators. Quasar components such as QHeader, QFooter, and Notify account for common safe-area cases, but test the app on multiple device shapes and orientations.
+Devices can reserve space for status bars, rounded corners, camera cutouts, and home indicators. Quasar components such as QHeader, QFooter, QDialog, and Notify account for common safe-area cases, but test the app on multiple device shapes and orientations.
 
 On Android, Quasar uses the `--safe-area-inset-*` variables supplied by the [Capacitor 8 System Bars API](https://capacitorjs.com/docs/apis/system-bars) and falls back to the standard CSS environment variables. If your app handles Android safe areas itself, disable Quasar's automatic component padding:
 

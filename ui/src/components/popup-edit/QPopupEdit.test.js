@@ -60,6 +60,14 @@ function getPopupEdit(wrapper) {
   return wrapper.findComponent(QPopupEdit)
 }
 
+function getMenu(wrapper) {
+  return wrapper.findComponent({ name: 'QMenu' })
+}
+
+function getMenuProp(props, propName) {
+  return getMenu(mountPopupEdit(props)).props(propName)
+}
+
 function getAnchor(wrapper) {
   return wrapper.get('.my-anchor')
 }
@@ -346,8 +354,9 @@ describe('[QPopupEdit API]', () => {
         await mountPositionedPopupEdit({ cover: false, fit: true })
 
         // the popup is never narrower than its anchor
-        expect(getPopup().style.minWidth).toBe('100px')
-        expect(getPopup().style.minHeight).toBe('')
+        const rect = getPopup().getBoundingClientRect()
+        expect(rect.width).toBe(100)
+        expect(rect.height).toBe(20)
       })
     })
 
@@ -356,10 +365,11 @@ describe('[QPopupEdit API]', () => {
         // it covers the anchor by default
         const wrapper = await mountPositionedPopupEdit()
 
-        expect(getPopup().style.minWidth).toBe('100px')
-        expect(getPopup().style.minHeight).toBe('50px')
-        expect(getPopup().style.top).toBe('100px')
-        expect(getPopup().style.left).toBe('100px')
+        let rect = getPopup().getBoundingClientRect()
+        expect(rect.top).toBe(100)
+        expect(rect.left).toBe(100)
+        expect(rect.width).toBe(100)
+        expect(rect.height).toBe(50)
 
         await hidePopup(wrapper)
         await wrapper.setProps({
@@ -367,11 +377,12 @@ describe('[QPopupEdit API]', () => {
         })
         await showPopup(wrapper)
 
-        // without it, the popup hangs below the anchor
-        expect(getPopup().style.minWidth).toBe('')
-        expect(getPopup().style.minHeight).toBe('')
-        expect(getPopup().style.top).toBe('150px')
-        expect(getPopup().style.left).toBe('100px')
+        // without it, the popup hangs below the anchor,
+        // no longer sized to it
+        rect = getPopup().getBoundingClientRect()
+        expect(rect.top).toBe(150)
+        expect(rect.left).toBe(100)
+        expect(rect.width).toBeLessThan(100)
       })
     })
 
@@ -405,8 +416,9 @@ describe('[QPopupEdit API]', () => {
 
         await mountPositionedPopupEdit({ cover: false, anchor: propVal })
 
-        expect(getPopup().style.top).toBe(top)
-        expect(getPopup().style.left).toBe(left)
+        const rect = getPopup().getBoundingClientRect()
+        expect(rect.top).toBe(Number.parseInt(top, 10))
+        expect(rect.left).toBe(Number.parseInt(left, 10))
       }
 
       test('value "top left" has effect', async () => {
@@ -500,8 +512,9 @@ describe('[QPopupEdit API]', () => {
 
         await mountPositionedPopupEdit({ cover: false, self: propVal })
 
-        expect(getPopup().style.top).toBe(top)
-        expect(getPopup().style.left).toBe(left)
+        const rect = getPopup().getBoundingClientRect()
+        expect(rect.top).toBe(Number.parseInt(top, 10))
+        expect(rect.left).toBe(Number.parseInt(left, 10))
       }
 
       test('value "top left" has effect', async () => {
@@ -571,8 +584,9 @@ describe('[QPopupEdit API]', () => {
 
         // the anchor is inflated by the offset, so the default
         // "bottom start" attaching point moves accordingly
-        expect(getPopup().style.top).toBe('180px')
-        expect(getPopup().style.left).toBe('80px')
+        const rect = getPopup().getBoundingClientRect()
+        expect(rect.top).toBe(180)
+        expect(rect.left).toBe(80)
       })
     })
 
@@ -587,8 +601,9 @@ describe('[QPopupEdit API]', () => {
         await settle()
 
         // the popup latches onto the pointer instead of onto the anchor
-        expect(getPopup().style.top).toBe('301px')
-        expect(getPopup().style.left).toBe('200px')
+        const rect = getPopup().getBoundingClientRect()
+        expect(rect.top).toBe(300)
+        expect(rect.left).toBe(200)
       })
     })
 
@@ -649,6 +664,135 @@ describe('[QPopupEdit API]', () => {
         await mountPositionedPopupEdit({ cover: false, maxWidth: propVal })
 
         expect(getPopup().style.maxWidth).toBe(propVal)
+      })
+    })
+
+    describe('[(prop)hover]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ hover: true }, 'hover')).toBe(true)
+      })
+    })
+
+    describe('[(prop)hover-delay]', () => {
+      test('type Number has effect', () => {
+        expect(getMenuProp({ hoverDelay: 300 }, 'hoverDelay')).toBe(300)
+      })
+    })
+
+    describe('[(prop)hover-hide-delay]', () => {
+      test('type Number has effect', () => {
+        expect(getMenuProp({ hoverHideDelay: 300 }, 'hoverHideDelay')).toBe(300)
+      })
+    })
+
+    describe('[(prop)transition-show]', () => {
+      test('type String has effect', () => {
+        expect(getMenuProp({ transitionShow: 'scale' }, 'transitionShow')).toBe(
+          'scale'
+        )
+      })
+    })
+
+    describe('[(prop)transition-hide]', () => {
+      test('type String has effect', () => {
+        expect(getMenuProp({ transitionHide: 'scale' }, 'transitionHide')).toBe(
+          'scale'
+        )
+      })
+    })
+
+    describe('[(prop)transition-duration]', () => {
+      test('type String has effect', () => {
+        expect(
+          getMenuProp({ transitionDuration: '500' }, 'transitionDuration')
+        ).toBe('500')
+      })
+
+      test('type Number has effect', () => {
+        expect(
+          getMenuProp({ transitionDuration: 500 }, 'transitionDuration')
+        ).toBe(500)
+      })
+    })
+
+    describe('[(prop)target]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ target: false }, 'target')).toBe(false)
+      })
+
+      test('type String has effect', () => {
+        const target = document.createElement('div')
+        target.className = 'my-target'
+        document.body.append(target)
+
+        expect(getMenuProp({ target: '.my-target' }, 'target')).toBe(
+          '.my-target'
+        )
+
+        target.remove()
+      })
+
+      test('type Element has effect', () => {
+        const target = document.createElement('div')
+        document.body.append(target)
+
+        expect(getMenuProp({ target }, 'target')).toBe(target)
+
+        target.remove()
+      })
+    })
+
+    describe('[(prop)no-parent-event]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ noParentEvent: true }, 'noParentEvent')).toBe(true)
+      })
+    })
+
+    describe('[(prop)context-menu]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ contextMenu: true }, 'contextMenu')).toBe(true)
+      })
+    })
+
+    describe('[(prop)dark]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ dark: true }, 'dark')).toBe(true)
+      })
+
+      test('type null has effect', () => {
+        expect(getMenuProp({ dark: null }, 'dark')).toBeNull()
+      })
+    })
+
+    describe('[(prop)no-esc-dismiss]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ noEscDismiss: true }, 'noEscDismiss')).toBe(true)
+      })
+    })
+
+    describe('[(prop)no-route-dismiss]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ noRouteDismiss: true }, 'noRouteDismiss')).toBe(
+          true
+        )
+      })
+    })
+
+    describe('[(prop)auto-close]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ autoClose: true }, 'autoClose')).toBe(true)
+      })
+    })
+
+    describe('[(prop)no-refocus]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ noRefocus: true }, 'noRefocus')).toBe(true)
+      })
+    })
+
+    describe('[(prop)no-focus]', () => {
+      test('type Boolean has effect', () => {
+        expect(getMenuProp({ noFocus: true }, 'noFocus')).toBe(true)
       })
     })
   })
@@ -825,6 +969,17 @@ describe('[QPopupEdit API]', () => {
         expect(eventList.save).toBeUndefined()
       })
     })
+
+    describe('[(event)escape-key]', () => {
+      test('is emitting', () => {
+        const onEscapeKey = vi.fn()
+        const wrapper = mountPopupEdit({ onEscapeKey })
+
+        getMenu(wrapper).vm.$emit('escapeKey')
+
+        expect(onEscapeKey).toHaveBeenCalledTimes(1)
+      })
+    })
   })
 
   describe('[Methods]', () => {
@@ -894,17 +1049,23 @@ describe('[QPopupEdit API]', () => {
       test('should be callable', async () => {
         const wrapper = await mountPositionedPopupEdit({ cover: false })
 
-        // the anchor moved without any of the watched dependencies changing
+        // an anchor move needs no call at all: the browser tracks it
         Object.assign(getAnchor(wrapper).element.style, {
           top: '200px',
           left: '300px'
         })
 
+        let rect = getPopup().getBoundingClientRect()
+        expect(rect.top).toBe(250)
+        expect(rect.left).toBe(300)
+
+        // the method stays callable (re-checks the placement decision)
         expect(getPopupEdit(wrapper).vm.updatePosition()).toBeUndefined()
         await settle()
 
-        expect(getPopup().style.top).toBe('250px')
-        expect(getPopup().style.left).toBe('300px')
+        rect = getPopup().getBoundingClientRect()
+        expect(rect.top).toBe(250)
+        expect(rect.left).toBe(300)
       })
     })
   })

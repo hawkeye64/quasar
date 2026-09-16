@@ -10,6 +10,7 @@ import {
 
 import TouchSwipe from '../../directives/touch-swipe/TouchSwipe.js'
 
+import useQuasar from '../use-quasar/use-quasar.js'
 import useRenderCache from '../../composables/use-render-cache/use-render-cache.js'
 import useTimeout from '../../composables/use-timeout/use-timeout.js'
 
@@ -21,12 +22,14 @@ export const usePanelChildProps = {
   disable: Boolean
 }
 
+const panelClassProps = { class: 'q-panel scroll' }
+
 const PanelWrapper = {
   setup(_, { slots }) {
     return () =>
       // the ARIA role belongs to the panel component inside
       // (QTabPanel/QStep/QCarouselSlide), not to this wrapper
-      h('div', { class: 'q-panel scroll' }, hSlot(slots.default))
+      h('div', panelClassProps, hSlot(slots.default))
   }
 }
 
@@ -65,6 +68,7 @@ function isValidPanelName(name) {
 
 export default function usePanel() {
   const { props, emit, proxy } = getCurrentInstance()
+  const $q = useQuasar()
   const { getCache } = useRenderCache()
   const { registerTimeout } = useTimeout()
 
@@ -85,7 +89,7 @@ export default function usePanel() {
   function onSwipe(evt) {
     const dir = props.vertical ? 'up' : 'left'
     goToPanelByOffset(
-      (!props.vertical && proxy.$q.lang.rtl ? -1 : 1) *
+      (!props.vertical && $q.lang.rtl ? -1 : 1) *
         (evt.direction === dir ? 1 : -1)
     )
   }
@@ -93,7 +97,10 @@ export default function usePanel() {
   const panelDirectives = computed(() => [
     [
       TouchSwipe,
-      onSwipe,
+      // TouchSwipe only acquires gestures while its value is a function;
+      // detaching the directive instead would re-create every panel on a
+      // swipeable toggle (#12668)
+      props.swipeable ? onSwipe : void 0,
       void 0,
       {
         horizontal: !props.vertical,
@@ -103,27 +110,26 @@ export default function usePanel() {
     ]
   ])
 
-  const transitionPrev = computed(
-    () =>
+  function getTransitionPrev() {
+    return (
       props.transitionPrev ||
-      `slide-${props.vertical ? 'down' : proxy.$q.lang.rtl ? 'left' : 'right'}`
-  )
+      `slide-${props.vertical ? 'down' : $q.lang.rtl ? 'left' : 'right'}`
+    )
+  }
 
-  const transitionNext = computed(
-    () =>
+  function getTransitionNext() {
+    return (
       props.transitionNext ||
-      `slide-${props.vertical ? 'up' : proxy.$q.lang.rtl ? 'right' : 'left'}`
-  )
+      `slide-${props.vertical ? 'up' : $q.lang.rtl ? 'right' : 'left'}`
+    )
+  }
 
-  const transitionStyle = computed(
-    () => `--q-transition-duration: ${props.transitionDuration}ms`
-  )
-
-  const contentKey = computed(() =>
-    typeof props.modelValue === 'string' || typeof props.modelValue === 'number'
+  function getContentKey() {
+    return typeof props.modelValue === 'string' ||
+      typeof props.modelValue === 'number'
       ? props.modelValue
       : String(props.modelValue)
-  )
+  }
 
   const keepAliveProps = computed(() => ({
     include: props.keepAliveInclude,
@@ -186,7 +192,7 @@ export default function usePanel() {
     const val =
       direction !== 0 && props.animated && panelIndex.value !== -1
         ? 'q-transition--' +
-          (direction === -1 ? transitionPrev.value : transitionNext.value)
+          (direction === -1 ? getTransitionPrev() : getTransitionNext())
         : null
 
     if (panelTransition.value !== val) {
@@ -246,17 +252,20 @@ export default function usePanel() {
       updatePanelIndex() &&
       panels[panelIndex.value]
 
+    const contentKey = getContentKey()
+    const transitionStyle = `--q-transition-duration: ${props.transitionDuration}ms`
+
     return props.keepAlive
       ? [
           h(KeepAlive, keepAliveProps.value, [
             h(
               needsUniqueKeepAliveWrapper.value
-                ? getCache(contentKey.value, () => ({
+                ? getCache(contentKey, () => ({
                     ...PanelWrapper,
-                    name: contentKey.value
+                    name: contentKey
                   }))
                 : PanelWrapper,
-              { key: contentKey.value, style: transitionStyle.value },
+              { key: contentKey, style: transitionStyle },
               () => panel
             )
           ])
@@ -266,8 +275,8 @@ export default function usePanel() {
             'div',
             {
               class: 'q-panel scroll',
-              style: transitionStyle.value,
-              key: contentKey.value
+              style: transitionStyle,
+              key: contentKey
             },
             [panel]
           )
@@ -306,6 +315,7 @@ export default function usePanel() {
 
   return {
     panelIndex,
+    panelTransition,
     panelDirectives,
 
     updatePanelsList,

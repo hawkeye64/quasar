@@ -13,6 +13,7 @@
         <q-header :class="$q.dark.isActive ? 'bg-secondary' : 'bg-black'">
           <q-toolbar>
             <q-btn
+              aria-label="Toggle left drawer"
               flat
               @click="drawerLeft = !drawerLeft"
               round
@@ -21,6 +22,7 @@
             />
             <q-toolbar-title>Header</q-toolbar-title>
             <q-btn
+              aria-label="Toggle right drawer"
               flat
               @click="drawerRight = !drawerRight"
               round
@@ -30,7 +32,13 @@
           </q-toolbar>
         </q-header>
 
-        <q-drawer v-model="drawerLeft" :width="200" behavior="mobile" bordered>
+        <q-drawer
+          aria-label="Left drawer"
+          v-model="drawerLeft"
+          :width="200"
+          behavior="mobile"
+          bordered
+        >
           <q-scroll-area class="fit">
             <div class="q-pa-sm">
               <div v-for="n in 50" :key="n">Drawer {{ n }} / 50</div>
@@ -39,6 +47,7 @@
         </q-drawer>
 
         <q-drawer
+          aria-label="Right drawer"
           side="right"
           v-model="drawerRight"
           bordered
@@ -63,6 +72,7 @@
 
             <q-page-sticky position="top-left" :offset="[18, 18]">
               <q-btn
+                aria-label="Sticky top left"
                 round
                 color="primary"
                 icon="arrow_back"
@@ -71,6 +81,7 @@
             </q-page-sticky>
             <q-page-sticky position="top-right" :offset="[18, 18]">
               <q-btn
+                aria-label="Sticky top right"
                 round
                 color="primary"
                 icon="arrow_upward"
@@ -79,6 +90,7 @@
             </q-page-sticky>
             <q-page-sticky position="bottom-left" :offset="[18, 18]">
               <q-btn
+                aria-label="Sticky bottom left"
                 round
                 color="primary"
                 icon="arrow_forward"
@@ -87,6 +99,7 @@
             </q-page-sticky>
             <q-page-sticky position="bottom-right" :offset="[18, 18]">
               <q-btn
+                aria-label="Sticky bottom right"
                 round
                 color="primary"
                 icon="arrow_forward"
@@ -96,7 +109,12 @@
           </q-page>
 
           <q-page-scroller position="bottom">
-            <q-btn fab icon="keyboard_arrow_up" color="red" />
+            <q-btn
+              aria-label="Scroll to top"
+              fab
+              icon="keyboard_arrow_up"
+              color="red"
+            />
           </q-page-scroller>
         </q-page-container>
       </q-layout>

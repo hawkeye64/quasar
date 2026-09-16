@@ -154,8 +154,7 @@
       "desc": "The design of the ACTIVE button, similar to the flat/outline/push/unelevated props (but those are used for non-active buttons)",
       "values": ["'flat'", "'outline'", "'push'", "'unelevated'", "''"],
       "default": "''",
-      "category": "style",
-      "addedIn": "v2.10"
+      "category": "style"
     },
 
     "active-color": {
@@ -201,8 +200,7 @@
         "'md lg'",
         "'2px 2px 5px 7px'"
       ],
-      "category": "style",
-      "addedIn": "v2.10"
+      "category": "style"
     },
 
     "padding": {
@@ -260,6 +258,40 @@
           "type": "Number"
         }
       }
+    }
+  },
+
+  "slots": {
+    "ellipsis": {
+      "desc": "Replaces an ellipsis (...) button; Suggestion: QBtn (spread 'btnProps' onto it)",
+      "scope": {
+        "side": {
+          "type": "String",
+          "desc": "Which ellipsis is being rendered",
+          "values": ["'start'", "'end'"]
+        },
+        "page": {
+          "type": "Number",
+          "desc": "The page the default ellipsis button navigates to (the first hidden page on that side)"
+        },
+        "btnProps": {
+          "type": "Object",
+          "desc": "Default QBtn props (design, color, size, label, disable, aria-label, ...) that can be binded to your own QBtn; deliberately does not contain the click handler or the 'to' prop"
+        },
+        "onClick": {
+          "type": "Function",
+          "desc": "The default click handler (navigates to 'page'); bind it to your own QBtn to keep the default behavior",
+          "params": null,
+          "returns": null
+        },
+        "to": {
+          "type": "Any",
+          "required": false,
+          "desc": "The router link target the default ellipsis button would use; only present when the 'to-fn' prop is set",
+          "examples": ["'/page/4'", "{ name: 'list', query: { page: 4 } }"]
+        }
+      },
+      "addedIn": "v2.30"
     }
   },
 

@@ -12,6 +12,27 @@ const NAMED_MASKS = {
   card: '#### #### #### ####'
 }
 
+// allocation-free equivalents of the ASCII-only built-in token patterns;
+// any other pattern falls back to the RegExp built from it
+const patternTesters = {
+  '[\\d]': char => {
+    const code = char.codePointAt(0)
+    return code > 47 && code < 58
+  },
+  '[a-zA-Z]': char => {
+    const code = char.codePointAt(0)
+    return (code > 64 && code < 91) || (code > 96 && code < 123)
+  },
+  '[0-9a-zA-Z]': char => {
+    const code = char.codePointAt(0)
+    return (
+      (code > 47 && code < 58) ||
+      (code > 64 && code < 91) ||
+      (code > 96 && code < 123)
+    )
+  }
+}
+
 const { tokenMap: DEFAULT_TOKEN_MAP, tokenKeys: DEFAULT_TOKEN_MAP_KEYS } =
   /*#__PURE__*/ getTokenMap({
     '#': { pattern: '[\\d]', negate: '[^\\d]' },
@@ -48,10 +69,16 @@ function getTokenMap(tokens) {
 
   tokenKeys.forEach(key => {
     const entry = tokens[key]
-    tokenMap[key] = {
-      ...entry,
-      regex: new RegExp(entry.pattern)
+    let test
+
+    if (Object.hasOwn(patternTesters, entry.pattern)) {
+      test = patternTesters[entry.pattern]
+    } else {
+      const regex = new RegExp(entry.pattern)
+      test = char => regex.test(char)
     }
+
+    tokenMap[key] = { ...entry, test }
   })
 
   return { tokenMap, tokenKeys }
@@ -67,6 +94,20 @@ function getTokenRegexMask(keys) {
   )
 }
 
+// input event types for which the new value is the previous masked value
+// with one contiguous user edit applied, so it can be unmasked by diffing
+// against that previous value (see unmaskEditValue); everything else
+// (paste, drop, autofill, IME composition, programmatic updates) may carry
+// an arbitrary — possibly fully masked — string and goes through unmaskValue
+const EDIT_INPUT_TYPES = [
+  'insertText',
+  'deleteContentBackward',
+  'deleteContentForward',
+  'deleteWordBackward',
+  'deleteWordForward',
+  'deleteByCut'
+]
+
 const escRegex = /[.*+?^${}()|[\]\\]/g
 const DEFAULT_TOKEN_REGEX_MASK = /*#__PURE__*/ getTokenRegexMask(
   DEFAULT_TOKEN_MAP_KEYS
@@ -81,13 +122,24 @@ export const useMaskProps = {
   maskTokens: Object
 }
 
-export default function useMask(props, emit, emitValue, inputRef) {
+export default function useMask(
+  props,
+  emit,
+  emitValue,
+  inputRef,
+  cancelPendingValueEmission
+) {
   let maskMarked,
     maskReplaced,
     computedMask,
     computedUnmask,
     pastedTextStart,
-    selectionAnchor
+    selectionAnchor,
+    // length innerValue had before fillWithMask padded it; the padded
+    // positions cannot be recognized by looking at the rendered value,
+    // since a fill char may be indistinguishable from a data char
+    // (fill-mask="0" against a "#" token) -- #18523
+    innerValueDataLen
 
   const tokens = computed(() => {
     if (props.maskTokens === void 0 || props.maskTokens === null) {
@@ -129,7 +181,13 @@ export default function useMask(props, emit, emitValue, inputRef) {
       if (v !== void 0) {
         updateMaskValue(innerValue.value, true)
       } else {
-        const val = unmaskValue(innerValue.value)
+        // hasMask still describes the OLD state here; when it was set,
+        // innerValue may carry fill padding that holds no data
+        const val = unmaskValue(
+          hasMask.value
+            ? stripFillPadding(innerValue.value, innerValueDataLen)
+            : innerValue.value
+        )
         updateMaskInternals()
         if (props.modelValue !== val) emit('update:modelValue', val)
       }
@@ -164,9 +222,11 @@ export default function useMask(props, emit, emitValue, inputRef) {
     if (hasMask.value) {
       const masked = maskValue(unmaskValue(props.modelValue))
 
+      innerValueDataLen = masked.length
       return props.fillMask !== false ? fillWithMask(masked) : masked
     }
 
+    innerValueDataLen = 0
     return props.modelValue
   }
 
@@ -226,21 +286,14 @@ export default function useMask(props, emit, emitValue, inputRef) {
           const c = tokens.value.tokenMap[token]
           mask.push(c)
           negateChar = c.negate
+          // the separator class these entries skip over is only known once
+          // every token in the mask has been seen, so keep the descriptors
+          // and build the sources below
           if (firstMatch) {
-            extract.push(
-              '(?:' +
-                negateChar +
-                '+)?(' +
-                c.pattern +
-                '+)?(?:' +
-                negateChar +
-                '+)?(' +
-                c.pattern +
-                '+)?'
-            )
+            extract.push({ c, overflow: true })
             firstMatch = false
           }
-          extract.push('(?:' + negateChar + '+)?(' + c.pattern + ')?')
+          extract.push({ c })
           return
         }
 
@@ -260,7 +313,12 @@ export default function useMask(props, emit, emitValue, inputRef) {
       }
     )
 
-    const unmaskMatcher = new RegExp(
+    const maskTokenPatterns = [
+        ...new Set(
+          mask.filter(v => typeof v !== 'string').map(({ pattern }) => pattern)
+        )
+      ],
+      unmaskMatcher = new RegExp(
         '^' +
           unmask.join('') +
           '(' +
@@ -270,7 +328,36 @@ export default function useMask(props, emit, emitValue, inputRef) {
           '$'
       ),
       extractLast = extract.length - 1,
-      extractMatcher = extract.map((re, index) => {
+      // What the entries below skip over to reach their token: the mask's
+      // own separators. A token's negate class is the wrong tool once the
+      // mask mixes token TYPES, because it also matches the data of every
+      // other type -- "[^a-zA-Z]" over "AA-##" swallows the digits, and
+      // the reverse-fill overflow entry runs before the "#" entries ever
+      // see them, so "ab12" unmasked to "ab" and rendered as nothing.
+      // A separator is a char no token in the mask accepts; with a single
+      // token type that is exactly the negate class, so those masks keep
+      // the cheaper form and the identical regex source
+      separator =
+        maskTokenPatterns.length === 1
+          ? negateChar
+          : '(?:' +
+            maskTokenPatterns.map(pattern => '(?!' + pattern + ')').join('') +
+            String.raw`[\s\S])`,
+      getExtractSource = ({ c, overflow }) =>
+        overflow === true
+          ? '(?:' +
+            separator +
+            '+)?(' +
+            c.pattern +
+            '+)?(?:' +
+            separator +
+            '+)?(' +
+            c.pattern +
+            '+)?'
+          : '(?:' + separator + '+)?(' + c.pattern + ')?',
+      extractMatcher = extract.map((entry, index) => {
+        const re = getExtractSource(entry)
+
         if (index === 0 && props.reverseFillMask) {
           return new RegExp('^' + fillCharEscaped + '*' + re)
         } else if (index === extractLast) {
@@ -319,18 +406,112 @@ export default function useMask(props, emit, emitValue, inputRef) {
     maskReplaced = maskMarked.split(MARKER).join(fillChar)
   }
 
+  // Builds the "does position i of `str` hold real data?" test for a
+  // rendered masked value whose pre-fill length was `dataLen`; hoists the
+  // per-value work out of the caller's loop. Walks the CURRENT internals.
+  //
+  // A position holds data when it sits in a mask slot, its own token
+  // accepts the char, and fillWithMask did not pad it. That last check
+  // cannot be replaced by testing the char: a fill char passes its own
+  // token whenever the two agree (fill-mask="0" against "#"), and would
+  // then be harvested as data -- growing the value by one fill char per
+  // keystroke (#18523). Only `dataLen` marks the boundary reliably.
+  // A padded reverse position with no token to check against stays data
+  function getDataCharTester(str, dataLen) {
+    const strLen = str.length,
+      localMaskMarked = props.reverseFillMask
+        ? getPaddedMaskMarked(strLen)
+        : maskMarked,
+      defOffset = props.reverseFillMask ? computedMask.length - strLen : 0,
+      // fillWithMask appends the padding, or prepends it when reverse filling
+      fillFrom = props.reverseFillMask ? 0 : Math.min(dataLen, strLen),
+      fillTo = props.reverseFillMask ? strLen - dataLen : strLen
+
+    return i => {
+      if (localMaskMarked[i] !== MARKER || (i >= fillFrom && i < fillTo)) {
+        return false
+      }
+
+      const maskDef = computedMask[defOffset + i]
+      return maskDef === void 0 || typeof maskDef === 'string'
+        ? true
+        : maskDef.test(str[i])
+    }
+  }
+
+  // counts the chars of `str` up to `position` that hold real data
+  function countDataChars(str, position, dataLen) {
+    const isDataChar = getDataCharTester(str, dataLen)
+
+    let count = 0
+    for (let i = 0; i < position; i++) {
+      if (isDataChar(i)) {
+        count++
+      }
+    }
+
+    return count
+  }
+
   function updateMaskValue(rawVal, updateMaskInternalsFlag, inputType) {
     const inp = inputRef.value,
       end = inp?.selectionEnd ?? 0,
       endReverse = inp === null ? 0 : inp.value.length - end,
-      unmasked = unmaskValue(rawVal)
+      unmasked =
+        updateMaskInternalsFlag !== true &&
+        typeof innerValue.value === 'string' &&
+        EDIT_INPUT_TYPES.includes(inputType)
+          ? unmaskEditValue(
+              innerValue.value,
+              innerValueDataLen,
+              rawVal,
+              inputType
+            )
+          : unmaskValue(rawVal)
+
+    // An internals rebuild (mask/fill props changed) can shift the layout
+    // arbitrarily, so the caret cannot keep its raw offset; remember how
+    // many data chars sit before it in the OLD layout (#7777). Counting
+    // data chars rather than raw slots also neutralizes the caret's
+    // transient jump to the end of the fill region: the fill chars there
+    // fail their token test and do not count.
+    // (maskMarked still holds the OLD layout here; when it is empty the
+    // control was not masked before, so there is nothing to re-anchor to)
+    let dataBeforeCaret
+    if (
+      updateMaskInternalsFlag === true &&
+      inp !== null &&
+      maskMarked.length !== 0
+    ) {
+      dataBeforeCaret = countDataChars(inp.value, end, innerValueDataLen)
+    }
 
     // Update here so unmask uses the original fillChar
     if (updateMaskInternalsFlag === true) updateMaskInternals()
 
     const preMasked = maskValue(unmasked, updateMaskInternalsFlag),
       masked = props.fillMask !== false ? fillWithMask(preMasked) : preMasked,
-      changed = innerValue.value !== masked
+      maskedDataLen = preMasked.length,
+      changed = innerValue.value !== masked,
+      // Whether the edit reached the DATA, which is what the caret has to
+      // follow. `changed` only reports that the rendered string moved, and
+      // a fill char that doubles as a valid data char keeps the render
+      // identical while the data grows (fill-mask="0" over "###-##" renders
+      // "000-00" whether it holds no data or five zeros); the caret then
+      // took the "nothing happened" path and stayed put, so the next char
+      // landed in front of the one just typed, "09" arriving as "90".
+      // Same render plus same data length means the same data, so the
+      // length is enough to tell the two apart (#18523)
+      dataChanged = changed || maskedDataLen !== innerValueDataLen
+
+    innerValueDataLen = maskedDataLen
+
+    // "the field holds no data", the state the caret logic below resets to.
+    // Comparing the render against maskReplaced only approximates it: a
+    // value whose data chars all equal the fill char renders identically to
+    // the empty state (fill-mask="0" over "###-##" renders "000-00" either
+    // way), which parked the caret at 0 on every "0" typed (#18523)
+    const rendersEmpty = props.fillMask !== false && maskedDataLen === 0
 
     // We want to avoid "flickering" so we set value immediately
     if (inp !== null && inp.value !== masked) inp.value = masked
@@ -339,8 +520,23 @@ export default function useMask(props, emit, emitValue, inputRef) {
 
     if (inp !== null && document.activeElement === inp) {
       nextTick(() => {
-        if (masked === maskReplaced) {
+        if (rendersEmpty) {
           const cursor = props.reverseFillMask ? maskReplaced.length : 0
+          inp.setSelectionRange(cursor, cursor, 'forward')
+          return
+        }
+
+        if (dataBeforeCaret !== void 0) {
+          // re-anchor the caret after the same number of data chars it had
+          // before the rebuild; its old raw offset points at an arbitrary
+          // spot of the new layout, which scrambled the chars typed next
+          let cursor = 0,
+            found = 0
+          while (cursor < masked.length && found < dataBeforeCaret) {
+            found = countDataChars(masked, cursor + 1, maskedDataLen)
+            cursor++
+          }
+
           inp.setSelectionRange(cursor, cursor, 'forward')
           return
         }
@@ -370,7 +566,7 @@ export default function useMask(props, emit, emitValue, inputRef) {
               : Math.max(
                   0,
                   masked.length -
-                    (masked === maskReplaced
+                    (rendersEmpty
                       ? 0
                       : Math.min(preMasked.length, endReverse) + 1)
                 ) + 1
@@ -381,13 +577,11 @@ export default function useMask(props, emit, emitValue, inputRef) {
         }
 
         if (props.reverseFillMask) {
-          if (changed) {
+          if (dataChanged) {
             const cursor = Math.max(
               0,
               masked.length -
-                (masked === maskReplaced
-                  ? 0
-                  : Math.min(preMasked.length, endReverse + 1))
+                (rendersEmpty ? 0 : Math.min(preMasked.length, endReverse + 1))
             )
 
             if (cursor === 1 && end === 1) {
@@ -399,7 +593,7 @@ export default function useMask(props, emit, emitValue, inputRef) {
             const cursor = masked.length - endReverse
             inp.setSelectionRange(cursor, cursor, 'backward')
           }
-        } else if (changed) {
+        } else if (dataChanged) {
           const cursor = Math.max(
             0,
             maskMarked.indexOf(MARKER),
@@ -413,13 +607,23 @@ export default function useMask(props, emit, emitValue, inputRef) {
       })
     }
 
-    const val = props.unmaskedValue ? unmaskValue(masked) : masked
+    // unmask the value BEFORE fillWithMask padded it: the padding carries
+    // no data, and unmaskValue cannot drop it on its own once a fill char
+    // satisfies a token (fill-mask="0" against "#" reported "1" as
+    // "10000"). Re-unmasking rather than reusing `unmasked` keeps the
+    // token transforms and the overflow truncation maskValue applied
+    const val = props.unmaskedValue ? unmaskValue(preMasked) : masked
 
     if (
       String(props.modelValue) !== val &&
       (props.modelValue !== null || val !== '')
     ) {
       emitValue(val, true)
+    } else if (cancelPendingValueEmission !== void 0) {
+      // the displayed value matches the model again, so a debounced
+      // emission of an intermediate state still in flight is stale and
+      // must not fire (#17568)
+      cancelPendingValueEmission()
     }
   }
 
@@ -547,8 +751,9 @@ export default function useMask(props, emit, emitValue, inputRef) {
     emit('keydown', e)
 
     if (
-      shouldIgnoreKey(e) ||
-      e.altKey // let browser handle these
+      e.defaultPrevented ||
+      e.altKey || // let browser handle these
+      shouldIgnoreKey(e)
     ) {
       return
     }
@@ -625,7 +830,7 @@ export default function useMask(props, emit, emitValue, inputRef) {
         if (updateMaskInternalsFlag === true && valChar === maskDef) {
           valIndex++
         }
-      } else if (valChar !== void 0 && maskDef.regex.test(valChar)) {
+      } else if (valChar !== void 0 && maskDef.test(valChar)) {
         output +=
           maskDef.transform !== void 0 ? maskDef.transform(valChar) : valChar
         valIndex++
@@ -642,7 +847,12 @@ export default function useMask(props, emit, emitValue, inputRef) {
       firstTokenIndex = maskMarked.indexOf(MARKER)
 
     let valIndex = val.length - 1,
-      output = ''
+      output = '',
+      // Literals reached on the way left are held back until a data char
+      // actually lands to their left. Emitting them on sight leaves the
+      // separator of a slot nothing ever filled dangling at the front:
+      // "AA-##" rendered "057" as "-57", which then unmasked back to "57"
+      pendingLiterals = ''
 
     for (
       let maskIndex = mask.length - 1;
@@ -654,12 +864,15 @@ export default function useMask(props, emit, emitValue, inputRef) {
       let valChar = val[valIndex]
 
       if (typeof maskDef === 'string') {
-        output = maskDef + output
+        pendingLiterals = maskDef + pendingLiterals
 
         if (updateMaskInternalsFlag === true && valChar === maskDef) {
           valIndex--
         }
-      } else if (valChar !== void 0 && maskDef.regex.test(valChar)) {
+      } else if (valChar !== void 0 && maskDef.test(valChar)) {
+        output = pendingLiterals + output
+        pendingLiterals = ''
+
         do {
           output =
             (maskDef.transform !== void 0
@@ -671,7 +884,7 @@ export default function useMask(props, emit, emitValue, inputRef) {
           // oxlint-disable-next-line no-unmodified-loop-condition
           firstTokenIndex === maskIndex &&
           valChar !== void 0 &&
-          maskDef.regex.test(valChar)
+          maskDef.test(valChar)
         )
       } else {
         return output
@@ -681,12 +894,123 @@ export default function useMask(props, emit, emitValue, inputRef) {
     return output
   }
 
+  // Unmasks the result of a single contiguous user edit (EDIT_INPUT_TYPES)
+  // by diffing it against the previously rendered masked value, whose layout
+  // is known exactly through maskMarked. Data chars that happen to equal a
+  // mask literal are therefore never mistaken for the literal itself, which
+  // the positional guesswork in unmaskValue cannot avoid (#15624, #18051)
+  function unmaskEditValue(prev, prevDataLen, val, inputType) {
+    const prevLen = prev.length,
+      valLen = val.length,
+      minLen = Math.min(prevLen, valLen)
+
+    let start = 0
+    while (start < minLen && prev[start] === val[start]) {
+      start++
+    }
+
+    let end = 0
+    while (
+      end < minLen - start &&
+      prev[prevLen - 1 - end] === val[valLen - 1 - end]
+    ) {
+      end++
+    }
+
+    const dataAt = getDataCharTester(prev, prevDataLen)
+
+    let before = '',
+      after = ''
+
+    for (let i = 0; i < start; i++) {
+      if (dataAt(i)) {
+        before += prev[i]
+      }
+    }
+
+    for (let i = prevLen - end; i < prevLen; i++) {
+      if (dataAt(i)) {
+        after += prev[i]
+      }
+    }
+
+    let inserted = ''
+    const rawInserted = val.slice(start, valLen - end)
+
+    if (rawInserted.length !== 0) {
+      if (props.reverseFillMask) {
+        // right-aligned content has no fixed slot for new chars;
+        // keep the ones some token accepts
+        for (const char of rawInserted) {
+          if (
+            computedMask.some(
+              maskDef => typeof maskDef !== 'string' && maskDef.test(char)
+            )
+          ) {
+            inserted += char
+          }
+        }
+      } else {
+        // data fills the token slots in order, so the insertion continues
+        // at the slot right after the data preceding it
+        const tokenDefs = computedMask.filter(
+          maskDef => typeof maskDef !== 'string'
+        )
+        let slot = before.length
+
+        for (const char of rawInserted) {
+          if (tokenDefs[slot] !== void 0 && tokenDefs[slot].test(char)) {
+            inserted += char
+            slot++
+          }
+        }
+      }
+    } else if (!props.reverseFillMask && start + end < prevLen) {
+      // A pure deletion. When the deleted chunk held no data chars (only
+      // mask literals), remasking would restore them and turn the edit into
+      // a silent no-op with a drifting caret. Soft keyboards (iOS) do not
+      // reliably go through the keydown hook that pre-selects across
+      // literals (#17639), so compensate here by dropping the data char
+      // adjacent to the deletion point instead
+      let deletedData = false
+      for (let i = start; i < prevLen - end; i++) {
+        if (dataAt(i)) {
+          deletedData = true
+          break
+        }
+      }
+
+      if (!deletedData) {
+        if (inputType === 'deleteContentForward') {
+          after = after.slice(1)
+        } else {
+          before = before.slice(0, -1)
+        }
+      }
+    }
+
+    return before + inserted + after
+  }
+
   function unmaskValue(val) {
     return typeof val !== 'string' || computedUnmask === void 0
       ? typeof val === 'number'
         ? computedUnmask(String(val))
         : val
       : computedUnmask(val)
+  }
+
+  // undoes fillWithMask: keeps only the `dataLen` chars the value had
+  // before it was padded. The padding cannot be recognized by looking at
+  // the chars, since a fill char may satisfy a token itself (#18523)
+  function stripFillPadding(str, dataLen) {
+    if (dataLen >= str.length) {
+      return str
+    }
+
+    return props.reverseFillMask
+      ? str.slice(str.length - dataLen)
+      : str.slice(0, dataLen)
   }
 
   function fillWithMask(val) {

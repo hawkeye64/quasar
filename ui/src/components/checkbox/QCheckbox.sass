@@ -10,6 +10,7 @@ $checkbox-transition: .22s cubic-bezier(0,0,.2,1) 0ms
   &__bg,
   &__icon-container
     user-select: none
+    -webkit-user-select: none /* Safari, older Chrome */
 
   &__bg
     top: 25%
@@ -19,6 +20,7 @@ $checkbox-transition: .22s cubic-bezier(0,0,.2,1) 0ms
     border: 2px solid currentColor
     border-radius: 2px
     transition: background $checkbox-transition
+    print-color-adjust: exact
     -webkit-print-color-adjust: exact
 
   &__icon
@@ -94,9 +96,7 @@ $checkbox-transition: .22s cubic-bezier(0,0,.2,1) 0ms
       padding-left: 0
       padding-right: .5em
 
-body.desktop
-
-  .q-checkbox:not(.disabled)
+  &:not(.disabled)
     .q-checkbox__inner:before
       content: ''
       position: absolute
@@ -107,16 +107,24 @@ body.desktop
       border-radius: 50%
       background: currentColor
       opacity: .12
-      transform: scale3d(0, 0, 1)
+      transform: scale(0)
       transition: transform $option-focus-transition
 
-    &:focus,
-    &:hover
+    &:focus-visible
       .q-checkbox__inner:before
-        transform: scale3d(1, 1, 1)
+        transform: scale(1)
 
-  .q-checkbox--dense:not(.disabled)
-    &:focus,
-    &:hover
+    @media (any-hover: hover)
+      &:hover
+        .q-checkbox__inner:before
+          transform: scale(1)
+
+  &--dense:not(.disabled)
+    &:focus-visible
       .q-checkbox__inner:before
-        transform: scale3d(1.4, 1.4, 1)
+        transform: scale(1.4)
+
+    @media (any-hover: hover)
+      &:hover
+        .q-checkbox__inner:before
+          transform: scale(1.4)

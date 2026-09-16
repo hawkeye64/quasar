@@ -15,6 +15,11 @@ export default {
     search: 'Търси',
     filter: 'Филтър',
     refresh: 'Презареди',
+    minimum: 'Минимум',
+    maximum: 'Максимум',
+    range: 'Диапазон',
+    noValue: 'Няма стойност',
+    resize: 'Преоразмеряване',
     expand: label => (label ? `Разширете "${label}"` : 'Разширяване'),
     collapse: label => (label ? `Свиване на "${label}"` : 'Свиване')
   },
@@ -34,8 +39,12 @@ export default {
     prevYear: 'Предходната година',
     nextYear: 'Догодина',
     today: 'Днес',
-    prevRangeYears: range => `Предишен ${range} години`,
-    nextRangeYears: range => `След това ${range} години`
+    prevRangeYears: range => `Предишните ${range} години`,
+    nextRangeYears: range => `Следващите ${range} години`,
+    hour: 'Час',
+    minute: 'Минута',
+    second: 'Секунда',
+    now: 'Текущо време'
   },
   table: {
     noData: 'Няма данни',
@@ -48,15 +57,41 @@ export default {
     recordsPerPage: 'Редове на страница:',
     allRows: 'Всички',
     pagination: (start, end, total) => start + '-' + end + ' от ' + total,
-    columns: 'Колони'
+    columns: 'Колони',
+    selectAllRows: 'Избери всички редове',
+    selectRow: 'Избери реда'
   },
   pagination: {
+    label: 'Странициране',
     first: 'Първа страница',
     prev: 'Предишна страница',
     next: 'Следваща страница',
     last: 'Последна страница'
   },
+  carousel: {
+    prevSlide: 'Предишен слайд',
+    nextSlide: 'Следващ слайд'
+  },
+  colorPicker: {
+    spectrum: 'Спектър',
+    tune: 'Настройка',
+    palette: 'Палитра',
+    value: 'Стойност на цвета',
+    hue: 'Нюанс',
+    alpha: 'Непрозрачност',
+    saturation: 'Наситеност',
+    brightness: 'Яркост'
+  },
+  uploader: {
+    addFiles: 'Избери файлове',
+    upload: 'Качи файловете',
+    abort: 'Прекрати качването',
+    removeQueued: 'Премахни чакащите файлове',
+    removeUploaded: 'Премахни качените файлове',
+    removeFile: 'Премахни файла'
+  },
   editor: {
+    toolbar: 'Лента с инструменти на редактора',
     url: 'URL',
     bold: 'Удебелен',
     italic: 'Курсив',

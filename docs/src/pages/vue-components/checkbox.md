@@ -12,9 +12,8 @@ related:
 
 The QCheckbox component is another basic element for user input. You can use this to supply a way for the user to toggle an option.
 
-::: tip
-Please also refer to the [QOptionGroup](/vue-components/option-group) on other possibilities for creating groups of Checkboxes.
-:::
+> [!TIP]
+> Please also refer to the [QOptionGroup](/vue-components/option-group) on other possibilities for creating groups of Checkboxes.
 
 <DocApi file="QCheckbox" />
 
@@ -24,7 +23,7 @@ Please also refer to the [QOptionGroup](/vue-components/option-group) on other p
 
 <DocExample title="Standard" file="Standard" />
 
-### With custom icons <q-badge label="v2.5+" />
+### With custom icons
 
 <DocExample title="With icons" file="WithIcons" />
 
@@ -79,9 +78,8 @@ Toggling order is:
 
 ### With QOptionGroup
 
-::: tip
-You can also use [QOptionGroup](/vue-components/option-group), which simplifies the usage when you have groups of checkboxes, like in example below.
-:::
+> [!TIP]
+> You can also use [QOptionGroup](/vue-components/option-group), which simplifies the usage when you have groups of checkboxes, like in example below.
 
 <DocExample title="Usage with QOptionGroup" file="OptionGroup" />
 
@@ -100,3 +98,9 @@ In the example below, we are rendering a `<label>` tag (notice `tag="label"`) so
 When dealing with a native form which has an `action` and a `method` (eg. when using Quasar with ASP.NET controllers), you need to specify the `name` property on QCheckbox, otherwise formData will not contain it (if it should) - all value are converted to string (native behaviour, so do not use Object values):
 
 <DocExample title="Native form" file="NativeForm" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+QCheckbox implements the [WAI-ARIA checkbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/checkbox/): it exposes `role="checkbox"` with a three-state `aria-checked` (`true`, `false`, or `mixed` for the indeterminate state). The `label` prop doubles as the accessible name (`aria-label`) — with a slot-only label, the name is derived from the rendered content — and a disabled checkbox exposes `aria-disabled="true"`. The native `<input type="checkbox">` you may notice in the DOM exists only for native form submission and `<label>` click forwarding; it is hidden from assistive technology.
+
+The checkbox is a Tab stop (see the `tabindex` prop) and toggles on <kbd>Enter</kbd> or <kbd>Space</kbd>. Keyboard focus draws a visible focus ring, while mouse clicks deliberately do not, so pointer users are not distracted by it.

@@ -9,13 +9,102 @@ Quasar Tree represents a highly configurable component that displays hierarchica
 
 <DocApi file="QTree" />
 
+## Defining the nodes
+
+The `nodes` prop is an array of plain objects, one per node, nested through their children. QTree reads a fixed set of keys on each; the names of the key, label and children properties are yours to pick through the `node-key`, `label-key` and `children-key` props (`label` and `children` by default).
+
+```js
+nodes: [
+  // array of Objects
+  // node Object definition
+  {
+    // unique id, under the property named by "node-key" (required)
+    id: 'fruits',
+
+    // text of the node, under the property named by "label-key"
+    label: 'Fruits',
+
+    // (optional) icon, image or avatar shown before the label
+    icon: 'restaurant_menu',
+    iconColor: 'primary', // one of the Quasar Color Palette names
+    // img: 'mountains.png', // from the /public folder
+    // avatar: 'boy-avatar.png', // from the /public folder
+
+    // (optional) the node cannot be selected, ticked, expanded or clicked
+    disabled: false,
+
+    // (optional) can the node be expanded? (default: true)
+    expandable: true,
+
+    // (optional) can the node be selected? (default: true)
+    selectable: true,
+
+    // (optional) called on click, receives the node
+    handler: node => {},
+
+    // (optional) with a tick strategy: show a checkbox, and can it be ticked?
+    noTick: false,
+    tickable: true,
+    // (optional) tick strategy for this node only: 'leaf', 'leaf-filtered', 'strict', 'none'
+    tickStrategy: 'leaf',
+
+    // (optional) scoped slot names for this node's header and body,
+    // without the 'header-' / 'body-' prefix
+    header: 'story', // renders through the 'header-story' slot
+    body: 'story', // renders through the 'body-story' slot
+
+    // (optional) the sub-nodes, same shape, under the property named by "children-key"
+    children: [
+      { id: 'apple', label: 'Apple' },
+      { id: 'pear', label: 'Pear', disabled: true }
+    ]
+  },
+
+  {
+    id: 'lazy',
+    label: 'Loaded on first expand',
+    // (optional) load the children on first expand through the "lazy-load" event;
+    // do not set 'children' on a lazy node
+    lazy: true
+  }
+]
+```
+
+| Node Property | Type           | Behavior when not present                       | Description                                                                                                                 |
+| ------------- | -------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| \<nodeKey\>   | String, Number | An error is generated                           | Node's key. The key is picked from the key specified in `nodeKey` property.                                                 |
+| label         | String         | The item has no label                           | Node's label. When `labelKey` prop is set the label is picked from that key.                                                |
+| icon          | String         | The default icon is used                        | Node's icon.                                                                                                                |
+| iconColor     | String         | The inherited color is used                     | Node's icon color. One from Quasar Color Palette.                                                                           |
+| img           | String         | No image is displayed                           | Node's image. Use /public folder. Example: 'mountains.png'                                                                  |
+| avatar        | String         | No avatar is displayed                          | Node's avatar. Use /public folder. Example: 'boy-avatar.png'                                                                |
+| children      | Array          | This node has no sub-nodes                      | Array of nodes as children.                                                                                                 |
+| disabled      | Boolean        | The node is enabled                             | Is node disabled?                                                                                                           |
+| expandable    | Boolean        | The node is expandable                          | Is node expandable?                                                                                                         |
+| selectable    | Boolean        | The node is selectable                          | Is node selectable?                                                                                                         |
+| handler       | Function       | No extra function is called                     | Custom function that should be called on click on node. Receives `node` as parameter.                                       |
+| tickable      | Boolean        | The node is tickable according to tick strategy | When using a tick strategy, each node shows a checkbox. Should a node's checkbox be disabled?                               |
+| noTick        | Boolean        | Node displays a checkbox                        | When using a tick strategy, should node display a checkbox?                                                                 |
+| tickStrategy  | String         | Tick strategy 'none' is used                    | Override global tick strategy for this node only. One of 'leaf', 'leaf-filtered', 'strict', 'none'.                         |
+| lazy          | Boolean        | Children are not lazy loaded                    | Should children be lazy loaded? In this case also don't specify 'children' prop.                                            |
+| header        | String         | Slot 'default-header' is used                   | Node header scoped slot name, without the required 'header-' prefix. Example: 'story' refers to 'header-story' scoped slot. |
+| body          | String         | Slot 'default-body' is used                     | Node body scoped slot name, without the required 'body-' prefix. Example: 'story' refers to 'body-story' scoped slot.       |
+
 ## Usage
 
 ### Basic
 
 <DocExample title="Basic" file="Basic" />
 
-### Keyboard navigation
+### Accessibility <q-badge label="v2.25+" />
+
+QTree follows the [WAI-ARIA tree pattern](https://www.w3.org/WAI/ARIA/apg/patterns/treeview/): the component exposes `role="tree"` and each node header is a `role="treeitem"` carrying `aria-expanded` on parents, `aria-selected` on selectable nodes, `aria-checked` on ticking ones (including the `mixed` state of partially ticked parents) and `aria-disabled` when disabled, while the nested child groups convey the hierarchy. In `virtual-scroll` mode the rows are rendered flat instead, so each one compensates with `aria-level`, `aria-setsize` and `aria-posinset`. Do give the tree an accessible name by setting `aria-label` (or `aria-labelledby`) on the component itself.
+
+The tick checkboxes are pointer affordances only — the keyboard path is <kbd>Space</kbd> on the node header (see below), with the state announced through `aria-checked`. The "no nodes" and "no results" messages use localized strings from the [Quasar Language Pack](/options/quasar-language-packs).
+
+Every node the user can see takes part in the roving Tab stop, as the tree pattern requires of a `role="treeitem"`. That includes the nodes nothing happens on (a leaf of a tree with no selection and no ticking) and the disabled ones: a disabled node stays reachable and announces itself through `aria-disabled`, but nothing acts on it — no selection, no expansion, no lazy loading and not even its own `handler`.
+
+#### Keyboard navigation
 
 When a tree node has focus:
 
@@ -23,13 +112,13 @@ When a tree node has focus:
 - <kbd>Arrow Right</kbd> expands a collapsed parent or moves focus to its first visible child.
 - <kbd>Arrow Left</kbd> collapses an expanded parent or moves focus to its parent.
 - <kbd>Home</kbd> and <kbd>End</kbd> move focus to the first and last visible nodes.
-- <kbd>Enter</kbd> performs the node's default action; <kbd>Space</kbd> toggles its expansion — or its checkbox, on tickable nodes (when using a `tick-strategy`).
+- <kbd>Enter</kbd> performs the node's default action; <kbd>Space</kbd> toggles its expansion — or its checkbox, on tickable nodes (when using a `tick-strategy`). Both do nothing on a disabled node.
 
 ### No connector lines
 
 <DocExample title="No connectors" file="NoConnectors" />
 
-### Dense <q-badge label="v2.2.4+" />
+### Dense
 
 <DocExample title="Dense" file="DenseTree" />
 
@@ -79,11 +168,10 @@ Notice (in the example below) the custom header and body slots.
 
 <DocExample title="Customizing nodes" file="SlotsCustomized" />
 
-::: warning
-Clicking or pressing `ENTER` on the custom header selects the tree item (and the custom header is blurred). Pressing `SPACE` toggles its expansion.
-
-If you don't want this to happen just wrap the content of the custom header in a `<div @click.stop @keydown.stop>` (or add the listeners to the respective component/element that is emitting them).
-:::
+> [!WARNING]
+> Clicking or pressing `ENTER` on the custom header selects the tree item (and the custom header is blurred). Pressing `SPACE` toggles its expansion.
+>
+> If you don't want this to happen just wrap the content of the custom header in a `<div @click.stop @keydown.stop>` (or add the listeners to the respective component/element that is emitting them).
 
 ### Accordion, filtering and selectable
 
@@ -101,7 +189,7 @@ In the example below, sibling nodes get contracted when one gets expanded.
 
 ### Selection vs ticking, expansion
 
-- Selection (through QTree `selected` prop) refers to the currently selected node (gets highlighted with different background).
+- Selection (through QTree `selected` prop) refers to the currently selected node. By default only its label color changes (see the `selected-color` prop); the node header also gets the `q-tree__node--selected` CSS class, so you can style it further (a background, for example) with your own CSS.
 - Ticking (through QTree `ticked` prop) refers to the checkbox associated with each node.
 - Expansion (through QTree `expanded` prop) refers to the nodes that are expanded.
 
@@ -123,32 +211,20 @@ You can apply a global tick strategy for a QTree and locally change the ticking 
 
 <DocExample title="Tick strategy" file="TickStrategy" />
 
+### Partially ticked nodes <q-badge label="v2.25+" />
+
+With the `leaf` and `leaf-filtered` strategies, a parent whose tickable children are only partly ticked is neither ticked nor unticked, so it does not show up in the `ticked` model. Use the `getIndeterminateNodes()` method to get such nodes (in the order of the `nodes` model), or `isIndeterminate(key)` to check one of them.
+
+Both always report nothing for the `strict` strategy, where a node's tick state is independent of its children.
+
+When you need all three states at once, `getTickState(key)` returns them in the tri-state form that a QCheckbox takes as its model: `true` when ticked, `null` when partially ticked and `false` when unticked. It is the very value that the node's own tickbox gets, so it can be bound to a QCheckbox of yours as is.
+
+The header and body slots also get an `indeterminate` boolean in their scope, next to the `ticked` one. It is read-only — a node becomes partially ticked through its children, so tick those instead.
+
+<DocExample title="Partially ticked nodes" file="Indeterminate" />
+
 ### Custom filter method
 
 You can customize the filtering method by specifying the `filter-method` prop. The method below filters by input if it also has '(\*)':
 
 <DocExample title="Custom filter" file="FilterCustom" />
-
-### Nodes model structure
-
-The following describes a node's properties that are taken into account by QTree's v-model.
-
-| Node Property | Type           | Behavior when not present                       | Description                                                                                                                 |
-| ------------- | -------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| \<nodeKey\>   | String, Number | An error is generated                           | Node's key. The key is picked from the key specified in `nodeKey` property.                                                 |
-| label         | String         | The item has no label                           | Node's label. When `labelKey` prop is set the label is picked from that key.                                                |
-| icon          | String         | The default icon is used                        | Node's icon.                                                                                                                |
-| iconColor     | String         | The inherited color is used                     | Node's icon color. One from Quasar Color Palette.                                                                           |
-| img           | String         | No image is displayed                           | Node's image. Use /public folder. Example: 'mountains.png'                                                                  |
-| avatar        | String         | No avatar is displayed                          | Node's avatar. Use /public folder. Example: 'boy-avatar.png'                                                                |
-| children      | Array          | This node has no sub-nodes                      | Array of nodes as children.                                                                                                 |
-| disabled      | Boolean        | The node is enabled                             | Is node disabled?                                                                                                           |
-| expandable    | Boolean        | The node is expandable                          | Is node expandable?                                                                                                         |
-| selectable    | Boolean        | The node is selectable                          | Is node selectable?                                                                                                         |
-| handler       | Function       | No extra function is called                     | Custom function that should be called on click on node. Receives `node` as parameter.                                       |
-| tickable      | Boolean        | The node is tickable according to tick strategy | When using a tick strategy, each node shows a checkbox. Should a node's checkbox be disabled?                               |
-| noTick        | Boolean        | Node displays a checkbox                        | When using a tick strategy, should node display a checkbox?                                                                 |
-| tickStrategy  | String         | Tick strategy 'none' is used                    | Override global tick strategy for this node only. One of 'leaf', 'leaf-filtered', 'strict', 'none'.                         |
-| lazy          | Boolean        | Children are not lazy loaded                    | Should children be lazy loaded? In this case also don't specify 'children' prop.                                            |
-| header        | String         | Slot 'default-header' is used                   | Node header scoped slot name, without the required 'header-' prefix. Example: 'story' refers to 'header-story' scoped slot. |
-| body          | String         | Slot 'default-body' is used                     | Node body scoped slot name, without the required 'body-' prefix. Example: 'story' refers to 'body-story' scoped slot.       |

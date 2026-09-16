@@ -1,6 +1,6 @@
 {
   "name": "@quasar/extras",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "Quasar Framework fonts, icons and animations",
   "keywords": [
     "animations",
@@ -24,7 +24,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/quasarframework/quasar.git"
+    "url": "git+https://github.com/quasarframework/quasar.git",
+    "directory": "extras"
   },
   "funding": {
     "type": "github",
@@ -121,7 +122,7 @@
     "@fortawesome/fontawesome-free": "7.3.1",
     "@mdi/font": "7.4.47",
     "@mdi/svg": "7.4.47",
-    "@xmldom/xmldom": "0.9.10",
+    "@xmldom/xmldom": "0.9.12",
     "animate.css": "4.1.1",
     "bootstrap-icons": "^1.13.1",
     "cross-fetch": "^4.1.0",

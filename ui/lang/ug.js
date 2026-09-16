@@ -18,8 +18,13 @@ export default {
     search: 'ئىزدەش',
     filter: 'سۈزگۈچ',
     refresh: 'يېڭىلاش',
+    minimum: 'ئەڭ تۆۋەن',
+    maximum: 'ئەڭ يۇقىرى',
+    range: 'دائىرە',
+    noValue: 'قىممەت يوق',
+    resize: 'چوڭلۇقىنى ئۆزگەرتىش',
     expand: label => (label ? `نى كېڭەيتىڭ "${label}"` : 'كېڭەيتىش'),
-    collapse: label => (label ? `نى يىمىرىڭ "${label}"` : 'كېڭەيتىش')
+    collapse: label => (label ? `نى يىمىرىڭ "${label}"` : 'يىمىرىش')
   },
   date: {
     days,
@@ -43,7 +48,11 @@ export default {
     nextYear: 'كېيىنىكى يىل',
     today: 'بۈگۈن',
     prevRangeYears: range => `ئالدىنقى ${range} يىل`,
-    nextRangeYears: range => ` كىيىنكىسى ${range} يىل`
+    nextRangeYears: range => `كىيىنكىسى ${range} يىل`,
+    hour: 'سائەت',
+    minute: 'مىنۇت',
+    second: 'سېكۇنت',
+    now: 'ھازىرقى ۋاقىت'
   },
   table: {
     noData: 'ئۇچۇر يوق',
@@ -53,15 +62,41 @@ export default {
     recordsPerPage: 'ھەربەتتىكى قۇر سانى:',
     allRows: 'ھەممىسى',
     pagination: (start, end, total) => start + ' - ' + end + ' / ' + total,
-    columns: 'ئىستون'
+    columns: 'ئىستون',
+    selectAllRows: 'بارلىق قۇرلارنى تاللاش',
+    selectRow: 'قۇرنى تاللاش'
   },
   pagination: {
+    label: 'بەت بۆلۈش',
     first: 'بىرىنچى بەت',
     prev: 'ئالدىنقى بەت',
     next: 'كېيىنكى بەت',
     last: 'ئاخىرقى بەت'
   },
+  carousel: {
+    prevSlide: 'ئالدىنقى سلايت',
+    nextSlide: 'كېيىنكى سلايت'
+  },
+  colorPicker: {
+    spectrum: 'سپېكتر',
+    tune: 'تەڭشەش',
+    palette: 'رەڭ تاختىسى',
+    value: 'رەڭ قىممىتى',
+    hue: 'رەڭ تەڭشىكى',
+    alpha: 'سۈزۈكسىزلىك',
+    saturation: 'تويۇنۇش',
+    brightness: 'يورۇقلۇق'
+  },
+  uploader: {
+    addFiles: 'ھۆججەت تاللاش',
+    upload: 'ھۆججەتلەرنى يۈكلەش',
+    abort: 'يۈكلەشنى توختىتىش',
+    removeQueued: 'نۆۋەتتىكى ھۆججەتلەرنى ئۆچۈرۈش',
+    removeUploaded: 'يۈكلەنگەن ھۆججەتلەرنى ئۆچۈرۈش',
+    removeFile: 'ھۆججەتنى ئۆچۈرۈش'
+  },
   editor: {
+    toolbar: 'تەھرىرلىگۈچ قورال ستونى',
     url: 'URL',
     bold: 'توم',
     italic: 'يانتۇ',

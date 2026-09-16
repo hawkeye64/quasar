@@ -16,6 +16,11 @@ export default {
     search: 'חיפוש',
     filter: 'סינון',
     refresh: 'רענון',
+    minimum: 'מינימום',
+    maximum: 'מקסימום',
+    range: 'טווח',
+    noValue: 'אין ערך',
+    resize: 'שינוי גודל',
     expand: label => (label ? `"${label}" הרחב את` : 'לְהַרְחִיב'),
     collapse: label => (label ? `"${label}" כווץ` : 'הִתמוֹטְטוּת')
   },
@@ -39,7 +44,11 @@ export default {
     nextYear: 'שנה הבאה',
     today: 'הַיוֹם',
     prevRangeYears: range => `קודם ${range} שנים`,
-    nextRangeYears: range => `הבא ${range} שנים`
+    nextRangeYears: range => `הבא ${range} שנים`,
+    hour: 'שעה',
+    minute: 'דקה',
+    second: 'שנייה',
+    now: 'הזמן הנוכחי'
   },
   table: {
     noData: 'לא נמצאו נתונים',
@@ -52,15 +61,41 @@ export default {
     recordsPerPage: 'שורות בעמוד:',
     allRows: 'הכל',
     pagination: (start, end, total) => start + ' - ' + end + ' מתוך ' + total,
-    columns: 'עמודות'
+    columns: 'עמודות',
+    selectAllRows: 'בחר את כל השורות',
+    selectRow: 'בחר שורה'
   },
   pagination: {
+    label: 'עימוד',
     first: 'עמוד ראשון',
     prev: 'עמוד קודם',
     next: 'העמוד הבא',
     last: 'העמוד האחרון'
   },
+  carousel: {
+    prevSlide: 'השקופית הקודמת',
+    nextSlide: 'השקופית הבאה'
+  },
+  colorPicker: {
+    spectrum: 'ספקטרום',
+    tune: 'כוונון',
+    palette: 'לוח צבעים',
+    value: 'ערך הצבע',
+    hue: 'גוון',
+    alpha: 'אטימות',
+    saturation: 'רוויה',
+    brightness: 'בהירות'
+  },
+  uploader: {
+    addFiles: 'בחר קבצים',
+    upload: 'העלה קבצים',
+    abort: 'בטל העלאה',
+    removeQueued: 'הסר קבצים בהמתנה',
+    removeUploaded: 'הסר קבצים שהועלו',
+    removeFile: 'הסר קובץ'
+  },
   editor: {
+    toolbar: 'סרגל הכלים של העורך',
     url: 'כתובת אתר',
     bold: 'בולט',
     italic: 'נטוי',

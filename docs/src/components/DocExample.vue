@@ -1,7 +1,7 @@
 <template>
   <q-card class="doc-example q-my-lg" flat bordered>
     <div class="header-toolbar row items-center q-pr-sm">
-      <DocCardTitle :title="props.title" prefix="example--" />
+      <DocCardTitle :title="props.title" :prefix="titlePrefix" />
 
       <q-space />
 
@@ -12,6 +12,7 @@
           flat
           round
           :icon="mdiCompare"
+          aria-label="Toggle dark mode"
           @click="docStore.toggleDark"
         >
           <q-tooltip>Toggle dark mode</q-tooltip>
@@ -25,6 +26,7 @@
           flat
           round
           :icon="fabGithub"
+          aria-label="View source on GitHub"
           @click="openGitHub"
         >
           <q-tooltip>View on GitHub</q-tooltip>
@@ -36,6 +38,7 @@
           flat
           round
           :icon="fabCodepen"
+          aria-label="Edit in Codepen"
           @click="openCodepen"
           :loading="source.isLoading"
         >
@@ -47,6 +50,9 @@
           flat
           round
           icon="code"
+          aria-label="View source code"
+          :aria-expanded="expanded ? 'true' : 'false'"
+          :aria-controls="expanded ? sourceId : void 0"
           @click="toggleExpand"
           :loading="source.isLoading"
         >
@@ -56,7 +62,7 @@
     </div>
 
     <q-slide-transition>
-      <div v-if="expanded">
+      <div v-if="expanded" :id="sourceId">
         <q-tabs
           class="header-tabs"
           v-model="currentTab"
@@ -97,30 +103,42 @@
       </div>
     </q-slide-transition>
 
-    <DocCodepen v-if="component" ref="codepenRef" :title="props.title" />
+    <DocCodepen
+      v-if="component"
+      ref="codepenRef"
+      :title="props.title"
+      :prefix="titlePrefix"
+    />
 
-    <q-separator />
-
-    <div class="row overflow-hidden">
+    <div v-if="component" class="doc-example__body row">
       <component
-        v-if="component"
         class="col doc-example__content doc-example-typography"
         :is="component"
         :class="componentClass"
       />
-      <q-linear-progress v-else color="brand-primary" indeterminate />
     </div>
+    <q-linear-progress v-else color="brand-primary" indeterminate />
   </q-card>
 </template>
 
 <script setup>
-import { computed, inject, markRaw, onMounted, ref, useTemplateRef } from 'vue'
 import { openURL } from 'quasar'
+import {
+  computed,
+  getCurrentInstance,
+  inject,
+  nextTick,
+  onMounted,
+  ref,
+  shallowRef,
+  useTemplateRef
+} from 'vue'
 
 import { fabCodepen, fabGithub } from '@quasar/extras/fontawesome-v7'
 import { mdiCompare } from '@quasar/extras/mdi-v7'
 
 import { useDocStore } from '@/layouts/doc-layout/store/index.js'
+import { slugify } from '@/assets/page-utils.js'
 
 import DocCode from './DocCode.vue'
 import DocCodepen from './DocCodepen.vue'
@@ -128,17 +146,22 @@ import DocCardTitle from './DocCardTitle.vue'
 
 const props = defineProps({
   title: String,
-  file: String,
+  // there is no example without one, and both ids below are built from it
+  file: {
+    type: String,
+    required: true
+  },
   noEdit: Boolean,
   scrollable: Boolean,
   overflow: Boolean
 })
 
+const vm = getCurrentInstance()
 const docStore = useDocStore()
 const examples = inject('_q_ex')
 
 const codepenRef = useTemplateRef('codepenRef')
-const component = ref(null)
+const component = shallowRef(null)
 const currentTab = ref('Template')
 const expanded = ref(false)
 const source = ref({
@@ -147,6 +170,9 @@ const source = ref({
   tabs: [],
   parts: {}
 })
+
+const titlePrefix = computed(() => `example--${props.file.toLowerCase()}--`)
+const sourceId = computed(() => `example-src--${slugify(props.file)}`)
 
 const componentClass = computed(() =>
   props.scrollable
@@ -254,7 +280,13 @@ function loadSource() {
 
 async function openCodepen() {
   if (!source.value.hasLoaded) await loadSource()
-  codepenRef.value.open(source.value.tabs)
+  if (component.value === null) await loadComponent()
+  if (vm.isUnmounted) return
+
+  // DocCodepen mounts with the component, one tick later
+  nextTick(() => {
+    codepenRef.value.open(source.value.tabs)
+  })
 }
 
 async function toggleExpand() {
@@ -262,30 +294,50 @@ async function toggleExpand() {
   expanded.value = !expanded.value
 }
 
-if (import.meta.env.QUASAR_CLIENT) {
-  onMounted(() => {
-    if (import.meta.env.QUASAR_DEV) {
-      const glob = import.meta.glob('../examples/*/*.vue', {
-        import: 'default'
-      })
+function importComponent() {
+  if (import.meta.env.QUASAR_DEV) {
+    const glob = import.meta.glob('../examples/*/*.vue', { import: 'default' })
+    return glob[`../examples/${examples.name}/${props.file}.vue`]()
+  }
 
-      glob[`../examples/${examples.name}/${props.file}.vue`]().then(comp => {
-        component.value = markRaw(comp)
-      })
-    } else {
-      examples.runtime.then(glob => {
-        component.value = markRaw(glob[props.file])
-      })
-    }
-  })
+  return examples.runtime.then(glob => glob[props.file])
+}
+
+let componentPromise = null
+
+if (import.meta.env.QUASAR_CLIENT) {
+  onMounted(loadComponent)
+}
+
+function loadComponent() {
+  if (componentPromise === null) {
+    componentPromise = importComponent().then(comp => {
+      if (vm.isUnmounted) return
+      component.value = comp
+      docStore.reportCardGrowth(vm)
+    })
+  }
+
+  return componentPromise
 }
 </script>
 
 <style lang="sass">
 .doc-example
+  // initial height should be 50px
+  // otherwise edit docStore.reportCardGrowth
+
+  &__body,
+  > .q-linear-progress
+    margin-top: 4px
 
   &__actions
     padding: 3px 0 3px 7px
+
+  // clip (rounded corners, phone-width overflow) without becoming a
+  // scroll container: QParallax's view timeline is nicer to bind to the layout
+  &__body
+    overflow: clip
 
   &__content
     position: relative

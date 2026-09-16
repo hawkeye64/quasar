@@ -1,4 +1,17 @@
-// oxlint-disable no-eq-null
+function toByteView(v) {
+  return v.constructor === ArrayBuffer
+    ? new Uint8Array(v)
+    : new Uint8Array(v.buffer, v.byteOffset, v.byteLength)
+}
+
+function hasCustomConversion(aFn, bFn, nativeFn) {
+  return (
+    typeof aFn === 'function' &&
+    aFn !== nativeFn &&
+    typeof bFn === 'function' &&
+    bFn !== nativeFn
+  )
+}
 
 export function isDeepEqual(a, b) {
   if (a === b) return true
@@ -68,8 +81,15 @@ export function isDeepEqual(a, b) {
       return true
     }
 
-    // oxlint-disable-next-line eqeqeq
-    if (a.buffer != null && a.buffer.constructor === ArrayBuffer) {
+    if (a.constructor === ArrayBuffer || a.constructor === DataView) {
+      if (a.byteLength !== b.byteLength) return false
+
+      // neither has indexed access, so compare their exposed byte ranges
+      a = toByteView(a)
+      b = toByteView(b)
+    }
+
+    if (ArrayBuffer.isView(a)) {
       length = a.length
 
       if (length !== b.length) return false
@@ -85,11 +105,13 @@ export function isDeepEqual(a, b) {
       return a.source === b.source && a.flags === b.flags
     }
 
-    if (a.valueOf !== Object.prototype.valueOf) {
+    if (hasCustomConversion(a.valueOf, b.valueOf, Object.prototype.valueOf)) {
       return a.valueOf() === b.valueOf()
     }
 
-    if (a.toString !== Object.prototype.toString) {
+    if (
+      hasCustomConversion(a.toString, b.toString, Object.prototype.toString)
+    ) {
       return a.toString() === b.toString()
     }
 

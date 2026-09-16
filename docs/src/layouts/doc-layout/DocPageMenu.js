@@ -1,162 +1,168 @@
-import {
-  QBadge,
-  QExpansionItem,
-  QIcon,
-  QItem,
-  QItemSection,
-  QList,
-  Ripple
-} from 'quasar'
+import { QBadge, QIcon, QTree } from 'quasar'
 
-import { mdiMenuDown } from '@quasar/extras/mdi-v7'
-import { h, onBeforeUpdate, ref, watch, withDirectives } from 'vue'
-import { useRoute } from 'vue-router'
+import { h, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import Menu from '@/assets/menu.js'
 import './DocPageMenu.sass'
 
-function getParentProxy(proxy) {
-  if (Object(proxy.$parent) === proxy.$parent) {
-    return proxy.$parent
-  }
+let nodes = null
 
-  let { parent } = proxy.$
+// leaf route path -> keys of the groups that must be open to reveal it
+const ancestorKeys = new Map()
+// groups flagged as opened in the menu definition
+const defaultOpenedKeys = []
 
-  while (Object(parent) === parent) {
-    if (Object(parent.proxy) === parent.proxy) {
-      return parent.proxy
-    }
-
-    parent = parent.parent
-  }
+// a click on the link is the link's business (router navigation, or
+// the browser's for external ones), never the treeitem's
+function stopClick(e) {
+  e.stopPropagation()
 }
 
-export default {
-  setup() {
-    const $route = useRoute()
-    const routePath = $route.path
+function getNodes(list, parentPath, parentKeys, onNodeClick) {
+  return list.map(item => {
+    const path = parentPath + (item.path !== void 0 ? '/' + item.path : '')
+    // some groups (Buttons, Form Components, ...) carry no path of
+    // their own, so the path alone would collide with the parent's
+    const key = item.path !== void 0 ? path : `${path}#${item.name}`
 
-    const rootRef = ref(null)
+    const node = {
+      key,
+      label: item.name,
+      icon: item.icon,
+      badge: item.badge,
+      path: item.external === true ? item.path : path,
+      external: item.external === true
+    }
 
-    watch(
-      () => $route.path,
-      val => {
-        showMenu(childRefs[val])
+    if (item.children !== void 0) {
+      if (item.opened === true) {
+        defaultOpenedKeys.push(key)
       }
-    )
+      node.children = getNodes(
+        item.children,
+        path,
+        [...parentKeys, key],
+        onNodeClick
+      )
+    } else if (node.external === false) {
+      node.handler = onNodeClick
+      ancestorKeys.set(path, parentKeys)
+    }
 
-    let childRefs = []
+    return node
+  })
+}
 
-    onBeforeUpdate(() => {
-      childRefs = []
-    })
+function getExpandedKeys(routePath, current) {
+  const keys = ancestorKeys.get(routePath)
 
-    function showMenu(proxy) {
-      if (proxy !== void 0 && proxy !== rootRef.value) {
-        proxy.show?.()
-        const parent = getParentProxy(proxy)
-        if (parent !== void 0) {
-          showMenu(parent)
+  if (keys === void 0) return current
+
+  const merged = new Set(current)
+  keys.forEach(key => {
+    merged.add(key)
+  })
+
+  return merged.size === current.length ? current : [...merged]
+}
+
+const getNodeClickHandler = import.meta.env.QUASAR_SERVER
+  ? () => {}
+  : () => {
+      const $router = useRouter()
+      const $route = useRoute()
+
+      return node => {
+        if (node.path !== $route.path) {
+          $router.push(node.path)
         }
       }
     }
 
-    function getDrawerMenu(menu, path, level) {
-      if (menu.children !== void 0) {
-        return h(
-          QExpansionItem,
-          {
-            class:
-              'doc-layout__item non-selectable' +
-              (level !== 0 ? ' doc-page-menu__deep-expansion' : ''),
-            ref: vm => {
-              if (vm) {
-                childRefs[path] = vm
-              }
-            },
-            key: `${menu.name}-${path}`,
-            label: menu.name,
-            icon: menu.icon,
-            expandIcon: mdiMenuDown,
-            defaultOpened: menu.opened || routePath.startsWith(path),
-            switchToggleSide: level !== 0,
-            denseToggle: level !== 0,
-            activeClass: 'doc-layout__item--active'
-          },
-          () =>
-            menu.children.map(item =>
-              getDrawerMenu(
-                item,
-                path + (item.path !== void 0 ? '/' + item.path : ''),
-                level / 2 + 0.1
-              )
-            )
-        )
-      }
+export default {
+  setup() {
+    if (nodes === null) {
+      nodes = getNodes(Menu, '', [], getNodeClickHandler())
+    }
 
-      const props = {
-        ref: vm => {
-          if (vm) {
-            childRefs[path] = vm
-          }
-        },
-        key: path,
-        class: 'doc-layout__item non-selectable',
-        to: path,
-        activeClass: 'doc-layout__item--active'
-      }
+    const $route = useRoute()
+    const expanded = ref(getExpandedKeys($route.path, [...defaultOpenedKeys]))
 
-      if (level !== 0) {
-        props.insetLevel = Math.min(level, 1)
+    watch(
+      () => $route.path,
+      path => {
+        expanded.value = getExpandedKeys(path, expanded.value)
       }
+    )
 
-      if (menu.external === true) {
-        Object.assign(props, {
-          to: void 0,
-          clickable: true,
-          tag: 'a',
-          href: menu.path,
-          target: '_blank'
-        })
-      }
-
+    // plain elements, not QItem: a link is one anchor with one class,
+    // the treeitem around it is the Tab stop and activates it on Enter
+    function getHeader({ node }) {
       const child = []
 
-      if (menu.icon !== void 0) {
-        child.push(
-          h(
-            QItemSection,
-            {
-              avatar: true
-            },
-            () => h(QIcon, { name: menu.icon })
-          )
+      if (node.icon !== void 0) {
+        child.push(h(QIcon, { name: node.icon }))
+      }
+
+      child.push(node.label)
+
+      if (node.badge !== void 0) {
+        child.push(h(QBadge, { label: node.badge, class: 'header-badge' }))
+      }
+
+      if (node.children !== void 0) {
+        return h('div', { class: 'doc-item' }, child)
+      }
+
+      if (node.external) {
+        return h(
+          'a',
+          {
+            class: 'doc-item',
+            href: node.path,
+            target: '_blank',
+            tabindex: -1,
+            onClick: stopClick
+          },
+          child
         )
       }
 
-      child.push(h(QItemSection, () => menu.name))
-
-      if (menu.badge !== void 0) {
-        child.push(
-          h(
-            QItemSection,
-            {
-              side: true
-            },
-            () => h(QBadge, { label: menu.badge, class: 'header-badge' })
-          )
-        )
-      }
-
-      return withDirectives(
-        h(QItem, props, () => child),
-        [[Ripple]]
+      // class, tabindex and the click listener fall through to the anchor
+      // RouterLink renders; both active classes map to one so the active
+      // link carries no router-link-* class
+      return h(
+        RouterLink,
+        {
+          to: node.path,
+          class: 'doc-item',
+          activeClass: '',
+          exactActiveClass: 'doc-item--active',
+          tabindex: -1,
+          onClick: stopClick
+        },
+        () => child
       )
     }
 
+    function onUpdateExpanded(val) {
+      expanded.value = val
+    }
+
     return () =>
-      h(QList, { ref: rootRef, class: 'doc-page-menu', dense: true }, () =>
-        Menu.map(item => getDrawerMenu(item, '/' + item.path, 0))
+      h(
+        QTree,
+        {
+          class: 'doc-page-menu',
+          nodes,
+          nodeKey: 'key',
+          expanded: expanded.value,
+          'onUpdate:expanded': onUpdateExpanded,
+          dense: true,
+          noConnectors: true
+        },
+        { 'default-header': getHeader }
       )
   }
 }

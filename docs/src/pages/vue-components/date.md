@@ -1,5 +1,5 @@
 ---
-title: QDate
+title: Date Picker
 desc: The QDate Vue component provides a method to input dates from Gregorian or Persian calendars.
 keys: QDate
 examples: QDate
@@ -11,27 +11,30 @@ related:
 
 The QDate component provides a method to input date. Currently it supports Gregorian (default) and Persian calendars.
 
-::: tip
-For handling date and/or time, also check out [Quasar Date Utils](/quasar-utils/date-utils).
-:::
+> [!TIP]
+> For handling date and/or time, also check out [Quasar Date Utils](/quasar-utils/date-utils).
 
 <DocApi file="QDate" />
 
 ## Usage
 
-::: warning
-Notice that the actual date(s) of the model are all in String format.
-:::
+> [!WARNING]
+> Notice that the actual date(s) of the model are all in String format.
 
 ### Basic
 
 <DocExample title="Basic" file="Basic" overflow />
 
-::: tip
-For landscape mode, you can use it along with `$q.screen` to make QDate responsive. Example: `:landscape="$q.screen.gt.xs"`. More info: [Quasar Screen Plugin](/options/screen-plugin).
-:::
+> [!TIP]
+> For landscape mode, you can use it along with `$q.screen` to make QDate responsive. Example: `:landscape="$q.screen.gt.xs"`. More info: [Quasar Screen Plugin](/options/screen-plugin).
 
 <DocExample title="Landscape" file="Landscape" overflow />
+
+### Accessibility <q-badge label="v2.25+" />
+
+Each selectable day of the calendar renders as a button named with its full date. Selection — single days as well as days inside a range — is marked with `aria-pressed`, and today additionally carries `aria-current="date"`. The header navigation buttons (previous/next month and year, "Today") get localized labels from the [Quasar Language Pack](/options/quasar-language-packs). Keyboard focus roves over the day buttons (roving tabindex) and is restored on the equivalent day when navigation crosses into another month. A `disable`d QDate exposes `aria-disabled="true"` on its root element.
+
+The calendar days form a single Tab stop: use the <kbd>Arrow</kbd> keys to move between days (crossing into the adjacent month at the edges), <kbd>Home</kbd> / <kbd>End</kbd> to jump to the start/end of the week, and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> to switch to the previous/next month (with <kbd>Shift</kbd>: year). Each day announces its full date to screen readers, along with its selection state and whether it is today.
 
 ### Multiple selection
 
@@ -45,17 +48,15 @@ Clicking on an already selected day will deselect it.
 
 Notice in the examples below that the model is an Object (single selection) or an Array of Objects (multiple selection).
 
-::: tip TIPS
+> [!TIP]
+> **TIPS**
+>
+> - Clicking on an already selected day will deselect it.
+> - The user's current editing range can also be set programmatic through the `setEditingRange` method (check the API card).
+> - There are two useful events in regards to the current editing range: `range-start` and `range-end` (check the API card).
 
-- Clicking on an already selected day will deselect it.
-- The user's current editing range can also be set programmatic through the `setEditingRange` method (check the API card).
-- There are two useful events in regards to the current editing range: `range-start` and `range-end` (check the API card).
-
-:::
-
-::: warning
-The `range` property is only partially compatible with the `options` prop: selected ranges might also include "unselectable" days.
-:::
+> [!WARNING]
+> The `range` property is only partially compatible with the `options` prop: selected ranges might also include "unselectable" days.
 
 <DocExample title="Single Range" file="SelectionRange" overflow />
 
@@ -97,13 +98,15 @@ The default model mask is `YYYY/MM/DD`, however you can use custom ones too.
 
 The `mask` prop tokens can be found at [Quasar Utils > Date utils](/quasar-utils/date-utils#format-for-display).
 
-::: warning Note on SSR/SSG
-Using `x` or `X` (timestamps) in the mask may cause hydration errors on the client, because decoding the model String must be done with `new Date()` which takes into account the local timezone. As a result, if the server is in a different timezone than the client, then the rendered output of the server will differ than the one on the client so hydration will fail.
-:::
+> [!WARNING]
+> **Note on SSR/SSG**
+>
+> Using `x` or `X` (timestamps) in the mask may cause hydration errors on the client, because decoding the model String must be done with `new Date()` which takes into account the local timezone. As a result, if the server is in a different timezone than the client, then the rendered output of the server will differ than the one on the client so hydration will fail.
 
-::: danger Note on persian calendar
-When using the persian calendar, the mask for QDate is forced to `YYYY/MM/DD`.
-:::
+> [!CAUTION]
+> **Note on persian calendar**
+>
+> When using the persian calendar, the mask for QDate is forced to `YYYY/MM/DD`.
 
 <DocExample title="Simple mask" file="MaskSimple" overflow />
 
@@ -115,9 +118,8 @@ Using the mask to connect a QDate and [QTime](/vue-components/time) to the same 
 
 <DocExample title="QDate and QTime on same model" file="MaskDateTime" overflow />
 
-::: tip
-If you want to programmatically set the value of QDate, you can do so by just re-assigning the value that you pass. However, the updated value needs to be a string in the same format as your mask. Eg. in the case your mask is `'dddd, MMM D, YYYY'`, passing `'2019/04/28'` as value won't work, you would need to pass `'Sunday, Apr 28, 2019'` instead.
-:::
+> [!TIP]
+> If you want to programmatically set the value of QDate, you can do so by just re-assigning the value that you pass. However, the updated value needs to be a string in the same format as your mask. Eg. in the case your mask is `'dddd, MMM D, YYYY'`, passing `'2019/04/28'` as value won't work, you would need to pass `'Sunday, Apr 28, 2019'` instead.
 
 ### Custom ad-hoc locale
 
@@ -135,6 +137,9 @@ If, for some reason, you need to use a custom ad-hoc locale rather than the curr
 
 The first example is using an array and the second example is using a function.
 
+> [!TIP]
+> The `events` array entries, as well as the String supplied to the function form, are always in `YYYY/MM/DD` format, regardless of the `mask` in use (the mask only shapes the model value). If you keep your event dates in another format, use the function form and convert before comparing.
+
 <DocExample title="Events" file="Events" overflow />
 
 <DocExample title="Event color" file="EventColor" overflow />
@@ -143,10 +148,10 @@ The first example is using an array and the second example is using a function.
 
 - You can use the `options` prop to limit user selection to certain times.
 - Alternatively, for a more in-depth way of limiting options, you can also supply a function (second and third example below) to `options-fn` prop.
+- The `options` array entries, as well as the String supplied to the function form, are always in `YYYY/MM/DD` format, regardless of the `mask` in use.
 
-::: warning
-The `options` property is only partially compatible with the `range` prop. Ranges might contain "unselectable" days.
-:::
+> [!WARNING]
+> The `options` property is only partially compatible with the `range` prop. Ranges might contain "unselectable" days.
 
 <DocExample title="Options" file="Options" overflow />
 
@@ -187,17 +192,30 @@ More info: [QInput](/vue-components/input).
 
 ### Persian calendar
 
-You have to set `calendar` to `persian` to use this feature .
+You have to set `calendar` to `persian` to use this feature.
 
-::: tip
-You can couple this with a Quasar [language pack](/options/quasar-language-packs) such as Persian (Farsi, `fa-IR`) to have the QDate strings translated too, for the full experience.
-:::
+> [!TIP]
+> You can couple this with a Quasar [language pack](/options/quasar-language-packs) such as Persian (Farsi, `fa-IR`) to have the QDate strings translated too, for the full experience.
 
-::: warning
-When using the persian calendar, the mask for QDate is forced to `YYYY/MM/DD`.
-:::
+> [!WARNING]
+> When using the persian calendar, the mask for QDate is forced to `YYYY/MM/DD`.
 
-<q-btn href="https://codepen.io/rstoenescu/pen/MWKpbNa" target="_blank" label="See example" icon-right="launch" rel="noopener noreferrer" />
+<DocExample title="Persian calendar" file="Persian" overflow />
+
+#### Localized digits <q-badge label="v2.31+" />
+
+The day and year numbers that QDate displays (calendar cells, navigation, header, years view) follow the `formatNumber` function of the active [language pack](/options/quasar-language-packs), or one passed through the `locale` prop, when one is defined. The `fa` and `fa-IR` packs define it to render Persian digits, as the example above shows. The model always keeps ASCII digits (`1397/08/12`).
+
+Any language pack (root-level `formatNumber` key) or ad-hoc locale can opt in. The function receives the ASCII digit string that would be displayed (zero-padded where QTime pads it) and returns its localized rendering:
+
+```js
+const myLocale = {
+  // ...the other locale fields
+  formatNumber: value => value.replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[digit]) // Bengali digits
+}
+```
+
+[QTime](/vue-components/time#custom-ad-hoc-locale) honors the same function for its header and clock face, and [QPagination](/vue-components/pagination#localized-digits) for its page numbers.
 
 ### Native form submit
 

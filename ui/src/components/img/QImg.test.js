@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
+import { isRuntimeSsrPreHydration } from 'quasar/src/plugins/platform/Platform.js'
+
 import QImg from './QImg.js'
 
 const src = '/images/photo.jpg'
@@ -15,10 +17,41 @@ function mountImg(props, slots) {
 }
 
 /**
+ * Mounts the way the client hydrates a server-rendered page: the
+ * component sets up before the takeover flips the pre-hydration state.
+ * (The mount is not an actual hydration, so the pre-hydration tree is
+ * what a fresh mount renders here.)
+ */
+function mountPreHydration(props, slots) {
+  isRuntimeSsrPreHydration.value = true
+  try {
+    return mountImg(props, slots)
+  } finally {
+    isRuntimeSsrPreHydration.value = false
+  }
+}
+
+/**
  * The current <img> is the one carrying the load/error handlers.
  */
 function getCurrentImg(wrapper) {
   return wrapper.get('.q-img__image--current')
+}
+
+/**
+ * Freezes the element getters that the hydration reconcile reads, so a
+ * test controls whether the image "has settled before hydration".
+ */
+function mockImgState({ complete, naturalWidth = 0, naturalHeight = 0 }) {
+  vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(
+    complete
+  )
+  vi.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockReturnValue(
+    naturalWidth
+  )
+  vi.spyOn(HTMLImageElement.prototype, 'naturalHeight', 'get').mockReturnValue(
+    naturalHeight
+  )
 }
 
 /**
@@ -66,17 +99,25 @@ describe('[QImg API]', () => {
       test('type String has effect', () => {
         const wrapper = mountImg({ ratio: '4' })
 
-        expect(wrapper.element.firstElementChild.style.paddingBottom).toBe(
-          '25%'
-        )
+        expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(4)
       })
 
       test('type Number has effect', () => {
         const wrapper = mountImg({ ratio: 2 })
 
-        expect(wrapper.element.firstElementChild.style.paddingBottom).toBe(
-          '50%'
-        )
+        expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(2)
+      })
+
+      test('sizes the box height from its width', () => {
+        const wrapper = mountImg({ ratio: 2, width: '200px' })
+
+        expect(wrapper.element.offsetHeight).toBe(100)
+      })
+
+      test('yields to an explicit height', () => {
+        const wrapper = mountImg({ ratio: 2, width: '200px', height: '50px' })
+
+        expect(wrapper.element.offsetHeight).toBe(50)
       })
     })
 
@@ -162,17 +203,13 @@ describe('[QImg API]', () => {
       test('type Number has effect', () => {
         const wrapper = mountImg({ initialRatio: 2 })
 
-        expect(wrapper.element.firstElementChild.style.paddingBottom).toBe(
-          '50%'
-        )
+        expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(2)
       })
 
       test('type String has effect', () => {
         const wrapper = mountImg({ initialRatio: '2' })
 
-        expect(wrapper.element.firstElementChild.style.paddingBottom).toBe(
-          '50%'
-        )
+        expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(2)
       })
 
       test('is replaced by the natural ratio once loaded', async () => {
@@ -184,17 +221,13 @@ describe('[QImg API]', () => {
 
         await waitForLoad(wrapper)
 
-        expect(wrapper.element.firstElementChild.style.paddingBottom).toBe(
-          '25%'
-        )
+        expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(4)
       })
 
       test('is superseded by the ratio prop', () => {
         const wrapper = mountImg({ initialRatio: 2, ratio: 4 })
 
-        expect(wrapper.element.firstElementChild.style.paddingBottom).toBe(
-          '25%'
-        )
+        expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(4)
       })
     })
 
@@ -328,8 +361,36 @@ describe('[QImg API]', () => {
         const propVal = 'A nice photo'
         const wrapper = mountImg({ alt: propVal })
 
+        expect(wrapper.attributes('role')).toBe('img')
         expect(wrapper.attributes('aria-label')).toBe(propVal)
         expect(getCurrentImg(wrapper).attributes('alt')).toBe(propVal)
+      })
+
+      test('the img role is only claimed when "alt" provides a name', () => {
+        // the img role requires an accessible name; without "alt" the
+        // wrapper stays neutral, like a native <img alt="">
+        const wrapper = mountImg()
+
+        expect(wrapper.attributes('role')).toBeUndefined()
+        expect(wrapper.attributes('aria-label')).toBeUndefined()
+      })
+
+      test('an empty "alt" marks the image decorative', () => {
+        // alt="" is the native way to say "decorative"; claiming the img
+        // role for it would produce a role with no accessible name
+        const wrapper = mountImg({ alt: '' })
+
+        expect(wrapper.attributes('role')).toBeUndefined()
+        expect(wrapper.attributes('aria-label')).toBeUndefined()
+        expect(getCurrentImg(wrapper).attributes('alt')).toBe('')
+      })
+
+      test('the inner image is decorative when "alt" is omitted', () => {
+        // an absent alt attribute leaves the image unnamed, which is a
+        // different failure from being explicitly decorative
+        const wrapper = mountImg()
+
+        expect(getCurrentImg(wrapper).attributes('alt')).toBe('')
       })
     })
 
@@ -429,6 +490,39 @@ describe('[QImg API]', () => {
         )
       })
     })
+
+    describe('[(prop)ssr-prerender]', () => {
+      test('type Boolean has effect', async () => {
+        mockImgState({ complete: false })
+
+        // an unknown box shape defers the image until hydrated: it is
+        // added at mount, hidden until loaded
+        const deferred = mountPreHydration()
+        await flushPromises()
+
+        expect(getCurrentImg(deferred).classes()).not.toContain(
+          'q-img__image--loaded'
+        )
+
+        // opting in server-renders it visible, like a native <img>
+        const wrapper = mountPreHydration({ ssrPrerender: true })
+
+        expect(getCurrentImg(wrapper).classes()).toContain(
+          'q-img__image--loaded'
+        )
+      })
+
+      test('is implied by a known box shape', () => {
+        mockImgState({ complete: false })
+
+        expect(
+          getCurrentImg(mountPreHydration({ ratio: 1 })).classes()
+        ).toContain('q-img__image--loaded')
+        expect(
+          getCurrentImg(mountPreHydration({ height: '100px' })).classes()
+        ).toContain('q-img__image--loaded')
+      })
+    })
   })
 
   describe('[Slots]', () => {
@@ -516,6 +610,127 @@ describe('[QImg API]', () => {
 
         expect(wrapper.find('.q-img__loading').exists()).toBe(false)
       })
+    })
+  })
+
+  describe('[Generic]', () => {
+    describe('server-rendered image', () => {
+      test('shows the loading state once hydrated while still loading', async () => {
+        const propVal = realImgSrc()
+        const complete = vi
+          .spyOn(HTMLImageElement.prototype, 'complete', 'get')
+          .mockReturnValue(false)
+
+        const wrapper = mountPreHydration({
+          src: propVal,
+          ratio: 1,
+          loading: 'eager'
+        })
+        await flushPromises()
+
+        expect(wrapper.find('.q-img__loading').exists()).toBe(true)
+        expect(wrapper.emitted('load')).toBeUndefined()
+
+        complete.mockRestore()
+        await waitForLoad(wrapper)
+
+        expect(wrapper.emitted('load')).toStrictEqual([[propVal]])
+        expect(wrapper.find('.q-img__loading').exists()).toBe(false)
+        expect(wrapper.findAll('img')).toHaveLength(1)
+        expect(wrapper.get('img').classes()).toContain('q-img__image--loaded')
+        expect(wrapper.find('.q-img__image--current').exists()).toBe(false)
+
+        // a later source change takes the regular (hidden until loaded) path
+        await wrapper.setProps({ src })
+
+        expect(getCurrentImg(wrapper).classes()).not.toContain(
+          'q-img__image--loaded'
+        )
+        expect(wrapper.find('.q-img__loading').exists()).toBe(true)
+      })
+
+      test('reconciles an image that loaded before hydration', async () => {
+        const propVal = realImgSrc()
+        mockImgState({ complete: true, naturalWidth: 4, naturalHeight: 1 })
+
+        const wrapper = mountPreHydration({
+          src: propVal,
+          ssrPrerender: true,
+          loading: 'eager'
+        })
+        await flushPromises()
+
+        expect(wrapper.emitted('load')).toStrictEqual([[propVal]])
+        expect(wrapper.find('.q-img__loading').exists()).toBe(false)
+        expect(wrapper.find('.q-img__image--current').exists()).toBe(false)
+        expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(4)
+
+        // the browser's own load event, when it does fire, is not a second load
+        vi.restoreAllMocks()
+        await new Promise(resolve => {
+          setTimeout(resolve, 100)
+        })
+
+        expect(wrapper.emitted('load')).toHaveLength(1)
+      })
+
+      test('reconciles an image that failed before hydration', async () => {
+        const errorContent = 'some-error-content'
+        mockImgState({ complete: true })
+
+        const wrapper = mountPreHydration(
+          { src: brokenImgSrc, errorSrc: realImgSrc(), ratio: 1 },
+          { error: () => errorContent }
+        )
+        await flushPromises()
+
+        const eventList = wrapper.emitted()
+        expect(eventList.error).toHaveLength(1)
+        expect(eventList.error[0][0]).toBeInstanceOf(Event)
+        expect(wrapper.get('.q-img__content').text()).toBe(errorContent)
+        expect(wrapper.get('img').attributes('src')).toBe(realImgSrc())
+      })
+
+      test('renders on top of the placeholder', () => {
+        mockImgState({ complete: false })
+        const placeholderSrc = realImgSrc(1, 1)
+
+        const wrapper = mountPreHydration({ ratio: 1, placeholderSrc })
+
+        const [placeholder, img] = wrapper.findAll('img')
+        expect(placeholder.attributes('src')).toBe(placeholderSrc)
+        expect(placeholder.classes()).toContain('q-img__image--loaded')
+        expect(img.attributes('src')).toBe(src)
+        expect(img.classes()).toContain('q-img__image--current')
+        expect(img.classes()).toContain('q-img__image--loaded')
+      })
+    })
+
+    test('re-reads the natural size a frame after load', async () => {
+      // WebKit reports an SVG's natural size from the img's current CSS
+      // box when the load event races layout (#15652); QImg re-reads the
+      // getters after a double-rAF, mocked here to replay that correction
+      const rafQueue = []
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb =>
+        rafQueue.push(cb)
+      )
+
+      const wrapper = mountImg({ src: realImgSrc(4, 1), loading: 'eager' })
+
+      await waitForLoad(wrapper)
+
+      expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(4)
+
+      const img = wrapper.get('img').element
+      Object.defineProperty(img, 'naturalWidth', { get: () => 500 })
+      Object.defineProperty(img, 'naturalHeight', { get: () => 100 })
+
+      while (rafQueue.length !== 0) {
+        rafQueue.shift()()
+      }
+      await flushPromises()
+
+      expect(Number.parseFloat(wrapper.element.style.aspectRatio)).toBe(5)
     })
   })
 })

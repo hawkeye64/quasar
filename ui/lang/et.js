@@ -15,6 +15,11 @@ export default {
     search: 'Otsi',
     filter: 'Filtreeri',
     refresh: 'Värskenda',
+    minimum: 'Miinimum',
+    maximum: 'Maksimum',
+    range: 'Vahemik',
+    noValue: 'Väärtus puudub',
+    resize: 'Muuda suurust',
     expand: label => (label ? `Laienda "${label}"` : 'Laienda'),
     collapse: label => (label ? `Ahenda "${label}"` : 'Ahenda')
   },
@@ -37,8 +42,12 @@ export default {
     prevYear: 'Eelmine aasta',
     nextYear: 'Järgmisel aastal',
     today: 'Täna',
-    prevRangeYears: range => `Eelmine ${range} aastad`,
-    nextRangeYears: range => `Järgmine ${range} aastat`
+    prevRangeYears: range => `Eelmised ${range} aastat`,
+    nextRangeYears: range => `Järgmised ${range} aastat`,
+    hour: 'Tund',
+    minute: 'Minut',
+    second: 'Sekund',
+    now: 'Praegune aeg'
   },
   table: {
     noData: 'Andmeid ei ole',
@@ -49,15 +58,41 @@ export default {
     recordsPerPage: 'Kirjed lehel:',
     allRows: 'Kõik',
     pagination: (start, end, total) => start + '-' + end + ' / ' + total,
-    columns: 'Veerud'
+    columns: 'Veerud',
+    selectAllRows: 'Vali kõik read',
+    selectRow: 'Vali rida'
   },
   pagination: {
+    label: 'Lehekülgede jaotus',
     first: 'Esimene leht',
     prev: 'Eelmine leht',
     next: 'Järgmine leht',
     last: 'Viimane leht'
   },
+  carousel: {
+    prevSlide: 'Eelmine slaid',
+    nextSlide: 'Järgmine slaid'
+  },
+  colorPicker: {
+    spectrum: 'Spekter',
+    tune: 'Häälestus',
+    palette: 'Palett',
+    value: 'Värvi väärtus',
+    hue: 'Värvitoon',
+    alpha: 'Läbipaistmatus',
+    saturation: 'Küllastus',
+    brightness: 'Heledus'
+  },
+  uploader: {
+    addFiles: 'Vali failid',
+    upload: 'Laadi failid üles',
+    abort: 'Katkesta üleslaadimine',
+    removeQueued: 'Eemalda järjekorras failid',
+    removeUploaded: 'Eemalda üleslaaditud failid',
+    removeFile: 'Eemalda fail'
+  },
   editor: {
+    toolbar: 'Redaktori tööriistariba',
     url: 'URL',
     bold: 'Rasvane',
     italic: 'Kaldkiri',

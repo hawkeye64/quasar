@@ -1,14 +1,15 @@
-import { computed, getCurrentInstance, h, nextTick, ref, watch } from 'vue'
+import { computed, h, nextTick, shallowRef, watch, withDirectives } from 'vue'
 
 import TouchPan from '../../directives/touch-pan/TouchPan.js'
 
+import useQuasar from '../../composables/use-quasar/use-quasar.js'
 import useDark, {
   useDarkProps
 } from '../../composables/private.use-dark/use-dark.js'
 import useId from '../../composables/use-id/use-id.js'
 
 import { createComponent } from '../../utils/private.create/create.js'
-import { hDir, hMergeSlot, hSlot } from '../../utils/private.render/render.js'
+import { hMergeSlot, hSlot } from '../../utils/private.render/render.js'
 import { stopAndPrevent } from '../../utils/event/event.js'
 
 export default /*#__PURE__*/ createComponent({
@@ -46,21 +47,21 @@ export default /*#__PURE__*/ createComponent({
     afterClass: [Array, String, Object],
 
     separatorClass: [Array, String, Object],
-    separatorStyle: [Array, String, Object]
+    separatorStyle: [Array, String, Object],
+
+    separatorAriaLabel: String
   },
 
   emits: ['update:modelValue'],
 
   setup(props, { slots, emit }) {
-    const {
-      proxy: { $q }
-    } = getCurrentInstance()
+    const $q = useQuasar()
     const isDark = useDark(props, $q)
 
-    const rootRef = ref(null)
+    const rootRef = shallowRef(null)
     const sideRefs = {
-      before: ref(null),
-      after: ref(null)
+      before: shallowRef(null),
+      after: shallowRef(null)
     }
 
     const panelId = useId()
@@ -70,7 +71,7 @@ export default /*#__PURE__*/ createComponent({
         'q-splitter no-wrap ' +
         `${props.horizontal ? 'q-splitter--horizontal column' : 'q-splitter--vertical row'}` +
         ` q-splitter--${props.disable ? 'disabled' : 'workable'}` +
-        (isDark.value ? ' q-splitter--dark' : '')
+        (isDark() ? ' q-splitter--dark' : '')
     )
 
     const propName = computed(() => (props.horizontal ? 'height' : 'width'))
@@ -148,7 +149,9 @@ export default /*#__PURE__*/ createComponent({
     const sepDirective = computed(() => [
       [
         TouchPan,
-        pan,
+        // TouchPan only acquires while its value is a function; detaching the
+        // directive instead would re-create the separator content (#12668)
+        props.disable ? void 0 : pan,
         void 0,
         {
           [props.horizontal ? 'vertical' : 'horizontal']: true,
@@ -163,7 +166,10 @@ export default /*#__PURE__*/ createComponent({
     const separatorAttrs = computed(() => {
       const acc = {
         role: 'separator',
-        'aria-orientation': props.horizontal ? 'horizontal' : 'vertical'
+        'aria-orientation': props.horizontal ? 'horizontal' : 'vertical',
+        // a separator has presentational children, so it can only be
+        // named through this attribute
+        'aria-label': props.separatorAriaLabel || $q.lang.label.resize
       }
 
       if (props.disable) {
@@ -289,13 +295,13 @@ export default /*#__PURE__*/ createComponent({
             onKeydown: props.disable ? void 0 : onSeparatorKeydown
           },
           [
-            hDir(
-              'div',
-              { class: 'q-splitter__separator-area absolute-full' },
-              hSlot(slots.separator),
-              'sep',
-              !props.disable,
-              () => sepDirective.value
+            withDirectives(
+              h(
+                'div',
+                { class: 'q-splitter__separator-area absolute-full' },
+                hSlot(slots.separator)
+              ),
+              sepDirective.value
             )
           ]
         ),

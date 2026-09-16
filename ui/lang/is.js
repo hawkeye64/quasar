@@ -15,6 +15,11 @@ export default {
     search: 'Leita',
     filter: 'Sía',
     refresh: 'Endurhlaða',
+    minimum: 'Lágmark',
+    maximum: 'Hámark',
+    range: 'Bil',
+    noValue: 'Ekkert gildi',
+    resize: 'Breyta stærð',
     expand: label => (label ? `Stækka "${label}"` : 'Stækkaðu'),
     collapse: label => (label ? `Draga saman "${label}"` : 'Hrun')
   },
@@ -37,7 +42,11 @@ export default {
     nextYear: 'Á næsta ári',
     today: 'Í dag',
     prevRangeYears: range => `Fyrri ${range} ár`,
-    nextRangeYears: range => `Næst ${range} ár`
+    nextRangeYears: range => `Næstu ${range} ár`,
+    hour: 'Klukkustund',
+    minute: 'Mínúta',
+    second: 'Sekúnda',
+    now: 'Núverandi tími'
   },
   table: {
     noData: 'Engin gögn tiltæk',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Færslur á hverri síðu:',
     allRows: 'Allar',
     pagination: (start, end, total) => start + '-' + end + ' af ' + total,
-    columns: 'Dálkar'
+    columns: 'Dálkar',
+    selectAllRows: 'Velja allar raðir',
+    selectRow: 'Velja röð'
   },
   pagination: {
+    label: 'Blaðsíðuskipting',
     first: 'Fyrsta blaðsíða',
     prev: 'Fyrri blaðsíða',
     next: 'Næsta blaðsíða',
     last: 'Síðasta blaðsíða'
   },
+  carousel: {
+    prevSlide: 'Fyrri glæra',
+    nextSlide: 'Næsta glæra'
+  },
+  colorPicker: {
+    spectrum: 'Litróf',
+    tune: 'Fínstilling',
+    palette: 'Litaspjald',
+    value: 'Litgildi',
+    hue: 'Litblær',
+    alpha: 'Ógegnsæi',
+    saturation: 'Mettun',
+    brightness: 'Birta'
+  },
+  uploader: {
+    addFiles: 'Velja skrár',
+    upload: 'Hlaða upp skrám',
+    abort: 'Hætta við upphleðslu',
+    removeQueued: 'Fjarlægja skrár í biðröð',
+    removeUploaded: 'Fjarlægja upphlaðnar skrár',
+    removeFile: 'Fjarlægja skrá'
+  },
   editor: {
+    toolbar: 'Tækjastika ritils',
     url: 'Slóð',
     bold: 'Feitletra',
     italic: 'Skáletra',

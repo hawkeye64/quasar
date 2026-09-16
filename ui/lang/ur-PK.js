@@ -29,6 +29,11 @@ export default {
     search: 'تلاش کریں',
     filter: 'فلٹر',
     refresh: 'تازہ کریں',
+    minimum: 'کم از کم',
+    maximum: 'زیادہ سے زیادہ',
+    range: 'رینج',
+    noValue: 'کوئی قدر نہیں',
+    resize: 'سائز تبدیل کریں',
     expand: label => (label ? `"${label}" کو وسیع کریں` : 'وسیع کریں'),
     collapse: label => (label ? `"${label}" کو سکیڑیں` : 'سکیڑیں')
   },
@@ -48,8 +53,12 @@ export default {
     prevYear: 'پچھلے سال',
     nextYear: 'اگلے سال',
     today: 'آج',
-    prevRangeYears: range => `پچھلا ${range} سال`,
-    nextRangeYears: range => `اگلا ${range} سال`
+    prevRangeYears: range => `پچھلے ${range} سال`,
+    nextRangeYears: range => `اگلے ${range} سال`,
+    hour: 'گھنٹہ',
+    minute: 'منٹ',
+    second: 'سیکنڈ',
+    now: 'موجودہ وقت'
   },
   table: {
     noData: 'کوئی ڈیٹا دستیاب نہیں',
@@ -60,15 +69,41 @@ export default {
     recordsPerPage: 'ریکارڈز فی صفحہ:',
     allRows: 'سب',
     pagination: (start, end, total) => `${start} - ${end} / ${total}`,
-    columns: 'کالم'
+    columns: 'کالم',
+    selectAllRows: 'تمام قطاریں منتخب کریں',
+    selectRow: 'قطار منتخب کریں'
   },
   pagination: {
+    label: 'صفحہ بندی',
     first: 'لومړی مخ',
     prev: 'مخکینۍ پاڼه',
     next: 'بل مخ',
     last: 'وروستۍ پاڼه'
   },
+  carousel: {
+    prevSlide: 'پچھلی سلائیڈ',
+    nextSlide: 'اگلی سلائیڈ'
+  },
+  colorPicker: {
+    spectrum: 'طیف',
+    tune: 'ترتیب',
+    palette: 'رنگ تختی',
+    value: 'رنگ کی قدر',
+    hue: 'رنگت',
+    alpha: 'دھندلاپن',
+    saturation: 'گہرائی',
+    brightness: 'چمک'
+  },
+  uploader: {
+    addFiles: 'فائلیں منتخب کریں',
+    upload: 'فائلیں اپ لوڈ کریں',
+    abort: 'اپ لوڈ منسوخ کریں',
+    removeQueued: 'قطار میں موجود فائلیں ہٹائیں',
+    removeUploaded: 'اپ لوڈ شدہ فائلیں ہٹائیں',
+    removeFile: 'فائل ہٹائیں'
+  },
   editor: {
+    toolbar: 'ایڈیٹر ٹول بار',
     url: 'یو آر ایل',
     bold: 'موٹا',
     italic: 'ترچھا',

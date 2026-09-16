@@ -15,6 +15,11 @@ export default {
     search: 'Meklēt',
     filter: 'Filtēt',
     refresh: 'Atjaunot',
+    minimum: 'Minimums',
+    maximum: 'Maksimums',
+    range: 'Diapazons',
+    noValue: 'Nav vērtības',
+    resize: 'Mainīt izmēru',
     expand: label => (label ? `Paplašināt "${label}"` : 'Izvērst'),
     collapse: label => (label ? `Sakļaut "${label}"` : 'Sakļaut')
   },
@@ -22,7 +27,7 @@ export default {
     days: 'Svētdiena_Pirmdiena_Otrdiena_Trešdiena_Ceturtdiena_Piektdiena_Sestdiena'.split(
       '_'
     ),
-    daysShort: 'Sv_Pi_Ot_Tr_Ce_Pi_Se'.split('_'),
+    daysShort: 'Sv_Pi_Ot_Tr_Ce_Pk_Se'.split('_'),
     months:
       'Janvāris_Februāris_Marts_Aprīlis_Maijs_Jūnijs_Jūlijs_Augusts_Septembris_Oktobris_Novembris_Decembris'.split(
         '_'
@@ -37,7 +42,11 @@ export default {
     nextYear: 'Nākamgad',
     today: 'Šodien',
     prevRangeYears: range => `Iepriekšējie ${range} gadi`,
-    nextRangeYears: range => `Nākamais ${range} gadi`
+    nextRangeYears: range => `Nākamie ${range} gadi`,
+    hour: 'Stunda',
+    minute: 'Minūte',
+    second: 'Sekunde',
+    now: 'Pašreizējais laiks'
   },
   table: {
     noData: 'Nav datu',
@@ -50,15 +59,41 @@ export default {
     recordsPerPage: 'Rindas lapā:',
     allRows: 'Visas',
     pagination: (start, end, total) => start + '-' + end + ' no ' + total,
-    columns: 'Kolonnas'
+    columns: 'Kolonnas',
+    selectAllRows: 'Atlasīt visas rindas',
+    selectRow: 'Atlasīt rindu'
   },
   pagination: {
+    label: 'Lappušu numerācija',
     first: 'Pirmā lapa',
     prev: 'Iepriekšējā lapa',
     next: 'Nākamā lapa',
     last: 'Pēdējā lapa'
   },
+  carousel: {
+    prevSlide: 'Iepriekšējais slaids',
+    nextSlide: 'Nākamais slaids'
+  },
+  colorPicker: {
+    spectrum: 'Spektrs',
+    tune: 'Pieregulēšana',
+    palette: 'Palete',
+    value: 'Krāsas vērtība',
+    hue: 'Nokrāsa',
+    alpha: 'Necaurspīdīgums',
+    saturation: 'Piesātinājums',
+    brightness: 'Spilgtums'
+  },
+  uploader: {
+    addFiles: 'Izvēlēties failus',
+    upload: 'Augšupielādēt failus',
+    abort: 'Pārtraukt augšupielādi',
+    removeQueued: 'Noņemt rindā esošos failus',
+    removeUploaded: 'Noņemt augšupielādētos failus',
+    removeFile: 'Noņemt failu'
+  },
   editor: {
+    toolbar: 'Redaktora rīkjosla',
     url: 'URL',
     bold: 'Trekns',
     italic: 'Kursīvs',

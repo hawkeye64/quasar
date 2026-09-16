@@ -34,7 +34,9 @@ type QuasarLanguageTableLabel =
   | "loading"
   | "recordsPerPage"
   | "allRows"
-  | "columns";
+  | "columns"
+  | "selectAllRows"
+  | "selectRow";
 type QuasarLanguageEditorLabel =
   | "url"
   | "bold"
@@ -109,9 +111,19 @@ export interface QuasarLanguage {
   isoName: string;
   nativeName: string;
   rtl?: boolean;
+  // receives the ASCII digit string a component would display
+  // ("5", "05", "1403") and returns it in the locale's digits
+  formatNumber?: (value: string) => string;
   label: StringDictionary<QuasarLanguageGeneralLabel> & {
     expand: (label?: string | undefined) => string;
     collapse: (label?: string | undefined) => string;
+    // screen-reader names stay optional: a third-party pack written
+    // before they existed must keep compiling
+    minimum?: string;
+    maximum?: string;
+    range?: string;
+    noValue?: string;
+    resize?: string;
   };
   date: {
     days: QuasarLanguageDayTuple;
@@ -121,6 +133,17 @@ export interface QuasarLanguage {
     firstDayOfWeek: number;
     format24h: boolean;
     pluralDay: string;
+    prevMonth?: string;
+    nextMonth?: string;
+    prevYear?: string;
+    nextYear?: string;
+    today?: string;
+    prevRangeYears?: (range: number) => string;
+    nextRangeYears?: (range: number) => string;
+    hour?: string;
+    minute?: string;
+    second?: string;
+    now?: string;
     headerTitle?: (
       date: Date,
       model: { year: number; month: number; day: number }
@@ -130,6 +153,36 @@ export interface QuasarLanguage {
     selectedRecords: (rows: number) => string;
     pagination: (start: number, end: number, total: number) => string;
   };
-  editor: StringDictionary<QuasarLanguageEditorLabel>;
+  pagination?: {
+    first?: string;
+    prev?: string;
+    next?: string;
+    last?: string;
+  };
+  carousel?: {
+    prevSlide?: string;
+    nextSlide?: string;
+  };
+  colorPicker?: {
+    spectrum?: string;
+    tune?: string;
+    palette?: string;
+    value?: string;
+    hue?: string;
+    alpha?: string;
+    saturation?: string;
+    brightness?: string;
+  };
+  uploader?: {
+    addFiles?: string;
+    upload?: string;
+    abort?: string;
+    removeQueued?: string;
+    removeUploaded?: string;
+    removeFile?: string;
+  };
+  editor: StringDictionary<QuasarLanguageEditorLabel> & {
+    toolbar?: string;
+  };
   tree: StringDictionary<QuasarLanguageTreeLabel>;
 }

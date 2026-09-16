@@ -22,21 +22,20 @@ The QLayout is a component designed to manage the entire window and wrap page co
 
 Scaffold your layout(s) by clicking on the button below.
 
-::: tip
-Keep an eye on your developer console for handy helpers on which components are being used but not declared in your quasar.config file.
-:::
+> [!TIP]
+> Keep an eye on your developer console for handy helpers on which components are being used but not declared in your quasar.config file.
 
 <q-btn icon-right="launch" label="Layout Builder" href="/layout-builder" target="_blank" />
 
 ## Usage
 
-::: warning Using margin CSS will break the layout
-QLayout depends on taking up the whole screen and so QPageContainer, QHeader, QFooter and QLayoutDrawer positions are managed by it (through the `view` prop). You **cannot** use _CSS margins_ as a style neither on QLayout itself nor on any of the QLayout components mentioned above. However you can safely use _CSS padding_.
-:::
+> [!WARNING]
+> **Using margin CSS will break the layout**
+>
+> QLayout depends on taking up the whole screen and so QPageContainer, QHeader, QFooter and QDrawer positions are managed by it (through the `view` prop). You **cannot** use _CSS margins_ as a style neither on QLayout itself nor on any of the QLayout components mentioned above. However you can safely use _CSS padding_.
 
-::: tip
-If your layout uses Vue Router sub-routes (recommended), then it makes sense to use Vue's `<router-view />` component, which is just a placeholder where sub-routes are injected. For more information, please read [Routing with Layouts and Pages](/layout/routing-with-layouts-and-pages).
-:::
+> [!TIP]
+> If your layout uses Vue Router sub-routes (recommended), then it makes sense to use Vue's `<router-view />` component, which is just a placeholder where sub-routes are injected. For more information, please read [Routing with Layouts and Pages](/layout/routing-with-layouts-and-pages).
 
 ### Understanding the "view" prop
 
@@ -72,23 +71,26 @@ These settings are completely up to you to use as you'd like. You could even go 
 
 <q-btn icon-right="launch" label="Layout Builder" href="/layout-builder" target="_blank" />
 
-::: warning
-
-- It is important that you specify all sections of a QLayout, even if you don't use them. For example, even if you don't use footer or right side drawer, still specify them within your QLayout's `view` prop.
-- When QDrawer is set into overlay mode, **it will force it to go into fixed position**, regardless if QLayout's "view" prop is configured with "l/r" or "L/R". Also, **if on iOS platform and QLayout is containerized**, the fixed position will also be forced upon QDrawer due to platform limitations that cannot be overcome.
-
-:::
+> [!WARNING]
+>
+> - It is important that you specify all sections of a QLayout, even if you don't use them. For example, even if you don't use footer or right side drawer, still specify them within your QLayout's `view` prop.
+> - When QDrawer is set into overlay mode, **it will force it to go into fixed position**, regardless if QLayout's "view" prop is configured with "l/r" or "L/R". Also, **if on iOS platform and QLayout is containerized**, the fixed position will also be forced upon QDrawer due to platform limitations that cannot be overcome.
 
 ### Containerized QLayout
 
 By default, QLayout is managing the entire window. However, you can also use QLayout as a container (with specific height and width) to isolate it somewhere in your pages.
 
-::: warning
-Please note that it **requires a CSS height (or min-height) being set explicitly**, otherwise it can't and it won't work.
-:::
+> [!WARNING]
+> Please note that it **requires a CSS height (or min-height) being set explicitly**, otherwise it can't and it won't work.
 
 In the example below, there is a containerized QLayout with drawers on each side (breakpoint of 700px on the left-side drawer and 500px on the right-side drawer). The breakpoint does not refer to the window width, but to the actual width of the QLayout container.
 
 <DocExample title="Containerized QLayout" file="Container" />
 
 <DocExample title="In a QDialog" file="ContainerDialog" />
+
+## Accessibility <q-badge label="v2.25+" />
+
+A QLayout with its usual children produces a correct landmark structure out of the box: [QHeader](/layout/header-and-footer#accessibility) renders a real `<header>` element, [QFooter](/layout/header-and-footer#accessibility) a `<footer>`, each [QDrawer](/layout/drawer#accessibility) an `<aside>` and [QPage](/layout/page#accessibility) the page's `<main>`. Screen reader users can therefore jump between the banner, footer, complementary and main content regions without any extra work on your side. QLayout itself and QPageContainer are plain containers that claim no landmark of their own.
+
+Two things remain your responsibility: do not add your own `<main>` element (QPage already is one, and a page must contain exactly one), and when you use more than one drawer, give each an `aria-label` so assistive technology can tell the complementary regions apart. Each child component's Accessibility section (linked above) covers its specific behavior.

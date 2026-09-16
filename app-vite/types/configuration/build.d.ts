@@ -1,4 +1,4 @@
-import { Plugin, UserConfig as ViteUserConfig } from "vite";
+import { OxcOptions, Plugin, UserConfig as ViteUserConfig } from "vite";
 import { Options as VuePluginOptions } from "@vitejs/plugin-vue";
 import { CompilerOptions, TypeAcquisition } from "typescript";
 import { QuasarHookParams, QuasarPublishParams } from "./conf";
@@ -118,6 +118,10 @@ interface QuasarStaticBuildConfiguration {
    * like _“<protocol>://<domain>/some/nested/folder”_ – in this case,
    * it means the distributables are in _“some/nested/folder”_ on your webserver.
    *
+   * Set it to `'./'` for a build with relative asset URLs, which can be served
+   * from any folder (SPA and PWA modes with Vue Router "hash" mode only;
+   * the dev server serves it from the root).
+   *
    * @default '/'
    */
   publicPath?: string;
@@ -222,6 +226,33 @@ interface QuasarStaticBuildConfiguration {
    * @type options {@link VueRouterVitePluginOptions}
    */
   filenameBasedRouting?: boolean | VueRouterVitePluginOptions;
+
+  /**
+   * Should you want to write your components with JSX/TSX (.jsx/.tsx files
+   * or <script lang="jsx|tsx"> in .vue files).
+   *
+   * Vite compiles them itself, so all this does is pointing it at Vue's JSX
+   * runtime (instead of the React one that it assumes by default) and adding
+   * the matching "jsx"/"jsxImportSource" to the generated
+   * .quasar/tsconfig.json (TypeScript projects).
+   *
+   * Set to `true`, or to an options object to override the defaults below,
+   * or to "preserve" when a Vite plugin (like @vitejs/plugin-vue-jsx, which
+   * adds the Vue specific JSX sugar: v-model, v-show, v-slots) should
+   * transform the JSX instead.
+   *
+   * https://v2.quasar.dev/quasar-cli-vite/handling-vite#jsx-tsx
+   *
+   * Default options supplied to Vite (Oxc) when `true`:
+   * @example
+   * {
+   *   runtime: 'automatic',
+   *   importSource: 'vue'
+   * }
+   *
+   * @default false
+   */
+  vueJsx?: boolean | NonNullable<OxcOptions["jsx"]>;
 
   /**
    * Options to supply to @vitejs/plugin-vue
@@ -443,9 +474,13 @@ interface QuasarStaticBuildConfiguration {
    *
    * Gets applied to production builds only.
    *
-   * Useful especially for (but not restricted to) PWA. If set to false then updating the
-   * PWA will force to re-download all assets again, regardless if they were changed or
-   * not (due to how Rolldown works through Vite).
+   * For a PWA it keeps updates small (only the changed files get re-downloaded), but
+   * the page applying an update must evict the scripts it preloaded before it reloads:
+   * Safari reuses them (<link rel="modulepreload">) from its in-memory cache across
+   * that reload without asking the service worker, and with stable filenames the new
+   * entry file would then run with old chunks ("SyntaxError: Importing binding name
+   * '...' is not found"). A fetch() of each precached script through the new worker
+   * evicts them; see the PWA docs, "Filename hashes quirk".
    *
    * @default true
    */

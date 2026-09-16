@@ -8,13 +8,14 @@
         @right="onRight"
         @slide="onSlide"
       >
-        <template v-slot:left> Left </template>
-        <template v-slot:right> Right content.. long </template>
+        <template #left> Left </template>
+        <template #right> Right content.. long </template>
 
         <q-item>
           <q-item-section avatar>
             <q-avatar>
               <img
+                alt="User avatar"
                 src="https://cdn.quasar.dev/img/avatar6.jpg"
                 draggable="false"
               />

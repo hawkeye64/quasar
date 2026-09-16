@@ -40,12 +40,14 @@ There are four ways of using Quasar. Pick the one that suits you best:
 | Advanced configuration through dynamic quasar.config file                                      | -          | **Yes**                | -                          |
 | Unit & end to end testing support                                                              | -          | **Yes**                | **Yes**                    |
 | TypeScript support                                                                             | -          | **Yes**                | **Yes**                    |
+| Documentation and API served offline to [AI coding agents](/start/ai-agents)                   | -          | **Yes**                | **Yes**                    |
 | **Best and Most Popular Choice!**                                                              |            | **YES!**               |                            |
 |                                                                                                | Quasar UMD | Quasar CLI (with Vite) | Quasar Vite Plugin         |
 
-::: tip Quasar Vite Plugin: Important!
-Although you may get a similar multi-platform support via Vite (directly) or some Vue community built plugins, these 3rd party supported build paths aren't tightly integrated with Quasar's components. Thus, as you run into problems with these 3rd party plugins, you will have to depend on the support of each individual plugin developer. With Quasar, you have a one-stop-shop should anything go wrong. Also, the Quasar CLI ensures applications are built to the best possible standards in both performance, project size and best practices. You will find no such guarantees anywhere else!
-:::
+> [!TIP]
+> **Quasar Vite Plugin: Important!**
+>
+> Although you may get a similar multi-platform support via Vite (directly) or some Vue community built plugins, these 3rd party supported build paths aren't tightly integrated with Quasar's components. Thus, as you run into problems with these 3rd party plugins, you will have to depend on the support of each individual plugin developer. With Quasar, you have a one-stop-shop should anything go wrong. Also, the Quasar CLI ensures applications are built to the best possible standards in both performance, project size and best practices. You will find no such guarantees anywhere else!
 
 ### Recommendation
 
